@@ -9,7 +9,7 @@ OBJ_DIR = obj
 API_DIR = api
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
-CC = $(GCC_PREFIX)gcc.exe
+CC =  $(GCC_PREFIX)gcc.exe
 CFLAGS = -Wall -pedantic -std=c99 -I. -I$(SRC_DIR) -I$(API_DIR)
 LDFLAGS =
 
@@ -33,7 +33,6 @@ depend: .depend
 # variables used here, the variable $* that matches whatever % stands for
 # can be useful in special cases.
 $(OBJ_DIR)/%.o:$(SRC_DIR)/%.c
-	mkdir -p $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 %:$(SRC_DIR)/%.c
