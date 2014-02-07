@@ -1,0 +1,1 @@
+ttpmacro "C:\Users\Rob Meades\workspace\teratermsend.ttl" %1 %2

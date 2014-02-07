@@ -1,0 +1,115 @@
+;Baud rates etc. can be found in teraterm.ini in the teraterm directory (should be 38400, 8N1, no flow control)
+timeout = 5
+connect '/C=6'
+
+try = 0
+successFile = "WriteToPiSuccess.txt"
+failFile = "WriteToPiFail.txt"
+filename = ""
+filenameAndFullPath = ""
+makeexe = "chmod +x "
+;Note that this is not the full string, it needs the filename added on the end later
+deleteFileOnDevice = "rm "
+logOutAtEnd = 1
+messageBoxTitle = "Load file onto Pi"
+
+;Assume we will fail (files are written to the same directory as this file)
+filedelete successFile
+filecreate filehandle failFile
+fileclose filehandle
+
+;Check parameters passed to this macro.  The first is the file name, the second the path to the file (may be absent)
+filename = param2
+strlen (param3)
+if result > 0 then
+	filenameAndFullPath = param3
+	strconcat filenameAndFullPath "\"
+endif
+strconcat filenameAndFullPath filename
+strconcat deleteFileOnDevice filename
+strconcat makeexe param2
+
+strlen (filenameAndFullPath)
+if result = 0 goto usage
+filesearch filenameAndFullPath
+if result > 0 goto checkifloggedin
+msgString = "File "
+strconcat msgString filenameAndFullPath
+strconcat msgString " does not exist."
+messagebox msgString messageBoxTitle
+goto finish
+
+:checkifloggedin
+statusbox "Checking if we're logged in already..." messageBoxTitle
+sendln
+wait "~$"
+if result = 0 goto start
+logOutAtEnd = 0
+goto alreadyloggedin
+
+:start
+statusbox "Waiting for log in prompt..." messageBoxTitle
+sendln
+wait "login:"
+try = try + 1
+;If timeout, we might already be logged in so log out first
+if result = 0 goto logoutandrestart
+statusbox "Logging in..." messageBoxTitle
+sendln "pi"
+wait "Password:"
+sendln "18victoria"
+statusbox "Waiting for prompt..." messageBoxTitle
+wait "~$"
+
+:alreadyloggedin
+statusbox "Deleting file on device..." messageBoxTitle
+sendln deleteFileOnDevice
+wait "~$"
+;Start zmodem receive on the other end
+statusbox "Starting Zmodem on Pi..." messageBoxTitle
+sendln "rz"
+;filenameAndFullPath is the file to send with full path as given on the command line to this macro
+statusbox "Sending file to Pi..." messageBoxTitle
+zmodemsend filenameAndFullPath 1
+if result > 0 goto zmodemsuccess
+messagebox "Zmodem did not return success, check terminal window." messageBoxTitle
+goto finish
+
+:zmodemsuccess
+sendln makeexe
+wait "~$"
+goto writesuccess
+
+:writesuccess
+statusbox "Success!" messageBoxTitle
+filedelete failFile
+filecreate filehandle successFile
+fileclose filehandle
+if logOutAtEnd = 1 goto logout
+statusbox "Staying logged in..." messageBoxTitle
+goto finish
+
+;log out nice and cleanly
+:logout
+statusbox "Logging out..." messageBoxTitle
+sendln
+wait "~$"
+sendln "exit"
+wait "login:"
+
+:finish
+disconnect
+closett
+end
+
+;try once more by exiting and starting again (but only do this once)
+:logoutandrestart
+if try > 1 goto finish
+statusbox "No response, trying again..." messageBoxTitle
+sendln "exit"
+goto start
+
+:usage
+msgString = "First parameter must be the file to send, second parameter is the path to the file if required."
+messagebox msgString messageBoxTitle
+goto finish
