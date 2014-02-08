@@ -3,28 +3,21 @@ ifneq (,)
 This makefile requires GNU Make.
 endif
 
-PROGRAM = a.out
+PROGRAM = shared.a
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
-
-SHARED_PRE = ../shared
-
-OW_LIBS_PRE = ../OneWireLibs
-OW_LIBS_FLAGS = -I $(OW_LIBS_PRE)/common -I $(OW_LIBS_PRE)/lib/userial/shared -I $(OW_LIBS_PRE)/lib/userial/link/Linux -DDEBUG
-OW_LIBS_OBJ_PRE = $(OW_LIBS_PRE)/builds/uLinuxGNU/obj
-OW_LIBS = $(OW_LIBS_OBJ_PRE)/atod26.o $(OW_LIBS_OBJ_PRE)/screenio.o $(OW_LIBS_OBJ_PRE)/findtype.o $(OW_LIBS_OBJ_PRE)/owlinkobjs
-
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
-CC = $(GCC_PREFIX)gcc.exe
-CFLAGS = -Wall -pedantic -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API) $(OW_LIBS_FLAGS)
-LDFLAGS = $(OW_LIBS) $(SHARED_PRE)/$(OBJ_DIR)/shared.a
+CC =  $(GCC_PREFIX)gcc.exe
+AR =  $(GCC_PREFIX)ar.exe
+CFLAGS = -Wall -pedantic -std=c99 -I. -I$(SRC_DIR) -I$(API_DIR)
+LDFLAGS =
 
 all: $(PROGRAM)
 
 $(PROGRAM): .depend $(OBJS)
-	$(CC) $(OBJS) $(LDFLAGS) -o $(OBJ_DIR)/$(PROGRAM)
+	$(AR) r $(LDFLAGS) $(OBJ_DIR)/$(PROGRAM) $(OBJS) 
 
 depend: .depend
 
@@ -41,7 +34,6 @@ depend: .depend
 # variables used here, the variable $* that matches whatever % stands for
 # can be useful in special cases.
 $(OBJ_DIR)/%.o:$(SRC_DIR)/%.c
-	mkdir -p $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 %:$(SRC_DIR)/%.c
