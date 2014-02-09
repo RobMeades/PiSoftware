@@ -86,20 +86,10 @@ int main (int argc, char **argv)
                             if (success)
                             {
                                 printf(" Temperature was:  %2.2f C\n", temperature);
-                                success = readSPPageDS2438 (portNumber, &batteryDeviceArray[i][0], DS2438_CONFIG_PAGE, &pageBuffer[0]);
+                                success = readCurrentDS2438 (portNumber, &batteryDeviceArray[i][0], &current);
                                 if (success)
                                 {
-                                    current = pageBuffer[DS2438_CURRENT_REG_OFFSET] + 0x100 * (pageBuffer[DS2438_CURRENT_REG_OFFSET + 1] & 0x03);
-                                    /* From the DS2438 data sheet I (in Amps) = Current Register / (4096 * RSENS) */
-                                    current = current * 1000 / RSENS_TIMES_4096;
-                                    if (pageBuffer[DS2438_CURRENT_REG_OFFSET + 1] & 0x80)
-                                    {
-                                        printf(" Discharge current was:  %d ma\n", current);
-                                    }
-                                    else
-                                    {
-                                        printf(" Charge current was:  %d ma\n", current);                           
-                                    }
+                                    printf(" Current was:  %d ma\n", current);
                                 }
                             }
                             for (x = 0; (x < DS4238_NUM_PAGES) && success; x++)

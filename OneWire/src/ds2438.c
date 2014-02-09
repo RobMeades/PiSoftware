@@ -12,6 +12,7 @@
 
 #define TEMPERATURE_UNIT          0.03125
 #define TEMPERATURE_READ_DELAY_MS 10
+#define RSENS_TIMES_4096          410 
 
 /*
  * STATIC FUNCTIONS
@@ -377,6 +378,38 @@ Bool readVddDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 * pVoltage)
 Bool readVadDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 * pVoltage)
 {
     return readAdDS2438 (portNumber, pSerialNumber, false, pVoltage);
+}
+
+/*
+ * Read the current as measured by the DS2438 chip.
+ *
+ * portNumber    the port number of the port being used for the
+ *               1-Wire Network.
+ * pSerialNumber the serial number for the part that the read is
+ *               to be done on.
+ * pCurrent      a pointer to somewhere to put the answer.
+ *
+ * @return  true if the operation succeeded, otherwise false.
+ */
+Bool readCurrentDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 * pCurrent)
+{
+    Bool success;
+    UInt8 buffer[20];
+    
+    /* Read the page with the data in it */
+    success = readNVPageDS2438 (portNumber, pSerialNumber, DS2438_CONFIG_PAGE, &buffer[0]);
+    
+    if (success)
+    {
+        if (pCurrent != PNULL)
+        {
+            *pCurrent = buffer[DS2438_CURRENT_REG_OFFSET] | (buffer[DS2438_CURRENT_REG_OFFSET + 1] << 8);
+            /* From the DS2438 data sheet I (in Amps) = Current Register / (4096 * RSENS) */
+            *pCurrent *= 1000 / RSENS_TIMES_4096;
+        }
+    }
+            
+    return success;
 }
 
 /*

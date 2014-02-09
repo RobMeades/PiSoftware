@@ -6,7 +6,6 @@
 #define ONEWIRE_PORT "/dev/USBSerial"
 #define NUM_BYTES_IN_CRC  1
 #define NUM_BYTES_IN_SERIAL_NUM 8
-#define RSENS_TIMES_4096 410 
 
 #define DS4238_NUM_BYTES_IN_PAGE 8
 #define DS4238_NUM_PAGES 8
@@ -37,3 +36,4 @@ bool writeNVPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt
 Bool readVddDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 * pVoltage);
 Bool readVadDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 * pVoltage);
 Bool readTemperatureDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, double * pTemperature);
+Bool readCurrentDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 * pCurrent);
