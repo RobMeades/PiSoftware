@@ -23,7 +23,7 @@ int main (int argc, char **argv)
     UInt8 portNumber = 0;
     UInt8 numBatteryDevices;
     UInt8 batteryDeviceArray[MAXDEVICES][NUM_BYTES_IN_SERIAL_NUM];
-    UInt8 pageBuffer[DS4238_NUM_BYTES_IN_PAGE];
+    UInt8 pageBuffer[8];
     SInt16 current;
     double temperature;
     UInt16 voltage;
@@ -60,43 +60,79 @@ int main (int argc, char **argv)
                  * be correct next time */
                 for (i = 0; (i < numBatteryDevices) && success; i++)
                 {
-                    success = readNVPageDS2438 (portNumber, &batteryDeviceArray[i][0], DS2438_CONFIG_PAGE, &pageBuffer[0]);
+                    UInt8 config;
+                    
+                    success = readNVConfigThresholdDS2438 (portNumber, &batteryDeviceArray[i][0], &config, PNULL);
                     if (success &&
-                        ((pageBuffer[DS2438_CONFIG_REG_OFFSET] | DS2438_IAD_IS_ENABLED) == 0 ||
-                         (pageBuffer[DS2438_CONFIG_REG_OFFSET] | DS2438_CA_IS_ENABLED) == 0 ||
-                         (pageBuffer[DS2438_CONFIG_REG_OFFSET] | DS2438_EE_IS_ENABLED) == 0))
+                        ((config | DS2438_IAD_IS_ENABLED) == 0 ||
+                         (config | DS2438_CA_IS_ENABLED) == 0 ||
+                         (config | DS2438_EE_IS_ENABLED) == 0))
                     {
-                        pageBuffer[DS2438_CONFIG_REG_OFFSET] = DS2438_IAD_IS_ENABLED | DS2438_CA_IS_ENABLED | DS2438_EE_IS_ENABLED;
-                        success = writeNVPageDS2438 (portNumber, &batteryDeviceArray[i][0], DS2438_CONFIG_PAGE, &pageBuffer[DS2438_CONFIG_REG_OFFSET], DS2438_CONFIG_REG_SIZE);                        
+                        config = DS2438_IAD_IS_ENABLED | DS2438_CA_IS_ENABLED | DS2438_EE_IS_ENABLED;
+                        success = writeNVConfigThresholdDS2438 (portNumber, &batteryDeviceArray[i][0], &config, PNULL);                        
                     }
                 }
+                
                 /* Now read stuff */
                 for (i = 0; (i < numBatteryDevices) && success; i++)
                 {
-                    printf("Device %d\n", i);                    
+                    printf ("Device %d\n", i);                    
                     success = readVddDS2438 (portNumber, &batteryDeviceArray[i][0], &voltage);
                     if (success)
                     {
-                        printf(" Vdd was:  %d mV\n", voltage);
+                        printf (" Vdd was:  %d mV\n", voltage);
                         success = readVadDS2438 (portNumber, &batteryDeviceArray[i][0], &voltage);
                         if (success)
                         {
-                            printf(" Vad was:  %d mV\n", voltage);
+                            printf (" Vad was:  %d mV\n", voltage);
                             success = readTemperatureDS2438 (portNumber, &batteryDeviceArray[i][0], &temperature);
                             if (success)
                             {
-                                printf(" Temperature was:  %2.2f C\n", temperature);
+                                printf (" Temperature was:  %2.2f C\n", temperature);
                                 success = readCurrentDS2438 (portNumber, &batteryDeviceArray[i][0], &current);
                                 if (success)
                                 {
-                                    printf(" Current was:  %d ma\n", current);
+                                    printf (" Current was:  %d ma (-ve means discharge)\n", current);
+                                    success = readBatteryDS2438 (portNumber, &batteryDeviceArray[i][0], &voltage, &current);
+                                    if (success)
+                                    {
+                                        printf ("Battery was %2.2f V, %1.3f A, %2.3f W\n", (double) voltage/1000, (double) current/1000, ((double) (voltage *  current * -1)) / 1000000);
+                                    }
                                 }
                             }
-                            for (x = 0; (x < DS4238_NUM_PAGES) && success; x++)
+                            for (x = 0; (x < 8) && success; x++)
                             {
                                 success = readSPPageDS2438 (portNumber, &batteryDeviceArray[i][0], x, &pageBuffer[0]);
                                 printf ("Page %d contents: %2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x\n", x, pageBuffer[0], pageBuffer[1], pageBuffer[2], pageBuffer[3], pageBuffer[4], pageBuffer[5], pageBuffer[6], pageBuffer[7]);
                             }
+                        }
+                    }
+                    
+                    /* Check other config data */
+                    for (i = 0; (i < numBatteryDevices) && success; i++)
+                    {
+                        UInt32 elapsedTime;
+                        UInt16 remainingCapacity;
+                        SInt16 offsetCalibration;
+                        UInt32 piOff;
+                        UInt32 chargingStopped;
+                        UInt32 accumulatedCharge;
+                        UInt32 accumulatedDischarge;
+                        
+                        success = readTimeCapacityOffsetDS2438 (portNumber, &batteryDeviceArray[i][0], &elapsedTime, &remainingCapacity, &offsetCalibration);
+                        if (success)
+                        {
+                            printf ("Other: elapsed time: %lu secs, remaining capacity: %u mA hours, cal. offset: %d\n", elapsedTime, remainingCapacity, offsetCalibration);
+                            success = readTimePiOffChargingStoppedDS2438 (portNumber, &batteryDeviceArray[i][0], &piOff, &chargingStopped);
+                            if (success)
+                            {
+                                printf ("      Pi last switched off: %lu secs, charging last stopped: %lu secs\n", piOff, chargingStopped);                                
+                                success = readChargeDischargeDS2438 (portNumber, &batteryDeviceArray[i][0], &accumulatedCharge, &accumulatedDischarge);
+                                if (success)
+                                {
+                                    printf ("      accumulated charge: %lu mA, accumulated discharge %lu mA\n", accumulatedCharge, accumulatedDischarge);                                    
+                                }
+                            }                            
                         }
                     }
                     
