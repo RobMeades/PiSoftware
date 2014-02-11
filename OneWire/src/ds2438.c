@@ -57,6 +57,9 @@
 #define CURRENT_TO_MA(x)         (((x) * 1000) / (4096 * RSENS))
 #define MA_TO_CURRENT(x)         (((x) * 4096 * RSENS) / 1000)
 
+/* To protect against deadlocks when looping for HW responses */
+#define GUARD_COUNTER                   255
+
 /*
  * STATIC FUNCTIONS
  */
@@ -209,11 +212,12 @@ static Bool readAdDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, Bool isVdd, UI
     Bool done = false;
     UInt8 buffer[20];
     UInt8 busyByte;
+    UInt8 guardCounter = GUARD_COUNTER;
+    UInt8 guardCounter1 = GUARD_COUNTER;
 
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
 
-    /* TODO: have a timeout here */
-    while (!done)
+    while (success && !done && (guardCounter > 0))
     {
         /* Read the configuration register so that we can do a logical OR of the AD bit in it */
         success = readSPPageDS2438 (portNumber, pSerialNumber, DS2438_CONFIG_PAGE, &buffer[0]);
@@ -240,11 +244,15 @@ static Bool readAdDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, Bool isVdd, UI
             if (owWriteByte (portNumber, DS2438_COMMAND_READ_AD))
             {
                 /* Block until the reading is complete */
-                /* TODO: have a timeout here */
                 busyByte = 0;
-                while (busyByte == 0)
+                while ((busyByte == 0) && (guardCounter1 > 0))
                 {
                     busyByte = owReadByte (portNumber);
+                    guardCounter1--;
+                }
+                if (guardCounter1 == 0)
+                {
+                    success = false;
                 }
             }
             else
@@ -271,6 +279,13 @@ static Bool readAdDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, Bool isVdd, UI
                 }
             }    
         }
+        
+        guardCounter--;
+    }
+
+    if (guardCounter == 0)
+    {
+        success = false;
     }
 
     return success;
@@ -317,20 +332,20 @@ static  Bool readRawCurrentDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt1
  *                1-Wire Network.
  * pSerialNumber  the serial number for the part that the read is
  *                to be done on.
- * pOffsetCal     a pointer to a location to store the offset data.
+ * pOffsetCal     the offset calibration value.  This will be
+ *                stored exactly as is, no shifting is done before
+ *                it is stored.
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-static Bool writeNVCalDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 *pOffsetCal)
+static Bool writeNVCalDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 offsetCal)
 {
     Bool success;
-    UInt8 buffer[DS2438_CAL_REG_OFFSET + sizeof (*pOffsetCal)];
+    UInt8 buffer[DS2438_CAL_REG_OFFSET + sizeof (offsetCal)];
 
-    ASSERT_PARAM (pOffsetCal != PNULL, (unsigned long) pOffsetCal);
-    
-    memset (&buffer[0], 0, sizeof(buffer));
-    buffer[DS2438_CAL_REG_OFFSET] = *pOffsetCal;
-    buffer[DS2438_CAL_REG_OFFSET + 1] = *pOffsetCal >> 8;
+    memset (&buffer[0], 0, sizeof (buffer));
+    buffer[DS2438_CAL_REG_OFFSET] = offsetCal;
+    buffer[DS2438_CAL_REG_OFFSET + 1] = offsetCal >> 8;
 
     success = writeNVPageDS2438 (portNumber, pSerialNumber, DS2438_ETM_ICA_OFFSET_PAGE, &buffer[0], sizeof (buffer));
     
@@ -414,6 +429,7 @@ Bool writeNVPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt
     UInt8 buffer[20];
     UInt8 count = 0;
     UInt8 busyByte;
+    UInt8 guardCounter = GUARD_COUNTER;
 
     ASSERT_PARAM (page <= DS4238_NUM_PAGES, page);
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
@@ -436,11 +452,15 @@ Bool writeNVPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt
             if (owBlock (portNumber, FALSE, buffer, count))
             {
                 /* Block until the write is complete */
-                /* TODO: have a timeout here */
                 busyByte = 0;
-                while (busyByte == 0)
+                while ((busyByte == 0) && (guardCounter > 0))
                 {
                     busyByte = owReadByte (portNumber);
+                    guardCounter--;
+                }
+                if (guardCounter == 0)
+                {
+                    success = false;
                 }
             }
             else
@@ -537,11 +557,12 @@ Bool readBatteryDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage
     Bool done = false;
     UInt8 buffer[20];
     UInt8 busyByte;
+    UInt8 guardCounter = GUARD_COUNTER;
+    UInt8 guardCounter1 = GUARD_COUNTER;
 
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
 
-    /* TODO: have a timeout here */
-    while (!done)
+    while (success && !done && guardCounter > 0)
     {
         /* Read the configuration register so that we can do a logical OR of the AD bit in it */
         success = readSPPageDS2438 (portNumber, pSerialNumber, DS2438_CONFIG_PAGE, &buffer[0]);
@@ -560,11 +581,15 @@ Bool readBatteryDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage
             if (owWriteByte (portNumber, DS2438_COMMAND_READ_AD))
             {
                 /* Block until the reading is complete */
-                /* TODO: have a timeout here */
                 busyByte = 0;
-                while (busyByte == 0)
+                while ((busyByte == 0) && guardCounter1 > 0)
                 {
                     busyByte = owReadByte (portNumber);
+                    guardCounter1--;
+                }
+                if (guardCounter1 == 0)
+                {
+                    success = false;
                 }
             }
             else
@@ -596,6 +621,13 @@ Bool readBatteryDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage
                 }
             }    
         }
+        
+        guardCounter--;
+    }
+    
+    if (guardCounter == 0)
+    {
+        success = false;
     }
 
     return success;
@@ -618,6 +650,7 @@ Bool readTemperatureDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, double *pTem
     Bool success;
     UInt8 buffer[20];
     UInt8 busyByte;
+    UInt8 guardCounter = GUARD_COUNTER;
 
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
 
@@ -631,11 +664,16 @@ Bool readTemperatureDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, double *pTem
         success = owWriteByte (portNumber, DS2438_COMMAND_READ_TEMPERATURE);
 
         /* Block until the reading is complete */
-        /* TODO: have a timeout here */
         busyByte = 0;
-        while (busyByte == 0)
+        while ((busyByte == 0) && (guardCounter > 0))
         {
             busyByte = owReadByte (portNumber);
+            guardCounter--;
+        }
+        
+        if (guardCounter == 0)
+        {
+            success = false;
         }
     }
     
@@ -644,12 +682,18 @@ Bool readTemperatureDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, double *pTem
     {
         msDelay (TEMPERATURE_READ_DELAY_MS);
 
-        /* TODO: have a timeout here */
+        guardCounter = GUARD_COUNTER;
         do
         {
             success = readNVPageDS2438 (portNumber, pSerialNumber, DS2438_CONFIG_PAGE, &buffer[0]);
+            guardCounter--;
         }
-        while (success && (buffer[DS2438_CONFIG_REG_OFFSET] & DS2438_TB_IS_BUSY));
+        while (success && (buffer[DS2438_CONFIG_REG_OFFSET] & DS2438_TB_IS_BUSY) && (guardCounter > 0));
+
+        if (guardCounter == 0)
+        {
+            success = false;
+        }
 
         if (success && (pTemperature != PNULL))
         {
@@ -714,7 +758,7 @@ Bool writeNVConfigThresholdDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8
 {
     Bool success;
     UInt8 buffer[DS2438_THRESHOLD_REG_OFFSET + sizeof (*pThreshold)]; /* Leave enough room in buffer for both */
-    UInt8 size = DS2438_CONFIG_REG_OFFSET + sizeof (pConfig);         /* but only size for the first for now */
+    UInt8 size = DS2438_CONFIG_REG_OFFSET + sizeof (*pConfig);         /* but only size for the first for now */
 
     ASSERT_PARAM (pConfig != PNULL, (unsigned long) pConfig);
     
@@ -745,7 +789,9 @@ Bool writeNVConfigThresholdDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8
  *                     Current Accumulator data (in mA hours). May be
  *                     PNULL.
  * pOffsetCal          a pointer to a location to store the offset data
- *                     (may be PNULL).
+ *                     (may be PNULL).  Note that the number returned is
+ *                     exactly that stored in the register (which is
+ *                     stored shifted left three bits).
  *
  * @return  true if the operation succeeded, otherwise false.
  */
@@ -1030,7 +1076,7 @@ Bool performCalDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 *pOffsetCa
     bool iadWasEnabled = false;
     
     /* Write in zero to the offset calibration */
-    success = writeNVCalDS2438 (portNumber, pSerialNumber, &current);
+    success = writeNVCalDS2438 (portNumber, pSerialNumber, current);
     if (success)
     {
         /* Read the current when there should be none flowing */
@@ -1066,7 +1112,7 @@ Bool performCalDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 *pOffsetCa
                     }
                     current <<= 3;
                     /* Now write the number back to the register */
-                    success = writeNVCalDS2438 (portNumber, pSerialNumber, &current);
+                    success = writeNVCalDS2438 (portNumber, pSerialNumber, current);
                     if (pOffsetCal != PNULL)
                     {
                         *pOffsetCal = CURRENT_TO_MA (current);

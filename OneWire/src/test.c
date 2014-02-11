@@ -178,15 +178,15 @@ int main (int argc, char **argv)
                         success = readTimeCapacityCalDS2438 (portNumber, &batteryDeviceArray[i][0], &elapsedTime, &remainingCapacity, &offsetCalibration);
                         if (success)
                         {
-                            printf ("Other: elapsed time: %lu secs, remaining capacity: %u mA hours, cal. offset: %d\n", elapsedTime, remainingCapacity, offsetCalibration);
+                            printf ("Elapsed time: %lu secs, remaining capacity: %u mAHr, cal. offset: %d\n", elapsedTime, remainingCapacity, offsetCalibration);
                             success = readTimePiOffChargingStoppedDS2438 (portNumber, &batteryDeviceArray[i][0], &piOff, &chargingStopped);
                             if (success)
                             {
-                                printf ("       Pi last switched off: %lu secs, charging last stopped: %lu secs\n", piOff, chargingStopped);                                
+                                printf ("Pi last switched off: %lu secs, charging last stopped: %lu secs\n", piOff, chargingStopped);                                
                                 success = readNVChargeDischargeDS2438 (portNumber, &batteryDeviceArray[i][0], &accumulatedCharge, &accumulatedDischarge);
                                 if (success)
                                 {
-                                    printf ("       accumulated charge: %lu mAHr, accumulated discharge %lu mAHr\n", accumulatedCharge, accumulatedDischarge);
+                                    printf ("Accumulated charge: %lu mAHr, accumulated discharge %lu mAHr\n", accumulatedCharge, accumulatedDischarge);
                                     for (x = 0; (x < DS2438_NUM_USER_DATA_PAGES) && success; x++)
                                     {
                                         success = readNVUserDataDS2438 (portNumber, &batteryDeviceArray[i][0], x, &pageBuffer[0]);
