@@ -1,6 +1,6 @@
 /*
- * OneWire.c
- * OneWire functions for RoboOne
+ * test.c
+ * Test all the OneWire functions
  */ 
 
 #include <stdio.h>

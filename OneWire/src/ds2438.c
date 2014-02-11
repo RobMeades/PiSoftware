@@ -502,16 +502,14 @@ Bool readVadDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage)
 Bool readCurrentDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 *pCurrent)
 {
     Bool success;
-    UInt8 buffer[20];
     
-    /* Read the page with the data in it */
-    success = readNVPageDS2438 (portNumber, pSerialNumber, DS2438_CONFIG_PAGE, &buffer[0]);
+    /* Read the raw current and then convert it */
+    success = readRawCurrentDS2438 (portNumber, pSerialNumber, pCurrent); 
     
     if (success)
     {
         if (pCurrent != PNULL)
         {
-            *pCurrent = buffer[DS2438_CURRENT_REG_OFFSET] | (buffer[DS2438_CURRENT_REG_OFFSET + 1] << 8);
             *pCurrent = CURRENT_TO_MA (*pCurrent);
         }
     }
