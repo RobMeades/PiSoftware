@@ -44,7 +44,7 @@
 
 #define TEMPERATURE_UNIT          0.03125
 #define TEMPERATURE_READ_DELAY_MS 10
-#define RSENS                     0.1
+#define RSENS                     0.05
 
 /* From the DS2438 data sheet remaining capacity (in mA hours) = ICA / (2048 * RSENS) */
 #define ICA_TO_MAHOURS(x)        (((x) * 1000) / (2048 * RSENS))
