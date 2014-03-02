@@ -10,7 +10,7 @@
 #include <rob_system.h>
 #include <one_wire.h>
 
-#define NUM_BYTES_IN_CRC                1
+#define DS2438_NUM_BYTES_IN_CRC         1
 #define DS4238_NUM_PAGES                8
 #define DS4238_COMMAND_RECALL_MEMORY    0xB8
 #define DS4238_COMMAND_READ_SCRATCHPAD  0xBE
@@ -103,7 +103,7 @@ static Bool readSPPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page
         buffer[count++] = DS4238_COMMAND_READ_SCRATCHPAD;
         buffer[count++] = page;
 
-        for (i = 0; i < DS4238_NUM_BYTES_IN_PAGE + NUM_BYTES_IN_CRC; i++)
+        for (i = 0; i < DS4238_NUM_BYTES_IN_PAGE + DS2438_NUM_BYTES_IN_CRC; i++)
         {
             buffer[count++] = 0xFF;
         }

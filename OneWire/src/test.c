@@ -10,7 +10,8 @@
 #include <rob_system.h>
 #include <one_wire.h>
 
-#define MAXDEVICES 5
+#define MAX_BATTERY_DEVICES 5
+#define MAX_IO_DEVICES 5
 
 /*
  * main for testing
@@ -22,7 +23,9 @@ int main (int argc, char **argv)
     UInt8 x;
     UInt8 portNumber = 0;
     UInt8 numBatteryDevices;
-    UInt8 batteryDeviceArray[MAXDEVICES][NUM_BYTES_IN_SERIAL_NUM];
+    UInt8 numIODevices;
+    UInt8 batteryDeviceArray[MAX_BATTERY_DEVICES][NUM_BYTES_IN_SERIAL_NUM];
+    UInt8 ioDeviceArray[MAX_IO_DEVICES][NUM_BYTES_IN_SERIAL_NUM];
     UInt8 pageBuffer[DS4238_NUM_BYTES_IN_PAGE];
     SInt16 current;
     double temperature;
@@ -45,7 +48,8 @@ int main (int argc, char **argv)
     }
     else
     {  
-        numBatteryDevices = FindDevices (portNumber, &batteryDeviceArray[0], SBATTERY_FAM, MAXDEVICES);
+        numBatteryDevices = FindDevices (portNumber, &batteryDeviceArray[0], SBATTERY_FAM, MAX_BATTERY_DEVICES);
+        numIODevices = FindDevices (portNumber, &ioDeviceArray[0], PIO_FAM, MAX_IO_DEVICES);
 
         if (numBatteryDevices == 0)
         {
@@ -54,12 +58,12 @@ int main (int argc, char **argv)
         }
         else
         {
+            printf ("Found %d battery monitoring devices.\n", numBatteryDevices);
             for (i = 0; (i < numBatteryDevices) && success; i++)
             {
                 UInt32 longOne1 = 0xFFFFFF01;
                 UInt32 longOne2 = 0xFFFFFF02;
-                UInt16 capacity = 1000;
-                
+                UInt16 capacity = 1000;                
                 
                 printf ("Writing time %lu and capacity %d.\n", longOne1, capacity);
                 success = writeTimeCapacityDS2438 (portNumber, &batteryDeviceArray[i][0], &longOne1, &capacity);
@@ -108,6 +112,50 @@ int main (int argc, char **argv)
                         }
                     }
                 }
+            }
+            
+            if (numIODevices == 0)
+            {
+                success = false;
+                ASSERT_ALWAYS_STRING ("No IO devices found.\n");
+            }
+            else
+            {
+                printf ("Found %d IO devices.\n", numIODevices);
+                do
+                {
+                    printf ("Reading registers of each IO device.\n");
+                    for (i = 0; (i < numIODevices) && success; i++)
+                    {
+                        printf ("Device %d:", i);
+                        success = readControlRegisterDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0]);
+                        if (success)
+                        {
+                            printf (" status reg: 0x%.2x", pageBuffer[0]);
+                            success = readPIOLogicStateDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0]);
+                            if (success)
+                            {
+                                printf (", IO reg: 0x%.2x", pageBuffer[0]);
+                                if (success)
+                                {
+                                    success = readPIOOutputLatchStateRegisterDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0]);
+                                    if (success)
+                                    {
+                                        printf (", IO O/P latch reg: 0x%.2x", pageBuffer[0]);
+                                        if (success)
+                                        {
+                                            success = readPIOActivityLatchStateRegisterDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0]);
+                                            if (success)
+                                            {
+                                                printf (", IO act latch reg: 0x%.2x.\n", pageBuffer[0]);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } /* for loop */
+                } while (!key_abort() && success);
             }
             
             do

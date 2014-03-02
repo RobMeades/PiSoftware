@@ -6,6 +6,38 @@
 #define ONEWIRE_PORT "/dev/USBSerial"
 #define NUM_BYTES_IN_SERIAL_NUM 8
 
+/* To protect against deadlocks when looping for HW responses */
+#define GUARD_COUNTER           255
+
+/*
+** Definitions specific to DS2408 PIO chip
+*/
+
+#define PIO_FAM 0x29
+
+#define DS2408_SEARCH_IS_ACTIVITY_LATCHED 0x01
+#define DS2408_SEARCH_IS_AND              0x02
+#define DS2408_RSTZ_IS_STROBE             0x04
+#define DS2408_HAS_POWER_ON_RESET         0x08
+#define DS2408_VCC_IS_PRESENT             0x80
+#define DS2408_MAX_BYTES_IN_PAGE          32
+
+/* Bool disableTestModeDS2408 (UInt8 portNumber, UInt8 *pSerialNumber); */
+Bool readControlRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
+/* Bool writeControlRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 data); */
+Bool readPIOLogicStateDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
+/* Bool channelAccessReadDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData); */
+/* Bool channelAccessWriteDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData); */
+Bool readPIOOutputLatchStateRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
+Bool readPIOActivityLatchStateRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
+/* Bool resetActivityLatchesDS2408 (UInt8 portNumber, UInt8 *pSerialNumber); */
+/* Bool writeConditionalSearchChannelSelectionMaskRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 data); */
+/* Bool writeConditionalSearchChannelPolaritySelectionRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 data); */
+
+/*
+** Definitions specific to DS2438 battery monitoring chip
+*/
+
 #define DS2438_ADB_IS_BUSY              0x40
 #define DS2438_NVB_IS_BUSY              0x20
 #define DS2438_TB_IS_BUSY               0x10
@@ -16,8 +48,8 @@
 #define DS4238_NUM_BYTES_IN_PAGE        8
 #define DS2438_NUM_USER_DATA_PAGES      4
 
-bool readNVPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8 *pMem);
-bool writeNVPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8 *pMem, UInt8 size);
+Bool readNVPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8 *pMem);
+Bool writeNVPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8 *pMem, UInt8 size);
 Bool readVddDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage);
 Bool readVadDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage);
 Bool readTemperatureDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, double *pTemperature);
