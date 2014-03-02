@@ -18,21 +18,23 @@
 #define DS2408_SEARCH_IS_ACTIVITY_LATCHED 0x01
 #define DS2408_SEARCH_IS_AND              0x02
 #define DS2408_RSTZ_IS_STROBE             0x04
-#define DS2408_HAS_POWER_ON_RESET         0x08
+#define DS2408_DEVICE_HAS_POWER_ON_RESET  0x08
 #define DS2408_VCC_IS_PRESENT             0x80
-#define DS2408_MAX_BYTES_IN_PAGE          32
+#define DS2408_MAX_BYTES_TO_READ          32 /* As returned by channelAccessReadDS2408() */
 
-/* Bool disableTestModeDS2408 (UInt8 portNumber, UInt8 *pSerialNumber); */
+Bool disableTestModeDS2408 (UInt8 portNumber, UInt8 *pSerialNumber);
 Bool readControlRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
-/* Bool writeControlRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 data); */
+Bool writeControlRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 data);
 Bool readPIOLogicStateDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
-/* Bool channelAccessReadDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData); */
-/* Bool channelAccessWriteDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData); */
+UInt8 channelAccessReadDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
+Bool channelAccessWriteDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
 Bool readPIOOutputLatchStateRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
 Bool readPIOActivityLatchStateRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
-/* Bool resetActivityLatchesDS2408 (UInt8 portNumber, UInt8 *pSerialNumber); */
-/* Bool writeConditionalSearchChannelSelectionMaskRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 data); */
-/* Bool writeConditionalSearchChannelPolaritySelectionRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 data); */
+Bool resetActivityLatchesDS2408 (UInt8 portNumber, UInt8 *pSerialNumber);
+Bool readCSChannelSelectionMaskRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
+Bool writeCSChannelSelectionMaskRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 data);
+Bool readCSChannelPolaritySelectionRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
+Bool writeCSChannelPolaritySelectionRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 data);
 
 /*
 ** Definitions specific to DS2438 battery monitoring chip
