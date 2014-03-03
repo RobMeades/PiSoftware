@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>OneWireDeviceDrivers</name>
+	<name>OneWire</name>
 	<comment></comment>
 	<projects>
 		<project>shared</project>
@@ -40,7 +40,7 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildLocation</key>
-					<value>${workspace_loc:/OneWireDeviceDrivers}</value>
+					<value>${workspace_loc:/OneWire}</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.useDefaultBuildCmd</key>
@@ -83,12 +83,12 @@
 		<link>
 			<name>src</name>
 			<type>2</type>
-			<location>C:/Users/Rob Meades/workspace/OneWireDeviceDrivers/src</location>
+			<location>C:/Users/Rob Meades/workspace/OneWire/src</location>
 		</link>
 		<link>
 			<name>obj</name>
 			<type>2</type>
-			<location>C:/Users/Rob Meades/workspace/OneWireDeviceDrivers/obj</location>
+			<location>C:/Users/Rob Meades/workspace/OneWire/obj</location>
 		</link>
 	</linkedResources>
 </projectDescription>
