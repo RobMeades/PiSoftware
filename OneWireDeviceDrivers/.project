@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>OneWire</name>
+	<name>OneWireDeviceDrivers</name>
 	<comment></comment>
 	<projects>
 		<project>shared</project>
@@ -19,12 +19,12 @@
 					<value>true</value>
 				</dictionary>
 				<dictionary>
-					<key>?name?</key>
-					<value></value>
-				</dictionary>
-				<dictionary>
 					<key>org.eclipse.cdt.make.core.append_environment</key>
 					<value>true</value>
+				</dictionary>
+				<dictionary>
+					<key>?name?</key>
+					<value></value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.stopOnError</key>
@@ -40,19 +40,19 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildLocation</key>
-					<value>${workspace_loc:/OneWire}</value>
+					<value>${workspace_loc:/OneWireDeviceDrivers}</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.useDefaultBuildCmd</key>
 					<value>true</value>
 				</dictionary>
 				<dictionary>
-					<key>org.eclipse.cdt.make.core.enableFullBuild</key>
-					<value>true</value>
-				</dictionary>
-				<dictionary>
 					<key>org.eclipse.cdt.make.core.enableAutoBuild</key>
 					<value>false</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.enableFullBuild</key>
+					<value>true</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildArguments</key>
@@ -81,14 +81,14 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>obj</name>
-			<type>2</type>
-			<location>C:/Users/Rob Meades/workspace/onewire/obj</location>
-		</link>
-		<link>
 			<name>src</name>
 			<type>2</type>
-			<location>C:/Users/Rob Meades/workspace/onewire/src</location>
+			<location>C:/Users/Rob Meades/workspace/OneWireDeviceDrivers/src</location>
+		</link>
+		<link>
+			<name>obj</name>
+			<type>2</type>
+			<location>C:/Users/Rob Meades/workspace/OneWireDeviceDrivers/obj</location>
 		</link>
 	</linkedResources>
 </projectDescription>
