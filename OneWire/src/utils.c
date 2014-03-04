@@ -33,7 +33,7 @@
  * @return  the number of devices found (which can be larger than
  *          maxNumAddresses).
  */
-UInt8 owFindAllDevices (UInt8 portNumber, UInt8 *pAddress, UInt8 maxNumAddresses)
+UInt8 owFindAllDevices (SInt32 portNumber, UInt8 *pAddress, UInt8 maxNumAddresses)
 {
     Bool success;
     UInt8 count=0;

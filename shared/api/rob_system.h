@@ -20,4 +20,4 @@ typedef unsigned long UInt32;
 #define ASSERT_PARAM(cONDITION,pARAM1) ((cONDITION) ? true : (assertFunc (__FUNCTION__, __LINE__, PNULL, (pARAM1))))
 
 bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 param1);
-void endStuff (void);
+void printProgress (const Char * pFormat, ...);

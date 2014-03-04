@@ -61,7 +61,7 @@
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-static Bool readMemoryDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 page, UInt8 *pMem, UInt8 size)
+static Bool readMemoryDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt16 page, UInt8 *pMem, UInt8 size)
 {
     Bool success;
     UInt8 buffer[DS2408_NUM_PAGES + DS2408_NUM_BYTES_IN_OVERHEAD];
@@ -140,7 +140,7 @@ static Bool readMemoryDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 pag
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-static Bool writeMemoryDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 page, UInt8 *pMem, UInt8 size)
+static Bool writeMemoryDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt16 page, UInt8 *pMem, UInt8 size)
 {
     Bool success;
     UInt8 buffer[DS2408_NUM_PAGES + DS2408_NUM_BYTES_IN_OVERHEAD];
@@ -194,7 +194,7 @@ static Bool writeMemoryDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 pa
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool disableTestModeDS2408 (UInt8 portNumber, UInt8 *pSerialNumber)
+Bool disableTestModeDS2408 (SInt32 portNumber, UInt8 *pSerialNumber)
 {
     Bool success;
     UInt8 buffer[DS2408_MINIMUM_BUFFER_SIZE];
@@ -234,7 +234,7 @@ Bool disableTestModeDS2408 (UInt8 portNumber, UInt8 *pSerialNumber)
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readControlRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
+Bool readControlRegisterDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
 {
     return readMemoryDS2408 (portNumber, pSerialNumber, DS2408_CONTROL_STATUS_REGISTER_PAGE, pData, 1);
 }
@@ -250,7 +250,7 @@ Bool readControlRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *p
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool writeControlRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 data)
+Bool writeControlRegisterDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 data)
 {
     Bool success;
     UInt8 readbackValue = DS2408_UNUSED_VALUE;
@@ -261,9 +261,9 @@ Bool writeControlRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 d
     if (success)
     {
         success = readControlRegisterDS2408 (portNumber, pSerialNumber, &readbackValue);
-        /* Need to mask off the VCC presence bit as that is a read-only bit */
-        readbackValue &= ~DS2408_VCC_IS_PRESENT;
-        data &= ~DS2408_VCC_IS_PRESENT;
+        /* Need to mask off the top nibble bit as those bits are read-only */
+        readbackValue &= 0x0f;
+        data &= 0x0f;
         if (success && (readbackValue != data))
         {
             success = false;
@@ -286,7 +286,7 @@ Bool writeControlRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 d
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readPIOLogicStateDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
+Bool readPIOLogicStateDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
 {
     return readMemoryDS2408 (portNumber, pSerialNumber, DS2408_PIO_LOGIC_STATE_PAGE, pData, 1);
 }
@@ -306,7 +306,7 @@ Bool readPIOLogicStateDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pDa
  *
  * @return  the number of times the PIO has been read.
  */
-UInt8 channelAccessReadDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
+UInt8 channelAccessReadDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
 {
     UInt8 buffer[DS2408_MAX_BYTES_TO_READ + DS2408_NUM_BYTES_IN_COMMAND + DS2408_NUM_BYTES_IN_CRC]; 
     UInt8 count=0;
@@ -368,7 +368,7 @@ UInt8 channelAccessReadDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pD
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool channelAccessWriteDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
+Bool channelAccessWriteDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
 {
     Bool success;
     UInt8 buffer[DS2408_MINIMUM_BUFFER_SIZE]; 
@@ -430,7 +430,7 @@ Bool channelAccessWriteDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pD
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readPIOOutputLatchStateRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
+Bool readPIOOutputLatchStateRegisterDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
 {
     return readMemoryDS2408 (portNumber, pSerialNumber, DS2408_PIO_OUTPUT_LATCH_STATE_REGISTER_PAGE, pData, 1);
 }
@@ -448,7 +448,7 @@ Bool readPIOOutputLatchStateRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumb
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readPIOActivityLatchStateRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
+Bool readPIOActivityLatchStateRegisterDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
 {
     return readMemoryDS2408 (portNumber, pSerialNumber, DS2408_PIO_ACTIVITY_LATCH_STATE_REGISTER_PAGE, pData, 1);
 }
@@ -463,7 +463,7 @@ Bool readPIOActivityLatchStateRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNu
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool resetActivityLatchesDS2408 (UInt8 portNumber, UInt8 *pSerialNumber)
+Bool resetActivityLatchesDS2408 (SInt32 portNumber, UInt8 *pSerialNumber)
 {
     Bool success;
     UInt8 buffer[DS2408_MINIMUM_BUFFER_SIZE];
@@ -517,7 +517,7 @@ Bool resetActivityLatchesDS2408 (UInt8 portNumber, UInt8 *pSerialNumber)
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readCSChannelSelectionMaskRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
+Bool readCSChannelSelectionMaskRegisterDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
 {
     return readMemoryDS2408 (portNumber, pSerialNumber, DS2408_CS_CHANNEL_SELECTION_MASK_PAGE, pData, 1);
 }
@@ -534,7 +534,7 @@ Bool readCSChannelSelectionMaskRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialN
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool writeCSChannelSelectionMaskRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 data)
+Bool writeCSChannelSelectionMaskRegisterDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 data)
 {
     Bool success;
     UInt8 readbackValue = DS2408_UNUSED_VALUE;
@@ -568,7 +568,7 @@ Bool writeCSChannelSelectionMaskRegisterDS2408 (UInt8 portNumber, UInt8 *pSerial
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readCSChannelPolaritySelectionRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
+Bool readCSChannelPolaritySelectionRegisterDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
 {
     return readMemoryDS2408 (portNumber, pSerialNumber, DS2408_CS_CHANNEL_POLARITY_SELECTION_PAGE, pData, 1);
 }
@@ -585,7 +585,7 @@ Bool readCSChannelPolaritySelectionRegisterDS2408 (UInt8 portNumber, UInt8 *pSer
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool writeCSChannelPolaritySelectionRegisterDS2408 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 data)
+Bool writeCSChannelPolaritySelectionRegisterDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 data)
 {
     Bool success;
     UInt8 readbackValue = DS2408_UNUSED_VALUE;

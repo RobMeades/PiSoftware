@@ -21,7 +21,7 @@ int main (int argc, char **argv)
     Bool success = true;
     UInt8 i;
     UInt8 x;
-    UInt8 portNumber = 0;
+    SInt32 portNumber = 0;
     UInt8 numBatteryDevices;
     UInt8 numIODevices;
     UInt8 batteryDeviceArray[MAX_BATTERY_DEVICES][NUM_BYTES_IN_SERIAL_NUM];

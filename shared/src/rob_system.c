@@ -4,6 +4,7 @@
  */
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <rob_system.h>
 
 /*
@@ -28,7 +29,10 @@ bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 pa
 /*
  * Progress printing function (that can be stubbed out afterwards)
  */
-void printProgress (const Char * pText)
+void printProgress (const Char * pFormat, ...)
 {
-    printf ("%s", pText);
+    va_list args;
+    va_start (args, pFormat);
+    vprintf (pFormat, args);
+    va_end (args);
 }

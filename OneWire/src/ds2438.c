@@ -81,7 +81,7 @@
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-static Bool readSPPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8 *pMem)
+static Bool readSPPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8 *pMem)
 {
     Bool success;
     UInt8 buffer[20];
@@ -155,7 +155,7 @@ static Bool readSPPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-static Bool writeSPPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8 *pMem, UInt8 size)
+static Bool writeSPPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8 *pMem, UInt8 size)
 {
     Bool success;
     UInt8 buffer[20];
@@ -206,7 +206,7 @@ static Bool writeSPPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 pag
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-static Bool readAdDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, Bool isVdd, UInt16 * pVoltage)
+static Bool readAdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, Bool isVdd, UInt16 * pVoltage)
 {
     Bool success;
     Bool done = false;
@@ -304,7 +304,7 @@ static Bool readAdDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, Bool isVdd, UI
  * 
  * @return  true if the operation succeeded, otherwise false.
  */
-static  Bool readRawCurrentDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 *pCurrent)
+static  Bool readRawCurrentDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, SInt16 *pCurrent)
 {
     Bool success;
     UInt8 buffer[20];
@@ -338,7 +338,7 @@ static  Bool readRawCurrentDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt1
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-static Bool writeNVCalDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 offsetCal)
+static Bool writeNVCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, SInt16 offsetCal)
 {
     Bool success;
     UInt8 buffer[DS2438_CAL_REG_OFFSET + sizeof (offsetCal)];
@@ -373,7 +373,7 @@ static Bool writeNVCalDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 off
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readNVPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8 *pMem)
+Bool readNVPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8 *pMem)
 {
     Bool success;
     UInt8 buffer[20];
@@ -423,7 +423,7 @@ Bool readNVPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool writeNVPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8 *pMem, UInt8 size)
+Bool writeNVPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt8 *pMem, UInt8 size)
 {
     Bool success;
     UInt8 buffer[20];
@@ -485,7 +485,7 @@ Bool writeNVPageDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readVddDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage)
+Bool readVddDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage)
 {
     return readAdDS2438 (portNumber, pSerialNumber, true, pVoltage);
 }
@@ -502,7 +502,7 @@ Bool readVddDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage)
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readVadDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage)
+Bool readVadDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage)
 {
     return readAdDS2438 (portNumber, pSerialNumber, false, pVoltage);
 }
@@ -519,7 +519,7 @@ Bool readVadDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage)
  * 
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readCurrentDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 *pCurrent)
+Bool readCurrentDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, SInt16 *pCurrent)
 {
     Bool success;
     
@@ -551,7 +551,7 @@ Bool readCurrentDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 *pCurrent
  *               May be PNULL.
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readBatteryDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage, SInt16 *pCurrent)
+Bool readBatteryDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage, SInt16 *pCurrent)
 {
     Bool success;
     Bool done = false;
@@ -645,7 +645,7 @@ Bool readBatteryDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readTemperatureDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, double *pTemperature)
+Bool readTemperatureDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, double *pTemperature)
 {
     Bool success;
     UInt8 buffer[20];
@@ -719,7 +719,7 @@ Bool readTemperatureDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, double *pTem
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readNVConfigThresholdDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pConfig, UInt8 *pThreshold)
+Bool readNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pConfig, UInt8 *pThreshold)
 {
     bool success;
     UInt8 buffer[20];
@@ -754,7 +754,7 @@ Bool readNVConfigThresholdDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool writeNVConfigThresholdDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 *pConfig, UInt8 *pThreshold)
+Bool writeNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pConfig, UInt8 *pThreshold)
 {
     Bool success;
     UInt8 buffer[DS2438_THRESHOLD_REG_OFFSET + sizeof (*pThreshold)]; /* Leave enough room in buffer for both */
@@ -795,7 +795,7 @@ Bool writeNVConfigThresholdDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readTimeCapacityCalDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity, SInt16 *pOffsetCal)
+Bool readTimeCapacityCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity, SInt16 *pOffsetCal)
 {
     bool success;
     UInt8 buffer[DS4238_NUM_BYTES_IN_PAGE];
@@ -838,7 +838,7 @@ Bool readTimeCapacityCalDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt32 *
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool writeTimeCapacityDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity)
+Bool writeTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity)
 {
     Bool success;
     UInt8 ica;
@@ -881,7 +881,7 @@ Bool writeTimeCapacityDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt32 *pE
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readTimePiOffChargingStoppedDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt32 *pPiOff, UInt32 *pChargingStopped)
+Bool readTimePiOffChargingStoppedDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pPiOff, UInt32 *pChargingStopped)
 {
     bool success;
     UInt8 buffer[DS4238_NUM_BYTES_IN_PAGE];
@@ -918,7 +918,7 @@ Bool readTimePiOffChargingStoppedDS2438 (UInt8 portNumber, UInt8 *pSerialNumber,
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readNVChargeDischargeDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt32 *pCharge, UInt32 *pDischarge)
+Bool readNVChargeDischargeDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pCharge, UInt32 *pDischarge)
 {
     bool success;
     UInt8 buffer[DS4238_NUM_BYTES_IN_PAGE];
@@ -957,7 +957,7 @@ Bool readNVChargeDischargeDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt32
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool writeNVChargeDischargeDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt32 *pCharge, UInt32 *pDischarge)
+Bool writeNVChargeDischargeDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pCharge, UInt32 *pDischarge)
 {
     Bool success;
     UInt16 charge;
@@ -1002,7 +1002,7 @@ Bool writeNVChargeDischargeDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt3
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readNVUserDataDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 block, UInt8 *pMem)
+Bool readNVUserDataDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 block, UInt8 *pMem)
 {
     ASSERT_PARAM (pMem != PNULL, (unsigned long) pMem);
     ASSERT_PARAM (block < DS2438_NUM_USER_DATA_PAGES, block);
@@ -1028,7 +1028,7 @@ Bool readNVUserDataDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 block, 
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool writeNVUserDataDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 block, UInt8 *pMem, UInt8 size)
+Bool writeNVUserDataDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 block, UInt8 *pMem, UInt8 size)
 {
     ASSERT_PARAM (pMem != PNULL, (unsigned long) pMem);
     ASSERT_PARAM (block < DS2438_NUM_USER_DATA_PAGES, block);
@@ -1067,7 +1067,7 @@ Bool writeNVUserDataDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, UInt8 block,
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool performCalDS2438 (UInt8 portNumber, UInt8 *pSerialNumber, SInt16 *pOffsetCal)
+Bool performCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, SInt16 *pOffsetCal)
 {
     bool success;
     SInt16 current = 0;
