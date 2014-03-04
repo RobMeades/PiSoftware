@@ -1,7 +1,7 @@
 /*
  * ds2438.c
  * Functions for handling the DS2438 battery monitoring chip
- */ 
+ */
 
 #include <stdio.h>
 #include <string.h>

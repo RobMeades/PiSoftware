@@ -6,6 +6,9 @@
 #define ONEWIRE_PORT "/dev/USBSerial"
 #define NUM_BYTES_IN_SERIAL_NUM 8
 
+/* Utility functions */
+UInt8 owFindAllDevices (UInt8 portNumber, UInt8 *pAddress, UInt8 maxNumAddresses);
+
 /* To protect against deadlocks when looping for HW responses */
 #define GUARD_COUNTER           255
 

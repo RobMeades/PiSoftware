@@ -4,6 +4,7 @@ This makefile requires GNU Make.
 endif
 
 PROGRAM = a.out
+LIB = onewire.a
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
@@ -17,14 +18,20 @@ OW_LIBS = $(OW_LIBS_OBJ_PRE)/findtype.o $(OW_LIBS_OBJ_PRE)/owlinkobjs
 
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
+LIB_OBJ:= $(OBJ_DIR)/ds2438.o $(OBJ_DIR)/ds2408.o $(OBJ_DIR)/utils.o
+TST_OBJ:= $(OBJ_DIR)/test.o
 CC = $(GCC_PREFIX)gcc.exe
+AR =  $(GCC_PREFIX)ar.exe
 CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) $(OW_LIBS_FLAGS)
-LDFLAGS = $(OW_LIBS) $(SHARED_PRE)/$(OBJ_DIR)/shared.a
+LDFLAGS = $(OBJ_DIR)/$(LIB) $(OW_LIBS) $(SHARED_PRE)/$(OBJ_DIR)/shared.a
 
 all: $(PROGRAM)
 
-$(PROGRAM): .depend $(OBJS)
-	$(CC) $(OBJS) $(LDFLAGS) -o $(OBJ_DIR)/$(PROGRAM)
+$(PROGRAM): $(LIB)
+	$(CC) $(TST_OBJ) $(LDFLAGS) -o $(OBJ_DIR)/$(PROGRAM)
+
+$(LIB): .depend $(OBJS)
+	$(AR) r $(OBJ_DIR)/$(LIB) $(LIB_OBJ) 
 
 depend: .depend
 
@@ -48,6 +55,6 @@ $(OBJ_DIR)/%.o:$(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
-	rm -f depend $(OBJ_DIR)/.depend $(OBJ_DIR)/*.o $(OBJ_DIR)/$(PROGRAM)
+	rm -f depend $(OBJ_DIR)/.depend $(OBJ_DIR)/*.o $(OBJ_DIR)/*.a $(OBJ_DIR)/$(PROGRAM)
 
 .PHONY: clean depend
