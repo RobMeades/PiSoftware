@@ -14,7 +14,7 @@
  * MANIFEST CONSTANTS
  */
 
-#define MAX_NUM_DEVICES 8 /* This MUST be the same as the number of elements in the gDevicesStaticConfig[] below */
+#define MAX_NUM_DEVICES 8 /* This MUST be the same as the number of elements in the gDeviceStaticConfigList[] below */
 
 /* Enable current measurement, integrated current accummulator, charge/discharge
  * counting and shadowing of charge/discharge count to non-volatile storage */
@@ -42,32 +42,32 @@
  * TYPES
  */
 
-/* The names of all the one wire devices on RoboOne */
+/* The names of all the one wire devices on RoboOne
+ * ORDER IS IMPORTANT - this enum is used to index into gDeviceStaticConfigList[] */
 typedef enum OwDeviceNameTag
 {
-    OW_NAME_NULL,
-    OW_NAME_RIO_BATTERY_MONITOR,
-    OW_NAME_O1_BATTERY_MONITOR,
-    OW_NAME_O2_BATTERY_MONITOR,
-    OW_NAME_O3_BATTERY_MONITOR,
-    OW_NAME_CHARGER_STATE_IO,
-    OW_NAME_SCHOTTKY_IO,
-    OW_NAME_RELAY_IO,
-    OW_NAME_GENERAL_PURPOSE_IO,
-    OW_NUM_NAMES
+    OW_NAME_RIO_BATTERY_MONITOR = 0,
+    OW_NAME_O1_BATTERY_MONITOR = 1,
+    OW_NAME_O2_BATTERY_MONITOR = 2,
+    OW_NAME_O3_BATTERY_MONITOR = 3,
+    OW_NAME_CHARGER_STATE_PIO = 4,
+    OW_NAME_SCHOTTKY_PIO = 5,
+    OW_NAME_RELAY_PIO = 6,
+    OW_NAME_GENERAL_PURPOSE_PIO = 7,
+    OW_NUM_NAMES,
+    OW_NAME_NULL
 } OwDeviceName;
 
-/* The possible OneWire device types,
- * ORDER IS IMPORTANT (may be used to index into the OwDeviceSpecifics union) */
+/* The possible OneWire device types */
 typedef enum OwDeviceTypeTag
 {
     OW_TYPE_DS2408_PIO,
     OW_TYPE_DS2438_BATTERY_MONITOR,
-    OW_TYPE_UNKNOWN,
-    OW_NUM_TYPES
+    OW_NUM_TYPES,
+    OW_TYPE_UNKNOWN
 } OwDeviceType;
 
-/* Device specific information for the DS24o8 PIO OneWire device */
+/* Device specific information for the DS2408 PIO OneWire device */
 typedef struct OwDS2408Tag
 {
     UInt8 intendedConfig;
@@ -80,8 +80,7 @@ typedef struct OwDS2438Tag
     UInt8 intendedConfig;
 } OwDS2438;
 
-/* Union of all the possible OneWire device specific information,
- * ORDER IS IMPORTANT (may be indexed by the OwDeviceType enum) */
+/* Union of all the possible OneWire device specific information */
 typedef union OwDeviceSpecificsTag
 {
     OwDS2408 ds2408;
@@ -107,16 +106,17 @@ typedef struct OwDevicesStaticConfigTag
  */
 
 /* TODO: check that these are the correct way around and put in the specific values */
-/* Would love this to be const but we call into library functions that don't promise constness */
+/* Would love this to be const but we call into library functions that don't promise constness
+ * ORDER IS IMPORTANT - the OwDeviceName enum is used to index into this */
 OwDevicesStaticConfig gDeviceStaticConfigList[] =
-         {{OW_NAME_RIO_BATTERY_MONITOR, {{SBATTERY_FAM, 0x84, 0x0d, 0xb3, 0x01, 0x00, 0x00, 0x09}}, {{RIO_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_O1_BATTERY_MONITOR, {{SBATTERY_FAM, 0x82, 0x30, 0xb3, 0x01, 0x00, 0x00, 0xd3}}, {{O1_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_O2_BATTERY_MONITOR, {{SBATTERY_FAM, 0xb5, 0x02, 0xb3, 0x01, 0x00, 0x00, 0xbc}}, {{O2_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_O3_BATTERY_MONITOR, {{SBATTERY_FAM, 0xdd, 0x29, 0xb3, 0x01, 0x00, 0x00, 0x56}}, {{O3_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_CHARGER_STATE_IO, {{PIO_FAM, 0x50, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x9e}}, {{CHARGER_STATE_IO_CONFIG, CHARGER_STATE_IO_PIN_CONFIG}}},
-          {OW_NAME_SCHOTTKY_IO, {{PIO_FAM, 0x5e, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x8d}}, {{SCHOTTKY_IO_CONFIG, SCHOTTKY_IO_PIN_CONFIG}}},
-          {OW_NAME_RELAY_IO, {{PIO_FAM, 0x8d, 0xf2, 0x0c, 0x00, 0x00, 0x00, 0xb4}}, {{RELAY_IO_CONFIG, RELAY_IO_PIN_CONFIG}}},
-          {OW_NAME_GENERAL_PURPOSE_IO, {{PIO_FAM, 0x7f, 0x6e, 0x0d, 0x00, 0x00, 0x00, 0xb1}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
+         {{OW_NAME_RIO_BATTERY_MONITOR, {{SBATTERY_FAM, 0xb5, 0x02, 0xb3, 0x01, 0x00, 0x00, 0xbc}}, {{RIO_BATTERY_MONITOR_CONFIG}}},
+          {OW_NAME_O1_BATTERY_MONITOR, {{SBATTERY_FAM, 0x82, 0x30, 0xb3, 0x01, 0x00, 0x00, 0xd3}}, {{O1_BATTERY_MONITOR_CONFIG}}}, /* TODO */
+          {OW_NAME_O2_BATTERY_MONITOR, {{SBATTERY_FAM, 0x84, 0x0d, 0xb3, 0x01, 0x00, 0x00, 0x09}}, {{O2_BATTERY_MONITOR_CONFIG}}}, /* TODO */
+          {OW_NAME_O3_BATTERY_MONITOR, {{SBATTERY_FAM, 0xdd, 0x29, 0xb3, 0x01, 0x00, 0x00, 0x56}}, {{O3_BATTERY_MONITOR_CONFIG}}}, /* TODO */
+          {OW_NAME_CHARGER_STATE_PIO, {{PIO_FAM, 0x8d, 0xf2, 0x0c, 0x00, 0x00, 0x00, 0xb4}}, {{CHARGER_STATE_IO_CONFIG, CHARGER_STATE_IO_PIN_CONFIG}}},
+          {OW_NAME_SCHOTTKY_PIO, {{PIO_FAM, 0x5e, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x8d}}, {{SCHOTTKY_IO_CONFIG, SCHOTTKY_IO_PIN_CONFIG}}}, /* TODO */
+          {OW_NAME_RELAY_PIO, {{PIO_FAM, 0x7f, 0x6e, 0x0d, 0x00, 0x00, 0x00, 0xb1}}, {{RELAY_IO_CONFIG, RELAY_IO_PIN_CONFIG}}}, /* TODO */
+          {OW_NAME_GENERAL_PURPOSE_PIO, {{PIO_FAM, 0x50, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x9e}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
 
 /* Obviously these need to be in the same order as the above */
 Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
@@ -190,15 +190,15 @@ static OwDeviceType getDeviceType (const UInt8 *pAddress)
       
 /*
  * Initialise stuff:
+ *
  * - Open the serial port for OneWire comms
- * - Initialise global variables
  * 
  * pPort   pointer to a string that represents
  *         the port to use for serial comms.
  *
  * @return  true if successful.
  */
-static Bool initOneWireBus (Char * pPort)
+static Bool startOneWireBus (Char * pPort)
 {
     Bool success = true;
 
@@ -218,6 +218,19 @@ static Bool initOneWireBus (Char * pPort)
     }
         
     return success;
+}
+
+/*
+ * Shut stuff down:
+ *
+ * - Release the serial port
+ * 
+ * @return  none.
+ */
+static void stopOneWireBus (void)
+{
+    printProgress ("Closing port.");
+    owRelease (gPortNumber);
 }
 
 /*
@@ -274,7 +287,7 @@ static UInt8 findAllDevices ()
 /*
  * Find and setup all the devices we expect to exist on  
  * the OneWire bus, using the configuration data in
- * gDevicesStaticConfig[].
+ * gDeviceStaticConfigList[].
  *
  * @return  true if successful, otherwise false.
  */
@@ -308,13 +321,19 @@ static Bool setupDevices (void)
                     success = writeNVConfigThresholdDS2438 (gPortNumber, pAddress, &gDeviceStaticConfigList[i].specifics.ds2438.intendedConfig, PNULL);
                     break;
                 case OW_TYPE_DS2408_PIO:
-                    /* Write the control register and the pin configuration, using an intermediate variable for the latter
-                     * as the write function also reads the result back and I'd rather avoid my global data structure being modified */
-                    success = writeControlRegisterDS2408 (gPortNumber, pAddress, gDeviceStaticConfigList[i].specifics.ds2408.intendedConfig);
+                    /* Disable test mode, just in case, then write the control register and
+                     * the pin configuration, using an intermediate variable for the latter
+                     * as the write function also reads the result back and I'd rather avoid
+                     * my global data structure being modified */
+                    success = disableTestModeDS2408 (gPortNumber, pAddress);
                     if (success)
                     {
-                        intendedPinConfig = gDeviceStaticConfigList[i].specifics.ds2408.intendedPinConfig;                     
-                        success = channelAccessWriteDS2408 (gPortNumber, pAddress, &intendedPinConfig);
+                        success = writeControlRegisterDS2408 (gPortNumber, pAddress, gDeviceStaticConfigList[i].specifics.ds2408.intendedConfig);
+                        if (success)
+                        {
+                            intendedPinConfig = gDeviceStaticConfigList[i].specifics.ds2408.intendedPinConfig;                     
+                            /* success = channelAccessWriteDS2408 (gPortNumber, pAddress, &intendedPinConfig); */
+                        }
                     }
                     break;
                 default:
@@ -355,16 +374,36 @@ int main (int argc, char **argv)
     Bool  success = true;
     
     /* Setup what's necessary for OneWire bus stuff */
-    success = initOneWireBus (ONEWIRE_PORT);
+    success = startOneWireBus (ONEWIRE_PORT);
     
     /* Find and setup the devices on the OneWire bus */
     if (success)
     {
-        success = setupDevices ();
+        success = setupDevices();
         
-        /* If the setup fails, print out what devices we can find */
-        if (!success)
+        if (success)
         {
+            UInt8 pinStates;
+            
+            while (!key_abort() && success)
+            {
+                printf ("Toggling pin 7 On\n");
+                pinStates = 0x7f;
+                success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_SCHOTTKY_PIO].address.value[0], &pinStates);
+                pinStates = 0x7f;
+                success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RELAY_PIO].address.value[0], &pinStates);
+                msDelay(2000);
+                printf ("Toggling pin 7 Off\n");
+                pinStates = 0x80;
+                success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_SCHOTTKY_PIO].address.value[0], &pinStates);
+                pinStates = 0x80;
+                success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RELAY_PIO].address.value[0], &pinStates);
+                msDelay(2000);
+            }
+        }
+        else
+        {
+            /* If the setup fails, print out what devices we can find */
             findAllDevices();
         }
     }
@@ -377,6 +416,9 @@ int main (int argc, char **argv)
     {
         printProgress ("Failed!\n");
     }
+    
+    /* Shut things down gracefully */
+    stopOneWireBus();
     
     return success;
 }
