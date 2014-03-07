@@ -14,6 +14,7 @@
  * MANIFEST CONSTANTS
  */
 
+#define ONEWIRE_PORT    "/dev/USBSerial"
 #define MAX_NUM_DEVICES 8    /* This MUST be the same as the number of elements in the gDeviceStaticConfigList[] below */
 #define TOGGLE_DELAY_MS 500  /* How long to toggle a set of pins from current state to opposite and back again */
 
@@ -188,24 +189,88 @@ static OwDeviceType getDeviceType (const UInt8 *pAddress)
 }    
       
 /*
- * Initialise stuff:
- *
- * - Open the serial port for OneWire comms
+ * Toggle a pin or pins from their current state to the
+ * reverse and back again. 
  * 
- * pPort   pointer to a string that represents
- *         the port to use for serial comms.
+ * deviceName  the PIO device that the pins belong to.
+ * pinsMask    the pins to be toggled (a bit set to 1 is
+ *             to be toggled a bit set to 0 is left alone). 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool togglePins (OwDeviceName deviceName, UInt8 pinsMask)
+{
+    Bool  success = true;
+    UInt8 pinsState;
+    UInt8 i;
+    
+    /* Read the last state of the pins */
+    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+    
+    /* Toggle the ones masked in */
+    for (i = 0; (i < 2) && success; i++)
+    {
+        if (pinsState & pinsMask)
+        {
+            pinsState &=~ pinsMask;
+        }
+        else
+        {
+            pinsState |= pinsMask;
+        }
+        success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+        msDelay (TOGGLE_DELAY_MS);
+    }
+    
+    return success;
+}
+
+/*
+ * Set a pin or pins to on (i.e. 5 Volts) or off (i.e. ground). 
+ * 
+ * deviceName  the PIO device that the pins belong to.
+ * pinMask     the pins to be set to 5 Volts or ground. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setPins (OwDeviceName deviceName, UInt8 pinMask, Bool setPinsTo5Volts)
+{
+    Bool  success = true;
+    UInt8 pinsState;
+    
+    /* Read the last state of the pins */
+    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+    
+    /* Set or reset the ones masked in */
+    if (setPinsTo5Volts)
+    {
+        pinsState |= pinMask;
+    }
+    else
+    {
+        pinsState &=~ pinMask;
+    }
+    success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+    
+    return success;
+}
+
+/*
+ * PUBLIC FUNCTIONS
+ */
+
+/*
+ * Initialise the OneWire bus port.
  *
  * @return  true if successful.
  */
-static Bool startOneWireBus (Char * pPort)
+Bool startOneWireBus (void)
 {
     Bool success = true;
 
-    ASSERT_PARAM (pPort != PNULL, (unsigned long) pPort);
-
-    printProgress ("Opening port %s...", pPort);
+    printProgress ("Opening port %s...", ONEWIRE_PORT);
     /* Open the serial port */
-    gPortNumber = owAcquireEx (pPort);
+    gPortNumber = owAcquireEx (ONEWIRE_PORT);
     if (gPortNumber < 0)
     {
         success = false;
@@ -226,7 +291,7 @@ static Bool startOneWireBus (Char * pPort)
  * 
  * @return  none.
  */
-static void stopOneWireBus (void)
+void stopOneWireBus (void)
 {
     printProgress ("Closing port.\n");
     owRelease (gPortNumber);
@@ -239,7 +304,7 @@ static void stopOneWireBus (void)
  * @return  the number of devices found (can be greater
  *          than MAX_NUM_DEVICES).
  */
-static UInt8 findAllDevices ()
+UInt8 findAllDevices ()
 {
     UInt8 numDevicesFound = 0;
     UInt8 numDevicesToPrint = MAX_NUM_DEVICES;
@@ -290,7 +355,7 @@ static UInt8 findAllDevices ()
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setupDevices (void)
+Bool setupDevices (void)
 {
     Bool  success = true;
     Bool  found[MAX_NUM_DEVICES];
@@ -366,79 +431,12 @@ static Bool setupDevices (void)
 }
 
 /*
- * Toggle a pin or pins from their current state to the
- * reverse and back again. 
- * 
- * deviceName  the PIO device that the pins belong to.
- * pinsMask    the pins to be toggled (a bit set to 1 is
- *             to be toggled a bit set to 0 is left alone). 
- *
- * @return  true if successful, otherwise false.
- */
-static Bool togglePins (OwDeviceName deviceName, UInt8 pinsMask)
-{
-    Bool  success = true;
-    UInt8 pinsState;
-    UInt8 i;
-    
-    /* Read the last state of the pins */
-    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
-    
-    /* Toggle the ones masked in */
-    for (i = 0; (i < 2) && success; i++)
-    {
-        if (pinsState & pinsMask)
-        {
-            pinsState &=~ pinsMask;
-        }
-        else
-        {
-            pinsState |= pinsMask;
-        }
-        success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
-        msDelay (TOGGLE_DELAY_MS);
-    }
-    
-    return success;
-}
-
-/*
- * Set a pin or pins to on (i.e. 5 Volts) or off (i.e. ground). 
- * 
- * deviceName  the PIO device that the pins belong to.
- * pinMask     the pins to be set to 5 Volts or ground. 
- *
- * @return  true if successful, otherwise false.
- */
-static Bool setPins (OwDeviceName deviceName, UInt8 pinMask, Bool setPinsTo5Volts)
-{
-    Bool  success = true;
-    UInt8 pinsState;
-    
-    /* Read the last state of the pins */
-    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
-    
-    /* Set or reset the ones masked in */
-    if (setPinsTo5Volts)
-    {
-        pinsState |= pinMask;
-    }
-    else
-    {
-        pinsState &=~ pinMask;
-    }
-    success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
-    
-    return success;
-}
-
-/*
  * Switch the Orangutan power relay from it's current 
  * state to the reverse and back again.
  *
  * @return  true if successful, otherwise false.
  */
-static Bool toggleOPwr (void)
+Bool toggleOPwr (void)
 {
     return togglePins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_O_PWR_TOGGLE);
 }
@@ -449,7 +447,7 @@ static Bool toggleOPwr (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool toggleORst (void)
+Bool toggleORst (void)
 {
     return togglePins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_O_RESET_TOGGLE);
 }
@@ -460,7 +458,7 @@ static Bool toggleORst (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool togglePiRst (void)
+Bool togglePiRst (void)
 {
     return togglePins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_PI_RESET_TOGGLE);
 }
@@ -471,7 +469,7 @@ static Bool togglePiRst (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setRioPwr12VOn (void)
+Bool setRioPwr12VOn (void)
 {
     return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_12V_ON, true);
 }
@@ -482,7 +480,7 @@ static Bool setRioPwr12VOn (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setRioPwr12VOff (void)
+Bool setRioPwr12VOff (void)
 {
     return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_12V_ON, false);
 }
@@ -493,7 +491,7 @@ static Bool setRioPwr12VOff (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setRioPwrBattOn (void)
+Bool setRioPwrBattOn (void)
 {
     return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_BATT_OFF, false);
 }
@@ -504,7 +502,7 @@ static Bool setRioPwrBattOn (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setRioPwrBattOff (void)
+Bool setRioPwrBattOff (void)
 {
     return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_BATT_OFF, true);
 }
@@ -515,7 +513,7 @@ static Bool setRioPwrBattOff (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setOPwr12VOn (void)
+Bool setOPwr12VOn (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_12V_ON, true);
 }
@@ -526,7 +524,7 @@ static Bool setOPwr12VOn (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setOPwr12VOff (void)
+Bool setOPwr12VOff (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_12V_ON, false);
 }
@@ -537,7 +535,7 @@ static Bool setOPwr12VOff (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setOPwrBattOn (void)
+Bool setOPwrBattOn (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_BATT_OFF, false);
 }
@@ -548,7 +546,7 @@ static Bool setOPwrBattOn (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setOPwrBattOff (void)
+Bool setOPwrBattOff (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_BATT_OFF, true);
 }
@@ -558,7 +556,7 @@ static Bool setOPwrBattOff (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setRioBatteryChargerOn (void)
+Bool setRioBatteryChargerOn (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_RIO_CHARGER_ON, true);
 }
@@ -568,7 +566,7 @@ static Bool setRioBatteryChargerOn (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setRioBatteryChargerOff (void)
+Bool setRioBatteryChargerOff (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_RIO_CHARGER_ON, false);
 }
@@ -578,7 +576,7 @@ static Bool setRioBatteryChargerOff (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setO1BatteryChargerOn (void)
+Bool setO1BatteryChargerOn (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O1_CHARGER_ON, true);
 }
@@ -588,7 +586,7 @@ static Bool setO1BatteryChargerOn (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setO1BatteryChargerOff (void)
+Bool setO1BatteryChargerOff (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O1_CHARGER_ON, false);
 }
@@ -598,7 +596,7 @@ static Bool setO1BatteryChargerOff (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setO2BatteryChargerOn (void)
+Bool setO2BatteryChargerOn (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O2_CHARGER_ON, true);
 }
@@ -608,7 +606,7 @@ static Bool setO2BatteryChargerOn (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setO2BatteryChargerOff (void)
+Bool setO2BatteryChargerOff (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O2_CHARGER_ON, false);
 }
@@ -618,7 +616,7 @@ static Bool setO2BatteryChargerOff (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setO3BatteryChargerOn (void)
+Bool setO3BatteryChargerOn (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O3_CHARGER_ON, true);
 }
@@ -628,9 +626,105 @@ static Bool setO3BatteryChargerOn (void)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setO3BatteryChargerOff (void)
+Bool setO3BatteryChargerOff (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O3_CHARGER_ON, false);
+}
+
+/*
+ * Switch all battery chargers ON.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool setAllBatteryChargersOn (void)
+{
+    Bool success;
+    
+    success = setRioBatteryChargerOn();
+    if (success)
+    {
+        success = setO1BatteryChargerOn();
+        if (success)
+        {
+            success = setO2BatteryChargerOn();
+            if (success)
+            {
+                success = setO3BatteryChargerOn();
+            }
+        }
+    }
+    
+    return success;
+}
+
+/*
+ * Switch all battery chargers OFF.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool setAllBatteryChargersOff (void)
+{
+    Bool success;
+    
+    success = setRioBatteryChargerOff();
+    if (success)
+    {
+        success = setO1BatteryChargerOff();
+        if (success)
+        {
+            success = setO2BatteryChargerOff();
+            if (success)
+            {
+                success = setO3BatteryChargerOff();
+            }
+        }
+    }
+    
+    return success;
+}
+
+/*
+ * Switch all Orangutan battery chargers ON.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool setAllOChargersOn (void)
+{
+    Bool success;
+    
+    success = setO1BatteryChargerOn();
+    if (success)
+    {
+        success = setO2BatteryChargerOn();
+        if (success)
+        {
+            success = setO3BatteryChargerOn();
+        }
+    }
+    
+    return success;
+}
+
+/*
+ * Switch all Orangutan battery chargers OFF.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool setAllOChargersOff (void)
+{
+    Bool success;
+    
+    success = setO1BatteryChargerOff();
+    if (success)
+    {
+        success = setO2BatteryChargerOff();
+        if (success)
+        {
+            success = setO3BatteryChargerOff();
+        }
+    }
+    
+    return success;
 }
 
 /*
@@ -640,7 +734,7 @@ static Bool setO3BatteryChargerOff (void)
  * 
  * @return  true if successful, otherwise false.
  */
-static Bool readRioBattCurrent (SInt16 *pCurrent)
+Bool readRioBattCurrent (SInt16 *pCurrent)
 {
     return readCurrentDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], pCurrent);
 }
@@ -652,7 +746,7 @@ static Bool readRioBattCurrent (SInt16 *pCurrent)
  * 
  * @return  true if successful, otherwise false.
  */
-static Bool readO1BattCurrent (SInt16 *pCurrent)
+Bool readO1BattCurrent (SInt16 *pCurrent)
 {
     return readCurrentDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], pCurrent);
 }
@@ -664,7 +758,7 @@ static Bool readO1BattCurrent (SInt16 *pCurrent)
  * 
  * @return  true if successful, otherwise false.
  */
-static Bool readO2BattCurrent (SInt16 *pCurrent)
+Bool readO2BattCurrent (SInt16 *pCurrent)
 {
     return readCurrentDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], pCurrent);
 }
@@ -676,9 +770,38 @@ static Bool readO2BattCurrent (SInt16 *pCurrent)
  * 
  * @return  true if successful, otherwise false.
  */
-static Bool readO3BattCurrent (SInt16 *pCurrent)
+Bool readO3BattCurrent (SInt16 *pCurrent)
 {
     return readCurrentDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], pCurrent);
+}
+
+/*
+ * Calibrate all battery monitors.
+ * This shold ONLY be called when the there is no
+ * current being drawn from the battery.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool performCalAllBatteryMonitors (void)
+{
+    Bool success;
+    
+    printProgress ("WARNING: calibrating all battery monitors, make sure no current is flowing!\n");
+    success = performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL);
+    if (success)
+    {
+        success = performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL);
+        if (success)
+        {
+            success = performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL);
+            if (success)
+            {
+                success = performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL);
+            }
+        }
+    }
+    
+    return success;
 }
 
 /*
@@ -688,9 +811,9 @@ static Bool readO3BattCurrent (SInt16 *pCurrent)
  * 
  * @return  true if successful, otherwise false.
  */
-static Bool performCalRioBattMonitor (void)
+Bool performCalRioBatteryMonitor (void)
 {
-    printProgress ("WARNING: calibrating RIO battery, make sure no RIO/PI current is flowing!\n");
+    printProgress ("WARNING: calibrating RIO battery monitors, make sure no RIO/PI current is flowing!\n");
     return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL);
 }
 
@@ -701,9 +824,9 @@ static Bool performCalRioBattMonitor (void)
  * 
  * @return  true if successful, otherwise false.
  */
-static Bool performCalO1BattMonitor (void)
+Bool performCalO1BatteryMonitor (void)
 {
-    printProgress ("WARNING: calibrating O1 battery, make sure no current is flowing!\n");
+    printProgress ("WARNING: calibrating O1 battery monitors, make sure no current is flowing!\n");
     return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL);
 }
 
@@ -714,9 +837,9 @@ static Bool performCalO1BattMonitor (void)
  * 
  * @return  true if successful, otherwise false.
  */
-static Bool performCalO2BattMonitor (void)
+Bool performCalO2BatteryMonitor (void)
 {
-    printProgress ("WARNING: calibrating O2 battery, make sure no current is flowing!\n");
+    printProgress ("WARNING: calibrating O2 battery monitors, make sure no current is flowing!\n");
     return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL);
 }
 
@@ -727,77 +850,8 @@ static Bool performCalO2BattMonitor (void)
  * 
  * @return  true if successful, otherwise false.
  */
-static Bool performCalO3BattMonitor (void)
+Bool performCalO3BatteryMonitor (void)
 {
-    printProgress ("WARNING: calibrating O3 battery, make sure no current is flowing!\n");
+    printProgress ("WARNING: calibrating O3 battery monitors, make sure no current is flowing!\n");
     return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL);
-}
-
-/*
- * PUBLIC FUNCTIONS
- */
-
-/*
- * Entry point
- */
-int main (int argc, char **argv)
-{
-    Bool  success = true;
-    
-    /* Setup what's necessary for OneWire bus stuff */
-    success = startOneWireBus (ONEWIRE_PORT);
-    
-    /* Find and setup the devices on the OneWire bus */
-    if (success)
-    {
-        success = setupDevices();
-        
-        if (success)
-        {            
-            SInt16 rioCurrent;
-            SInt16 o1Current;
-            SInt16 o2Current;
-            SInt16 o3Current;            
-            
-            while (!key_abort() && success)
-            {
-                success = readRioBattCurrent (&rioCurrent);
-                if (success)
-                {
-                    success = readO1BattCurrent (&o1Current);
-                    if (success)
-                    {
-                        success = readO2BattCurrent (&o2Current);
-                        if (success)
-                        {
-                            success = readO3BattCurrent (&o3Current);
-                        }
-                    }
-                }
-                if (success)
-                {
-                    printf ("Currents: RIO %4d O1 %4d, O2 %4d, O3 %4d (-ve means discharge)\n", rioCurrent, o1Current, o2Current, o3Current);                
-                }
-            }
-        }
-        else
-        {
-            /* If the setup fails, print out what devices we can find */
-            findAllDevices();
-        }
-    }
-    
-    if (success)
-    {
-        printProgress ("Done.\n");
-    }
-    else
-    {
-        printProgress ("Failed!\n");
-    }
-    
-    /* Shut things down gracefully */
-    stopOneWireBus();
-    
-    return success;
 }

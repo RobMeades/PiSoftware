@@ -3,7 +3,6 @@
  * General definitions for OneWire functions
  */ 
 
-#define ONEWIRE_PORT "/dev/USBSerial"
 #define NUM_BYTES_IN_SERIAL_NUM 8
 
 /* Utility functions */
