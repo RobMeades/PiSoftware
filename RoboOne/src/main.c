@@ -26,7 +26,7 @@ int main (int argc, char **argv)
         if (success)
         {
             /* Run the interactive menu */
-            runMenu();
+            success = runMenu();
         }
         else
         {

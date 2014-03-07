@@ -13,7 +13,8 @@
 #define MAX_NUM_CHARS_IN_COMMAND 4 /* including a null terminator */
 #define KEY_COMMAND_CANCEL '\x1b'   /* the escape key */
 #define KEY_BACKSPACE '\x08'
-#define COMMAND_PROMPT "Enter a command (? for help): "
+#define SCREEN_BACKSPACE "\x1b[1D" /* ANSI: ESC [ value D */
+#define COMMAND_PROMPT "\nEnter a command (? for help) "
 
 /*
  * STATIC FUNCTION PROTOTYPES
@@ -40,8 +41,7 @@ typedef struct CommandTag
  */
 
 /* Array of possible commands.  All commands must be unique */
-Command gCommandList[] = {{"", &commandNull, "Null entry."},
-	                      {"?", &commandHelp, "Display command help."},
+Command gCommandList[] = {{"?", &commandHelp, "Display command help."},
 						  {"X", &commandExit, "Exit this program."},
 						  {"I", &commandNull, "Display the current reading for all batteries."},
  						  {"V", &commandNull, "Display the Voltage reading for all batteries."},
@@ -82,7 +82,7 @@ Command gCommandList[] = {{"", &commandNull, "Null entry."},
  */
 static Bool commandNull (void)
 {
-    printf ("Not implemented.\n");
+    printf ("Not implemented.");
     return true;
 }
 
@@ -93,11 +93,11 @@ static Bool commandHelp (void)
 {
 	UInt8 i;
 
+	printf ("\n");
 	for (i = 0; i < sizeof (gCommandList) / sizeof (Command); i++)
 	{
 		printf (" %s: %s\n", gCommandList[i].commandString, gCommandList[i].pDescription);
 	}
-	printf (COMMAND_PROMPT);
 
 	return true;
 }
@@ -117,7 +117,7 @@ static UInt8 toUpper (UInt8 digit)
 {
 	if (digit >= 'a' && digit <= 'z')
 	{
-		digit |= 0x20;
+		digit &= ~0x20;
 	}
 
 	return digit;
@@ -130,9 +130,9 @@ static void actOnBackspace(UInt8 *pEntry, UInt8 *pNumEntries)
 {
 	*pEntry = 0;
 	(*pNumEntries)--;
-	putchar (KEY_BACKSPACE);
+	printf (SCREEN_BACKSPACE);
 	putchar (' ');
-	putchar (KEY_BACKSPACE);
+    printf (SCREEN_BACKSPACE);
 }
 
 /*
@@ -144,7 +144,7 @@ static void actOnBackspace(UInt8 *pEntry, UInt8 *pNumEntries)
  */
 Bool runMenu (void)
 {
-    Bool success = true;
+    Bool success = false;
 	UInt8 numEntries = 0;
 	UInt8 entry[MAX_NUM_CHARS_IN_COMMAND];
     UInt8 key;
@@ -152,104 +152,106 @@ Bool runMenu (void)
 	struct termios savedSettings;
     struct termios newSettings;
 
-    success = tcgetattr (STDIN_FILENO, &savedSettings);
-	if (success)
-	{
-		/* Save current settings and then set us up for no echo, non-canonical (i.e. no need for enter) */
-		memcpy (&newSettings, &savedSettings, sizeof (newSettings));
-		newSettings.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK | ECHONL | ECHOPRT | ECHOKE | ICRNL);
-		tcsetattr (STDIN_FILENO, TCSANOW, &newSettings);
-
-		/* Prompt for input */
-		printf (COMMAND_PROMPT);
-
-		/* Run the interactive bit */
-		while (success)
-		{
-			key = getchar();
-			switch (key)
-			{
-				case KEY_COMMAND_CANCEL:
-				{
-	                /* Reset the number of entries and go fully backwards on the screen */
-					for (i = 0; i < numEntries; i++)
-					{
-						actOnBackspace (&entry[i], &numEntries);
-					}
-				}
-				break;
-				case KEY_BACKSPACE:
-				{
-	                /* Set last entry to zero and go back one on the screen */
-					if (numEntries > 0)
-					{
-						actOnBackspace (&entry[numEntries], &numEntries);
-					}
-				}
-				break;
-                /* Handle all the other commands */
-				default:
-				{
-					/* Go through the characters entered so far and find out
-					 * which command they refer to.  When only one is found,
-					 * run the command function. */
-					UInt8 numFound;
-					UInt8 lastCommandFound = 0;
-					UInt8 entryPos = 0;
-
-					entry[numEntries] = toUpper (key);
-					numEntries++;
-					do
-					{
-						numFound = 0;
-					    lastCommandFound = 0;
-						for (i = 0; i < (sizeof (gCommandList) / sizeof (Command)); i++)
-						{
-							if (gCommandList[i].commandString[entryPos] == entry[entryPos])
-							{
-								numFound++;
-								lastCommandFound = i;
-							}
-						}
-						if (numFound > 0)
-						{
-							entryPos++;
-						}
-					} while ((entryPos < numEntries) && (numFound > 0));
-
-					if (numFound == 0)
-					{
-						/* None found, delete the most recent key entered as it won't get us anywhere */
-						entry[numEntries] = 0;
-						numEntries--;
-					}
-					else
-					{
-						/* Found a possible command so display the character */
-						putchar (entry[numEntries]);
-						if (numFound == 1)
-						{
-							/* There is only one command that this could be so call the function */
-							if (gCommandList[lastCommandFound].commandPtr)
-							{
-								success = gCommandList[lastCommandFound].commandPtr();
-
-								/* Remove the input line and await the next command */
-								for (i = 0; i < numEntries; i++)
-								{
-									actOnBackspace (&entry[i], &numEntries);
-								}
-							}
-						}
-					}
-				}
-				break;
-			}
-		}
-
-		/* Restore saved settings */
-	    success = tcsetattr (STDIN_FILENO, TCSANOW, &savedSettings);
-	}
+    /* Check if this is a TTY device */
+    if (tcgetattr (STDIN_FILENO, &savedSettings) == 0)
+    {
+        success = true;
+    	if (success)
+    	{
+    		/* Save current settings and then set us up for no echo, non-canonical (i.e. no need for enter) */
+    		memcpy (&newSettings, &savedSettings, sizeof (newSettings));
+    		newSettings.c_lflag &= ~(ICANON | ECHO | ECHOK | ECHONL | ECHOPRT | ECHOKE | ICRNL);
+    		tcsetattr (STDIN_FILENO, TCSANOW, &newSettings);
+    
+    		/* Prompt for input */
+    		printf (COMMAND_PROMPT);
+    
+    		/* Run the interactive bit */
+    		while (success)
+    		{
+    			key = getchar();
+    			switch (key)
+    			{
+    				case KEY_COMMAND_CANCEL:
+    				{
+    	                /* Reset the number of entries and go fully backwards on the screen */
+    					for (i = 0; i < numEntries; i++)
+    					{
+    						actOnBackspace (&entry[i], &numEntries);
+    					}
+    				}
+    				break;
+    				case KEY_BACKSPACE:
+    				{
+    	                /* Set last entry to zero and go back one on the screen */
+    					if (numEntries > 0)
+    					{
+    						actOnBackspace (&entry[numEntries], &numEntries);
+    					}
+    				}
+    				break;
+                    /* Handle all the other commands */
+    				default:
+    				{
+    					/* Go through the characters entered so far and find out
+    					 * which command they refer to.  When only one is found,
+    					 * run the command function. */
+    					UInt8 numFound;
+    					UInt8 lastCommandFound = 0;
+    					UInt8 entryPos = 0;
+    
+    					entry[numEntries] = toUpper (key);
+    					numEntries++;
+    					do
+    					{
+    						numFound = 0;
+    					    lastCommandFound = 0;
+    						for (i = 0; i < (sizeof (gCommandList) / sizeof (Command)); i++)
+    						{
+    							if (gCommandList[i].commandString[entryPos] == entry[entryPos])
+    							{
+    								numFound++;
+    								lastCommandFound = i;
+    							}
+    						}
+    						if (numFound > 0)
+    						{
+    							entryPos++;
+    						}
+    					} while ((entryPos < numEntries) && (numFound > 0));
+    
+    					if (numFound == 0)
+    					{
+    						/* None found, delete the most recent key entered as it won't get us anywhere */
+    						numEntries--;
+    					}
+    					else
+    					{
+    						/* Found a possible command so display the character */
+    						putchar (entry[numEntries - 1]);
+    						if (numFound == 1)
+    						{
+    							/* There is only one command that this could be so call the function */
+    							if (gCommandList[lastCommandFound].commandPtr)
+    							{
+    							    printf (": %s\n", gCommandList[lastCommandFound].pDescription);
+    								success = gCommandList[lastCommandFound].commandPtr();
+    
+    					            /* Prompt for more input */
+    								numEntries = 0;
+    					            printf (COMMAND_PROMPT);    					    
+    							}
+    						}
+    					}
+    				}
+    				break;
+    			}
+    		}
+    
+            /* Restore saved settings, hopefully */
+            tcsetattr (STDIN_FILENO, TCSANOW, &savedSettings);
+    	}
+    }
 
     return success;
 }
