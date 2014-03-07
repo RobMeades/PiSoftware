@@ -6,26 +6,33 @@
  * MANIFEST CONSTANTS
  */
 
+/*
+ * These are the masks for how the various IO ports are
+ * connected.  To set an IO port to 5V (==high impedance
+ * with pull-up resistor), make it a 1, to set it to ground
+ * (== the transistor is on, i.e. low impedance) make it a 0.
+ */
+
 /* How the pins are connected on the "charger state" PIO chip */
-#define CHARGER_STATE_RIO_GREEN_PIN  0x01
-#define CHARGER_STATE_RIO_RED_PIN    0x02
-#define CHARGER_STATE_O1_GREEN_PIN   0x04
-#define CHARGER_STATE_O1_RED_PIN     0x08
-#define CHARGER_STATE_O2_GREEN_PIN   0x10
-#define CHARGER_STATE_O2_RED_PIN     0x20
-#define CHARGER_STATE_O3_GREEN_PIN   0x40
-#define CHARGER_STATE_O3_RED_PIN     0x80
+#define CHARGER_STATE_RIO_GREEN  0x01
+#define CHARGER_STATE_RIO_RED    0x02
+#define CHARGER_STATE_O1_GREEN   0x04
+#define CHARGER_STATE_O1_RED     0x08
+#define CHARGER_STATE_O2_GREEN   0x10
+#define CHARGER_STATE_O2_RED     0x20
+#define CHARGER_STATE_O3_GREEN   0x40
+#define CHARGER_STATE_O3_RED     0x80
 
 /* How the pins are connected on the "Schottky" PIO chip */
-#define SCHOTTKY_PI_RESET             0x01
-#define SCHOTTKY_RIO_12V_ON           0x02
-#define SCHOTTKY_RIO_BATT_OFF         0x04
-#define SCHOTTKY_O_PWR_TOGGLE         0x08
-#define SCHOTTKY_O_RESET              0x10
-#define SCHOTTKY_SPARE_2              0x20 /* Connected to pin 2 of the spare header */
-#define SCHOTTKY_SPARE_3              0x40 /* Connected to pin 3 of the spare header */
-#define SCHOTTKY_NON_SCHOTTKY_SPARE_4 0x80 /* Note that this is connected to the spare header but is NOT via the Schottky chip, just weak TTL levels */
-#define SCHOTTKY_NON_SCHOTTY_MUX_E    SCHOTTKY_NON_SCHOTTKY_SPARE_4 /* It is ALSO connected, if J4 is in place, to the !enable pin of the analogue mux chip */
+#define SCHOTTKY_PI_RESET_TOGGLE       0x01
+#define SCHOTTKY_RIO_PWR_12V_ON        0x02
+#define SCHOTTKY_RIO_PWR_BATT_OFF      0x04
+#define SCHOTTKY_O_PWR_TOGGLE          0x08
+#define SCHOTTKY_O_RESET_TOGGLE        0x10
+#define SCHOTTKY_SPARE_2               0x20 /* Connected to pin 2 of the spare header */
+#define SCHOTTKY_SPARE_3               0x40 /* Connected to pin 3 of the spare header */
+#define SCHOTTKY_NON_SCHOTTKY_SPARE_4  0x80 /* Note that this is connected to the spare header but is NOT via the Schottky chip, just weak TTL levels */
+#define SCHOTTKY_NON_SCHOTTY_MUX_NOT_E SCHOTTKY_NON_SCHOTTKY_SPARE_4 /* It is ALSO connected, if J4 is in place, to the not_enable pin of the analogue mux chip */
 
 /* How the pins are connected on the "Relay" PIO chip */
 #define RELAY_O_PWR_12V_ON           0x01

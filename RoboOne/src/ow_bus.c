@@ -14,7 +14,8 @@
  * MANIFEST CONSTANTS
  */
 
-#define MAX_NUM_DEVICES 8 /* This MUST be the same as the number of elements in the gDeviceStaticConfigList[] below */
+#define MAX_NUM_DEVICES 8    /* This MUST be the same as the number of elements in the gDeviceStaticConfigList[] below */
+#define TOGGLE_DELAY_MS 500  /* How long to toggle a set of pins from current state to opposite and back again */
 
 /* Enable current measurement, integrated current accummulator, charge/discharge
  * counting and shadowing of charge/discharge count to non-volatile storage */
@@ -32,8 +33,8 @@
 #define RELAY_IO_CONFIG               DEFAULT_DS2408_CONFIG
 #define GENERAL_PURPOSE_IO_CONFIG     DEFAULT_DS2408_CONFIG
 
-/* All pins low to begin with */
-#define CHARGER_STATE_IO_PIN_CONFIG   0x00
+/* All pins low to begin with apart from charger state which is allowed to float as an input */
+#define CHARGER_STATE_IO_PIN_CONFIG   0xFF
 #define SCHOTTKY_IO_PIN_CONFIG        0x00
 #define RELAY_IO_PIN_CONFIG           0x00
 #define GENERAL_PURPOSE_IO_PIN_CONFIG 0x00
@@ -70,14 +71,14 @@ typedef enum OwDeviceTypeTag
 /* Device specific information for the DS2408 PIO OneWire device */
 typedef struct OwDS2408Tag
 {
-    UInt8 intendedConfig;
-    UInt8 intendedPinConfig;
+    UInt8 config;
+    UInt8 pinsState;
 } OwDS2408;
 
 /* Device specific information for the DS2438 battery monitoring OneWire device */
 typedef struct OwDS2438Tag
 {
-    UInt8 intendedConfig;
+    UInt8 config;
 } OwDS2438;
 
 /* Union of all the possible OneWire device specific information */
@@ -105,17 +106,15 @@ typedef struct OwDevicesStaticConfigTag
  * GLOBALS (prefixed with g)
  */
 
-/* TODO: check that these are the correct way around and put in the specific values */
-/* Would love this to be const but we call into library functions that don't promise constness
- * ORDER IS IMPORTANT - the OwDeviceName enum is used to index into this */
+/* ORDER IS IMPORTANT - the OwDeviceName enum is used to index into this */
 OwDevicesStaticConfig gDeviceStaticConfigList[] =
          {{OW_NAME_RIO_BATTERY_MONITOR, {{SBATTERY_FAM, 0xb5, 0x02, 0xb3, 0x01, 0x00, 0x00, 0xbc}}, {{RIO_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_O1_BATTERY_MONITOR, {{SBATTERY_FAM, 0x82, 0x30, 0xb3, 0x01, 0x00, 0x00, 0xd3}}, {{O1_BATTERY_MONITOR_CONFIG}}}, /* TODO */
-          {OW_NAME_O2_BATTERY_MONITOR, {{SBATTERY_FAM, 0x84, 0x0d, 0xb3, 0x01, 0x00, 0x00, 0x09}}, {{O2_BATTERY_MONITOR_CONFIG}}}, /* TODO */
-          {OW_NAME_O3_BATTERY_MONITOR, {{SBATTERY_FAM, 0xdd, 0x29, 0xb3, 0x01, 0x00, 0x00, 0x56}}, {{O3_BATTERY_MONITOR_CONFIG}}}, /* TODO */
+          {OW_NAME_O1_BATTERY_MONITOR, {{SBATTERY_FAM, 0x84, 0x0d, 0xb3, 0x01, 0x00, 0x00, 0x09}}, {{O1_BATTERY_MONITOR_CONFIG}}},
+          {OW_NAME_O2_BATTERY_MONITOR, {{SBATTERY_FAM, 0xdd, 0x29, 0xb3, 0x01, 0x00, 0x00, 0x56}}, {{O2_BATTERY_MONITOR_CONFIG}}},
+          {OW_NAME_O3_BATTERY_MONITOR, {{SBATTERY_FAM, 0x82, 0x30, 0xb3, 0x01, 0x00, 0x00, 0xd3}}, {{O3_BATTERY_MONITOR_CONFIG}}},
           {OW_NAME_CHARGER_STATE_PIO, {{PIO_FAM, 0x8d, 0xf2, 0x0c, 0x00, 0x00, 0x00, 0xb4}}, {{CHARGER_STATE_IO_CONFIG, CHARGER_STATE_IO_PIN_CONFIG}}},
-          {OW_NAME_SCHOTTKY_PIO, {{PIO_FAM, 0x5e, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x8d}}, {{SCHOTTKY_IO_CONFIG, SCHOTTKY_IO_PIN_CONFIG}}}, /* TODO */
-          {OW_NAME_RELAY_PIO, {{PIO_FAM, 0x7f, 0x6e, 0x0d, 0x00, 0x00, 0x00, 0xb1}}, {{RELAY_IO_CONFIG, RELAY_IO_PIN_CONFIG}}}, /* TODO */
+          {OW_NAME_SCHOTTKY_PIO, {{PIO_FAM, 0x7f, 0x6e, 0x0d, 0x00, 0x00, 0x00, 0xb1}}, {{SCHOTTKY_IO_CONFIG, SCHOTTKY_IO_PIN_CONFIG}}},
+          {OW_NAME_RELAY_PIO, {{PIO_FAM, 0x5e, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x8d}}, {{RELAY_IO_CONFIG, RELAY_IO_PIN_CONFIG}}},
           {OW_NAME_GENERAL_PURPOSE_PIO, {{PIO_FAM, 0x50, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x9e}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
 
 /* Obviously these need to be in the same order as the above */
@@ -229,7 +228,7 @@ static Bool startOneWireBus (Char * pPort)
  */
 static void stopOneWireBus (void)
 {
-    printProgress ("Closing port.");
+    printProgress ("Closing port.\n");
     owRelease (gPortNumber);
 }
 
@@ -296,7 +295,7 @@ static Bool setupDevices (void)
     Bool  success = true;
     Bool  found[MAX_NUM_DEVICES];
     UInt8 *pAddress;
-    UInt8 intendedPinConfig;
+    UInt8 pinsState;
     UInt8 i;
     
     printProgress ("Setting up OneWire devices...\n");
@@ -318,7 +317,7 @@ static Bool setupDevices (void)
             {
                 case OW_TYPE_DS2438_BATTERY_MONITOR:
                     /* Write the config register, leaving the threshold alone */
-                    success = writeNVConfigThresholdDS2438 (gPortNumber, pAddress, &gDeviceStaticConfigList[i].specifics.ds2438.intendedConfig, PNULL);
+                    success = writeNVConfigThresholdDS2438 (gPortNumber, pAddress, &gDeviceStaticConfigList[i].specifics.ds2438.config, PNULL);
                     break;
                 case OW_TYPE_DS2408_PIO:
                     /* Disable test mode, just in case, then write the control register and
@@ -328,11 +327,11 @@ static Bool setupDevices (void)
                     success = disableTestModeDS2408 (gPortNumber, pAddress);
                     if (success)
                     {
-                        success = writeControlRegisterDS2408 (gPortNumber, pAddress, gDeviceStaticConfigList[i].specifics.ds2408.intendedConfig);
+                        success = writeControlRegisterDS2408 (gPortNumber, pAddress, gDeviceStaticConfigList[i].specifics.ds2408.config);
                         if (success)
                         {
-                            intendedPinConfig = gDeviceStaticConfigList[i].specifics.ds2408.intendedPinConfig;                     
-                            /* success = channelAccessWriteDS2408 (gPortNumber, pAddress, &intendedPinConfig); */
+                            pinsState = gDeviceStaticConfigList[i].specifics.ds2408.pinsState;                     
+                            success = channelAccessWriteDS2408 (gPortNumber, pAddress, &pinsState);
                         }
                     }
                     break;
@@ -367,6 +366,378 @@ static Bool setupDevices (void)
 }
 
 /*
+ * Toggle a pin or pins from their current state to the
+ * reverse and back again. 
+ * 
+ * deviceName  the PIO device that the pins belong to.
+ * pinsMask    the pins to be toggled (a bit set to 1 is
+ *             to be toggled a bit set to 0 is left alone). 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool togglePins (OwDeviceName deviceName, UInt8 pinsMask)
+{
+    Bool  success = true;
+    UInt8 pinsState;
+    UInt8 i;
+    
+    /* Read the last state of the pins */
+    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+    
+    /* Toggle the ones masked in */
+    for (i = 0; (i < 2) && success; i++)
+    {
+        if (pinsState & pinsMask)
+        {
+            pinsState &=~ pinsMask;
+        }
+        else
+        {
+            pinsState |= pinsMask;
+        }
+        success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+        msDelay (TOGGLE_DELAY_MS);
+    }
+    
+    return success;
+}
+
+/*
+ * Set a pin or pins to on (i.e. 5 Volts) or off (i.e. ground). 
+ * 
+ * deviceName  the PIO device that the pins belong to.
+ * pinMask     the pins to be set to 5 Volts or ground. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setPins (OwDeviceName deviceName, UInt8 pinMask, Bool setPinsTo5Volts)
+{
+    Bool  success = true;
+    UInt8 pinsState;
+    
+    /* Read the last state of the pins */
+    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+    
+    /* Set or reset the ones masked in */
+    if (setPinsTo5Volts)
+    {
+        pinsState |= pinMask;
+    }
+    else
+    {
+        pinsState &=~ pinMask;
+    }
+    success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+    
+    return success;
+}
+
+/*
+ * Switch the Orangutan power relay from it's current 
+ * state to the reverse and back again.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool toggleOPwr (void)
+{
+    return togglePins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_O_PWR_TOGGLE);
+}
+
+/*
+ * Switch the Orangutan reset relay from it's current 
+ * state to the reverse and back again.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool toggleORst (void)
+{
+    return togglePins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_O_RESET_TOGGLE);
+}
+
+/*
+ * Switch the Raspberry Pi reset relay from it's current 
+ * state to the reverse and back again.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool togglePiRst (void)
+{
+    return togglePins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_PI_RESET_TOGGLE);
+}
+
+/*
+ * Switch the relay that allows 12 Volts to be supplied
+ * to the RIO to ON.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setRioPwr12VOn (void)
+{
+    return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_12V_ON, true);
+}
+
+/*
+ * Switch the relay that allows 12 Volts to be
+ * supplied to the RIO to OFF.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setRioPwr12VOff (void)
+{
+    return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_12V_ON, false);
+}
+
+/*
+ * Switch the relay that allows on-board battery
+ * power to be supplied to the RIO to ON.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setRioPwrBattOn (void)
+{
+    return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_BATT_OFF, false);
+}
+
+/*
+ * Switch the relay that allows on-board battery
+ * power to be supplied to the RIO to OFF.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setRioPwrBattOff (void)
+{
+    return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_BATT_OFF, true);
+}
+
+/*
+ * Switch the relay that allows 12 Volts to be
+ * supplied to the Orangutan to ON.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setOPwr12VOn (void)
+{
+    return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_12V_ON, true);
+}
+
+/*
+ * Switch the relay that allows 12 Volts to be
+ * supplied to the Orangutan to OFF.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setOPwr12VOff (void)
+{
+    return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_12V_ON, false);
+}
+
+/*
+ * Switch the relay that allows on-board battery
+ * power to be supplied to the Orangutan to ON.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setOPwrBattOn (void)
+{
+    return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_BATT_OFF, false);
+}
+
+/*
+ * Switch the relay that allows battery power to be
+ * supplied to the Orangutan to OFF.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setOPwrBattOff (void)
+{
+    return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_BATT_OFF, true);
+}
+
+/*
+ * Switch the RIO battery charger to ON.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setRioBatteryChargerOn (void)
+{
+    return setPins (OW_NAME_RELAY_PIO, RELAY_RIO_CHARGER_ON, true);
+}
+
+/*
+ * Switch the RIO battery charger to OFF.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setRioBatteryChargerOff (void)
+{
+    return setPins (OW_NAME_RELAY_PIO, RELAY_RIO_CHARGER_ON, false);
+}
+
+/*
+ * Switch the O1 battery charger to ON.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setO1BatteryChargerOn (void)
+{
+    return setPins (OW_NAME_RELAY_PIO, RELAY_O1_CHARGER_ON, true);
+}
+
+/*
+ * Switch the O1 battery charger to OFF.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setO1BatteryChargerOff (void)
+{
+    return setPins (OW_NAME_RELAY_PIO, RELAY_O1_CHARGER_ON, false);
+}
+
+/*
+ * Switch the O2 battery charger to ON.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setO2BatteryChargerOn (void)
+{
+    return setPins (OW_NAME_RELAY_PIO, RELAY_O2_CHARGER_ON, true);
+}
+
+/*
+ * Switch the O2 battery charger to OFF.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setO2BatteryChargerOff (void)
+{
+    return setPins (OW_NAME_RELAY_PIO, RELAY_O2_CHARGER_ON, false);
+}
+
+/*
+ * Switch the O3 battery charger to ON.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setO3BatteryChargerOn (void)
+{
+    return setPins (OW_NAME_RELAY_PIO, RELAY_O3_CHARGER_ON, true);
+}
+
+/*
+ * Switch the O3 battery charger to OFF.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setO3BatteryChargerOff (void)
+{
+    return setPins (OW_NAME_RELAY_PIO, RELAY_O3_CHARGER_ON, false);
+}
+
+/*
+ * Read the current being drawn from the Rio/Pi/5V battery.
+ *
+ * pCurrent  a pointer to somewhere to put the current reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+static Bool readRioBattCurrent (SInt16 *pCurrent)
+{
+    return readCurrentDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], pCurrent);
+}
+
+/*
+ * Read the current being drawn from the O1 battery.
+ *
+ * pCurrent  a pointer to somewhere to put the current reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+static Bool readO1BattCurrent (SInt16 *pCurrent)
+{
+    return readCurrentDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], pCurrent);
+}
+
+/*
+ * Read the current being drawn from the O2 battery.
+ *
+ * pCurrent  a pointer to somewhere to put the current reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+static Bool readO2BattCurrent (SInt16 *pCurrent)
+{
+    return readCurrentDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], pCurrent);
+}
+
+/*
+ * Read the current being drawn from the O3 battery.
+ *
+ * pCurrent  a pointer to somewhere to put the current reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+static Bool readO3BattCurrent (SInt16 *pCurrent)
+{
+    return readCurrentDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], pCurrent);
+}
+
+/*
+ * Calibrate the Rio/Pi/5V battery monitor.
+ * This shold ONLY be called when the there is no
+ * current being drawn from the battery.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+static Bool performCalRioBattMonitor (void)
+{
+    printProgress ("WARNING: calibrating RIO battery, make sure no RIO/PI current is flowing!\n");
+    return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL);
+}
+
+/*
+ * Calibrate the O1 battery monitor.
+ * This shold ONLY be called when the there is no
+ * current being drawn from the battery.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+static Bool performCalO1BattMonitor (void)
+{
+    printProgress ("WARNING: calibrating O1 battery, make sure no current is flowing!\n");
+    return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL);
+}
+
+/*
+ * Calibrate the O2 battery monitor.
+ * This shold ONLY be called when the there is no
+ * current being drawn from the battery.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+static Bool performCalO2BattMonitor (void)
+{
+    printProgress ("WARNING: calibrating O2 battery, make sure no current is flowing!\n");
+    return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL);
+}
+
+/*
+ * Calibrate the O3 battery monitor.
+ * This shold ONLY be called when the there is no
+ * current being drawn from the battery.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+static Bool performCalO3BattMonitor (void)
+{
+    printProgress ("WARNING: calibrating O3 battery, make sure no current is flowing!\n");
+    return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL);
+}
+
+/*
+ * PUBLIC FUNCTIONS
+ */
+
+/*
  * Entry point
  */
 int main (int argc, char **argv)
@@ -382,23 +753,31 @@ int main (int argc, char **argv)
         success = setupDevices();
         
         if (success)
-        {
-            UInt8 pinStates;
+        {            
+            SInt16 rioCurrent;
+            SInt16 o1Current;
+            SInt16 o2Current;
+            SInt16 o3Current;            
             
             while (!key_abort() && success)
             {
-                printf ("Toggling pin 7 On\n");
-                pinStates = 0x7f;
-                success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_SCHOTTKY_PIO].address.value[0], &pinStates);
-                pinStates = 0x7f;
-                success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RELAY_PIO].address.value[0], &pinStates);
-                msDelay(2000);
-                printf ("Toggling pin 7 Off\n");
-                pinStates = 0x80;
-                success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_SCHOTTKY_PIO].address.value[0], &pinStates);
-                pinStates = 0x80;
-                success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RELAY_PIO].address.value[0], &pinStates);
-                msDelay(2000);
+                success = readRioBattCurrent (&rioCurrent);
+                if (success)
+                {
+                    success = readO1BattCurrent (&o1Current);
+                    if (success)
+                    {
+                        success = readO2BattCurrent (&o2Current);
+                        if (success)
+                        {
+                            success = readO3BattCurrent (&o3Current);
+                        }
+                    }
+                }
+                if (success)
+                {
+                    printf ("Currents: RIO %4d O1 %4d, O2 %4d, O3 %4d (-ve means discharge)\n", rioCurrent, o1Current, o2Current, o3Current);                
+                }
             }
         }
         else

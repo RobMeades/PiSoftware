@@ -1091,45 +1091,46 @@ Bool performCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, SInt16 *pOffsetC
         success = readRawCurrentDS2438 (portNumber, pSerialNumber, &current);
         if (success)
         {
-            /* Switch off current measurement */
+            /* Switch off current measurement if necessary */
             success = readNVConfigThresholdDS2438 (portNumber, pSerialNumber, &storedConfig, PNULL);
-            if (success && ((storedConfig | DS2438_IAD_IS_ENABLED) != 0))
+            if (success && ((storedConfig & DS2438_IAD_IS_ENABLED) != 0))
             {
                 iadWasEnabled = true;
                 tempConfig = storedConfig & ~DS2438_IAD_IS_ENABLED;
                 success = writeNVConfigThresholdDS2438 (portNumber, pSerialNumber, &tempConfig, PNULL);
-                if (success)
-                {
-                    /* Two's complement the current measurement */
-                    current *= -1;
+            }
+            /* Calculate the new calibration value and write it back */
+            if (success)
+            {
+                /* Two's complement the current measurement */
+                current *= -1;
 
-                    /* Now, here's where the data sheet is less clear.  The current register is a straight
-                     * 10 bit signed number.  The offset register is in the same units (0.2441 mVs) but the
-                     * value coded into the register is a 9 bit number and is shifted left by three bits
-                     * For the result to make sense, I think the current value needs to be manipulated in
-                     * the same way (at least, this works by experiment with real calibrations) */
-                    
-                    /* So, first lose the 10th bit in a sign-sensitive way, then shift the number */
-                    if (current < 0)
-                    {
-                        current |= 0x02;                        
-                    }
-                    else
-                    {
-                        current &= ~0x02;                                                
-                    }
-                    current <<= 3;
-                    /* Now write the number back to the register */
-                    success = writeNVCalDS2438 (portNumber, pSerialNumber, current);
-                    if (pOffsetCal != PNULL)
-                    {
-                        *pOffsetCal = CURRENT_TO_MA (current);
-                    }
-                    if (success && iadWasEnabled)
-                    {
-                        /* Put IAD back as it was */
-                        success = writeNVConfigThresholdDS2438 (portNumber, pSerialNumber, &storedConfig, PNULL);
-                    }
+                /* Now, here's where the data sheet is less clear.  The current register is a straight
+                 * 10 bit signed number.  The offset register is in the same units (0.2441 mVs) but the
+                 * value coded into the register is a 9 bit number and is shifted left by three bits
+                 * For the result to make sense, I think the current value needs to be manipulated in
+                 * the same way (at least, this works by experiment with real calibrations) */
+                
+                /* So, first lose the 10th bit in a sign-sensitive way, then shift the number */
+                if (current < 0)
+                {
+                    current |= 0x02;                        
+                }
+                else
+                {
+                    current &= ~0x02;                                                
+                }
+                current <<= 3;
+                /* Now write the number back to the register */
+                success = writeNVCalDS2438 (portNumber, pSerialNumber, current);
+                if (pOffsetCal != PNULL)
+                {
+                    *pOffsetCal = CURRENT_TO_MA (current);
+                }
+                if (iadWasEnabled) /* Don't bother checking success here, we changed the value successfully so really need to write it back */
+                {
+                    /* Put IAD back as it was */
+                    success = writeNVConfigThresholdDS2438 (portNumber, pSerialNumber, &storedConfig, PNULL);
                 }
             }
         }
