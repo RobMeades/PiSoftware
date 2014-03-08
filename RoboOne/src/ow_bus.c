@@ -26,6 +26,11 @@
 #define O2_BATTERY_MONITOR_CONFIG     DEFAULT_DS2438_CONFIG
 #define O3_BATTERY_MONITOR_CONFIG     DEFAULT_DS2438_CONFIG
 
+/* Set the threshold at which current measurements get added to the
+ * accumulators in a DS2438. Use 0x40 (+/-2 LSB) as there is ~20 ma
+ * of noise */
+#define DEFAULT_DS2438_THRESHOLD      0x40
+
 /* RSTZ is a reset line, set power on reset back to 0,
  * don't care about conditional search as we don't use it */
 #define DEFAULT_DS2408_CONFIG         (~DS2408_DEVICE_HAS_POWER_ON_RESET & ~DS2408_RSTZ_IS_STROBE)
@@ -381,10 +386,14 @@ Bool setupDevices (void)
             switch (getDeviceType (pAddress))
             {
                 case OW_TYPE_DS2438_BATTERY_MONITOR:
-                    /* Write the config register, leaving the threshold alone */
-                    success = writeNVConfigThresholdDS2438 (gPortNumber, pAddress, &gDeviceStaticConfigList[i].specifics.ds2438.config, PNULL);
-                    break;
+                {
+                    UInt8 threshold = DEFAULT_DS2438_THRESHOLD;
+                    /* Write the config register and the threshold register */
+                    success = writeNVConfigThresholdDS2438 (gPortNumber, pAddress, &gDeviceStaticConfigList[i].specifics.ds2438.config, &threshold);
+                }
+                break;
                 case OW_TYPE_DS2408_PIO:
+                {
                     /* Disable test mode, just in case, then write the control register and
                      * the pin configuration, using an intermediate variable for the latter
                      * as the write function also reads the result back and I'd rather avoid
@@ -399,11 +408,14 @@ Bool setupDevices (void)
                             success = channelAccessWriteDS2408 (gPortNumber, pAddress, &pinsState);
                         }
                     }
-                    break;
+                }
+                break;
                 default:
+                {
                     ASSERT_ALWAYS_PARAM (pAddress[0]);
                     success = false;
                     break;
+                }
             }
             if (!success)
             {
@@ -776,9 +788,154 @@ Bool readO3BattCurrent (SInt16 *pCurrent)
 }
 
 /*
+ * Read the Voltage at the Rio/Pi/5V battery.
+ *
+ * pCurrent  a pointer to somewhere to put the Voltage reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readRioBattVoltage (UInt16 *pVoltage)
+{
+    return readVddDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], pVoltage);
+}
+
+/*
+ * Read the Voltage at the O1 battery.
+ *
+ * pCurrent  a pointer to somewhere to put the Voltage reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readO1BattVoltage (UInt16 *pVoltage)
+{
+    return readVddDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], pVoltage);
+}
+
+/*
+ * Read the Voltage at the O2 battery.
+ *
+ * pCurrent  a pointer to somewhere to put the Voltage reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readO2BattVoltage (UInt16 *pVoltage)
+{
+    return readVddDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], pVoltage);
+}
+
+/*
+ * Read the Voltage at the O3 battery.
+ *
+ * pCurrent  a pointer to somewhere to put the Voltage reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readO3BattVoltage (UInt16 *pVoltage)
+{
+    return readVddDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], pVoltage);
+}
+
+/*
+ * Read the accumulated remaining capacity of the Rio/Pi/5V battery.
+ *
+ * pRemainingCapacity  a pointer to somewhere to put the reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readRioRemainingCapacity (UInt16 *pRemainingCapacity)
+{
+    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL);
+}
+
+/*
+ * Read the accumulated remaining capacity of the O1 battery.
+ *
+ * pRemainingCapacity  a pointer to somewhere to put the reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readO1RemainingCapacity (UInt16 *pRemainingCapacity)
+{
+    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL);
+}
+
+/*
+ * Read the accumulated remaining capacity of the O2 battery.
+ *
+ * pRemainingCapacity  a pointer to somewhere to put the reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readO2RemainingCapacity (UInt16 *pRemainingCapacity)
+{
+    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL);
+}
+
+/*
+ * Read the accumulated remaining capacity of the O3 battery.
+ *
+ * pRemainingCapacity  a pointer to somewhere to put the reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readO3RemainingCapacity (UInt16 *pRemainingCapacity)
+{
+    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL);
+}
+
+/*
+ * Read the lifetime charge/discharge data of the Rio/Pi/5V battery.
+ *
+ * pCurrent  a pointer to somewhere to put the Voltage reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readRioBattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
+{
+    return readNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], pCharge, pDischarge);
+}
+
+/*
+ * Read the lifetime charge/discharge data of the O1 battery.
+ *
+ * pCurrent  a pointer to somewhere to put the Voltage reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readO1BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
+{
+    return readNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], pCharge, pDischarge);
+}
+
+/*
+ * Read the lifetime charge/discharge data of the O2 battery.
+ *
+ * pCurrent  a pointer to somewhere to put the Voltage reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readO2BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
+{
+    return readNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], pCharge, pDischarge);
+}
+
+/*
+ * Read the lifetime charge/discharge data of the O3 battery.
+ *
+ * pCurrent  a pointer to somewhere to put the Voltage reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readO3BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
+{
+    return readNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], pCharge, pDischarge);
+}
+
+/*
  * Calibrate all battery monitors.
  * This shold ONLY be called when the there is no
- * current being drawn from the battery.
+ * current being drawn from the battery, or the
+ * sense resistor is shorted.
  * 
  * @return  true if successful, otherwise false.
  */
@@ -786,7 +943,7 @@ Bool performCalAllBatteryMonitors (void)
 {
     Bool success;
     
-    printProgress ("WARNING: calibrating all battery monitors, make sure no current is flowing!\n");
+    printProgress ("\nWARNING: calibrating all battery monitors, make sure no current is flowing!\n");
     success = performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL);
     if (success)
     {

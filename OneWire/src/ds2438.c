@@ -729,7 +729,7 @@ Bool readTemperatureDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, double *pTe
  */
 Bool readNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pConfig, UInt8 *pThreshold)
 {
-    bool success;
+    Bool success;
     UInt8 buffer[20];
     
     success = readNVPageDS2438 (portNumber, pSerialNumber, DS2438_CONFIG_PAGE, &buffer[0]);
@@ -767,6 +767,9 @@ Bool writeNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt
     Bool success;
     UInt8 buffer[DS2438_THRESHOLD_REG_OFFSET + sizeof (*pThreshold)]; /* Leave enough room in buffer for both */
     UInt8 size = DS2438_CONFIG_REG_OFFSET + sizeof (*pConfig);         /* but only size for the first for now */
+    UInt8 storedConfig;
+    UInt8 tempConfig;
+    Bool iadWasEnabled = false;
 
     ASSERT_PARAM (pConfig != PNULL, (unsigned long) pConfig);
     
@@ -774,11 +777,26 @@ Bool writeNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt
     
     if (pThreshold != PNULL)
     {
+        /* Current measurement has to be switched off if we're writing to the threshold register */
+        success = readNVConfigThresholdDS2438 (portNumber, pSerialNumber, &storedConfig, PNULL);
+        if (success && ((storedConfig & DS2438_IAD_IS_ENABLED) != 0))
+        {
+            iadWasEnabled = true;
+            tempConfig = storedConfig & ~DS2438_IAD_IS_ENABLED;
+            success = writeNVConfigThresholdDS2438 (portNumber, pSerialNumber, &tempConfig, PNULL);
+        }
+        /* Put the value to write in the buffer */
         buffer[DS2438_THRESHOLD_REG_OFFSET] = *pThreshold;
         size = sizeof (buffer);
     }
     
     success = writeNVPageDS2438 (portNumber, pSerialNumber, DS2438_CONFIG_PAGE, &buffer[0], size);
+
+    if (iadWasEnabled) /* Don't bother checking success here, we changed the value successfully so really need to write it back */
+    {
+        /* Put IAD back as it was */
+        success = writeNVConfigThresholdDS2438 (portNumber, pSerialNumber, &storedConfig, PNULL);
+    }
     
     return success;
 }
@@ -805,7 +823,7 @@ Bool writeNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt
  */
 Bool readTimeCapacityCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity, SInt16 *pOffsetCal)
 {
-    bool success;
+    Bool success;
     UInt8 buffer[DS4238_NUM_BYTES_IN_PAGE];
     
     success = readNVPageDS2438 (portNumber, pSerialNumber, DS2438_ETM_ICA_OFFSET_PAGE, &buffer[0]);
@@ -891,7 +909,7 @@ Bool writeTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *p
  */
 Bool readTimePiOffChargingStoppedDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pPiOff, UInt32 *pChargingStopped)
 {
-    bool success;
+    Bool success;
     UInt8 buffer[DS4238_NUM_BYTES_IN_PAGE];
     
     success = readNVPageDS2438 (portNumber, pSerialNumber, DS2438_DISC_EOC_PAGE, &buffer[0]);
@@ -928,7 +946,7 @@ Bool readTimePiOffChargingStoppedDS2438 (SInt32 portNumber, UInt8 *pSerialNumber
  */
 Bool readNVChargeDischargeDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pCharge, UInt32 *pDischarge)
 {
-    bool success;
+    Bool success;
     UInt8 buffer[DS4238_NUM_BYTES_IN_PAGE];
     
     success = readNVPageDS2438 (portNumber, pSerialNumber, DS2438_CCA_DCA_PAGE, &buffer[0]);
@@ -1077,11 +1095,11 @@ Bool writeNVUserDataDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 block
  */
 Bool performCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, SInt16 *pOffsetCal)
 {
-    bool success;
+    Bool success;
     SInt16 current = 0;
     UInt8 storedConfig;
     UInt8 tempConfig;
-    bool iadWasEnabled = false;
+    Bool iadWasEnabled = false;
     
     /* Write in zero to the offset calibration */
     success = writeNVCalDS2438 (portNumber, pSerialNumber, current);
