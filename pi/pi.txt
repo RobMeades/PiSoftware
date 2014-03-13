@@ -1,0 +1,467 @@
+GET ARCH
+
+Download the Arch Linux image file from:
+
+http://downloads.raspberrypi.org/arch_latest
+
+Write the .img file in the downloaded .zip file to the SD card you had in your Pi, e.g. by inserting it into the Windows machine you did the download from and then using Win32DiskImager to write the image.
+
+RESIZE FILESYSTEM
+
+Put the SD card into the Pi (it doesn't have to be the one in RoboOne, any Pi will do) and resize the file system to a larger and yet manageable size as follows.  Borrowing from http://jan.alphadev.net/post/53594241659/growing-the-rpi-root-partition, the initial partitioning of recent Arch Linux images is slightly different from those that went before, and different from the NOOBS Pi image as well.  
+
+First, log in with username "root", password "root".  Enter:
+
+df -h
+
+...and in the list you should see a /dev/mmcblk0p1 partition of size around 90 Mbytes.  This is the boot partition, /dev/mmcblk0 being the SD card itself.  Enter:
+
+fdisk /dev/mmcblk0
+
+...and then enter p to see the partition information:
+
+Disk /dev/mmcblk0: 7.4 GiB, 7948206080 bytes, 15523840 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disklabel type: dos
+Disk identifier: 0x417ee54b
+
+Device         Boot     Start       End  Blocks  Id System
+/dev/mmcblk0p1           2048    186367   92160   c W95 FAT32 (LBA)
+/dev/mmcblk0p2         186368   3667967 1740800   5 Extended
+/dev/mmcblk0p5         188416   3667967 1739776  83 Linux
+
+Partition 2 is the normal extended partition and partition 5 is a logical Linux partition within it.  Apparently this is done because you can only have four primary partitions at top level on a disk whereas you can have more if you put them within extended partitions.  Or something like that.  Anyway, we need BOTH of these partitions to span the entire disk, and for an 8 gigabyte SD card, a sensible end block that should fit onto any 8 gigabyte SD card you buy is 15,499,999 (each of block being 500 bytes).  So, note the start blocks for each of the partitions and then delete partition 2 by entering:
+
+d
+2
+
+This will also delete partition 5 as it is inside partition 2.  Then recreate both partitions with the new end block by entering:
+
+n
+e
+2
+186368
+15499999
+
+n
+l
+5
+188416
+15499999
+
+Enter p and you should now get a partition table as follows:
+
+Disk /dev/mmcblk0: 7.4 GiB, 7948206080 bytes, 15523840 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disklabel type: dos
+Disk identifier: 0x417ee54b
+
+Device         Boot     Start       End  Blocks  Id System
+/dev/mmcblk0p1           2048    186367   92160   c W95 FAT32 (LBA)
+/dev/mmcblk0p2         186368  15499999 7656816   5 Extended
+/dev/mmcblk0p5         188416  15499999 7655792  83 Linux
+
+Enter w to write this information back to the SD card, and you will see something like:
+
+The partition table has been altered!
+
+Calling ioctl() to re-read partition table.
+Re-reading the partition table failed.: Device or resource busy.
+The kernel still uses the old table. The new table will be used at the next reboot or after you run partprobe(8) or kpartx(8)
+
+Reboot with:
+
+reboot
+
+...and when the Pi comes back up, log in with "root", "root" again and enter:
+
+resize2fs /dev/mmcblk0p5
+
+Once this has cooked, enter:
+
+df -h
+
+...and you should see a 7.2G root drive, roughly as follows:
+
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/root       7.2G  402M  6.5G   6% /
+
+All of the 8 gigabyte SD card (or a sensible maximum amount of it, anyway) is now in use.
+
+UPGRADE ARCH
+
+Upgrade the whole system with:
+
+pacman -Syu
+
+...entering 'y' to the two prompts that arise.  Enter:
+
+reboot
+
+...and log in again to make sure it all works.
+
+CHANGE ROOT PASSWORD
+
+Change the root password with the command:
+
+passwd
+
+CHANGE HOSTNAME
+
+Use nano to edit /etc/hostname and change "alarmpi" to "RoboOne".
+
+Use nano to edit the /etc/hosts file to reflect the hostname, modifying the line of the file to read
+
+127.0.0.1 localhost.localdomain localhost yourhostname
+
+...replacing yourhostname with the name you put in /etc/hostname.
+
+SWITCH OFF SWAPFILE
+
+Switch the swap file off by entering:
+
+swapoff -a
+
+CREATE A USER
+
+Install sudo:
+
+pacman -S sudo
+
+Give your regular user permission to use sudo by editing the configuration file visudo as follows:
+
+EDITOR=nano visudo
+
+Locate the section marked as:
+
+##
+## User privilege specification
+##
+
+...and uncomment the line a few lines below this to say:
+
+%wheel ALL=(ALL) ALL
+
+...and the one below that to say:
+
+%wheel ALL=(ALL) NOPASSWD: ALL
+
+...and the one below that to say:
+
+%sudo    ALL=(ALL) ALL
+
+...and the one below that to say:
+
+ALL ALL=(ALL) ALL  # WARNING: only use this together with 'Defaults targetpw'
+
+Install the adduser package:
+
+pacman -S adduser
+
+Create a new user with:
+
+adduser
+
+Following the prompts, add the username "pi". Accept the next available UID. Use the default users as the initial group. For additional groups press up-arrow and press enter (which gives you the lot).  It may complain that some don't exist, in which case try again with those removed from the list.  Accept the default home directory and shell. Don't enter an expiration date. Confirm this and then enter whatever "finger" information you think is worthwhile and, finally, the password.
+
+Log out and log in again as this user.  From now on "sudo" commands as necessary.
+
+SET THE TIME
+
+Get the ntp package:
+
+pacman -S ntp
+
+Enable the service and switch NTP on with:
+
+systemctl enable ntpd.service
+timedatectl set-ntp 1
+
+You will need the policy kit to set the timezone:
+
+pacman -S polkit
+
+Reboot the device (this is apparently required for polkit or you will get an "Access Denied" error
+
+Now set the timezone:
+
+timedatectl set-timezone Europe/London
+
+INSTALL GENERAL PACKAGES
+
+pacman -S lrzsz
+pacman -S picocom
+pacman -S minicom
+pacman -S unzip
+
+INSTALL/SET-UP AUDIO OUTPUT
+
+pacman -S alsa-utils
+pacman -S alsa-firmware
+pacman -S alsa-lib
+pacman -S alsa-plugins
+
+Point audio out to the speakers by entering:
+
+amixer cset numid=3 1
+
+(the 1 is for analogue out).
+
+Set volume to maximum by running alsamixer end pressing the arrow keys.
+
+Plug a speaker into the audio output jack and test that it works by entering:
+
+speaker-test -t wav -c 2
+
+INSTALL VSFTPD
+
+pacman -S vsftpd
+
+Get permissions correct with:
+
+chown root /etc/vsftpd.conf
+
+Make sure that /etc/vsftpd.conf includes the line:
+
+listen=YES
+
+...and restart the service:
+
+systemctl restart vsftpd
+
+Check that you can get a response from the ftp server by entering:
+
+ftp 127.0.0.1
+
+You should get something like:
+
+Connected to 127.0.0.1.
+220 (vsFTPd 3.0.2)
+Name (127.0.0.1:pi):
+
+Then edit /etc/vsftpd.conf to disable anonymous FTP (anonymous_enable=NO), allow local users to log in (local_enable=YES) and enable writing (write_enable=YES).   Restart the vsfptd service once more and check that you can log into the FTP server from somewhere else as the user pi.
+
+Set vsftpd to start at boot by entering:
+
+systemctl enable vsftpd
+
+COPY OVER FILES
+
+While you're connected via FTP...
+
+Copy the file /etc/udev/rules.d/39-rob.rules from the old SD card to the new one.
+Copy any bash scripts (e.g. the one that streams video), modified RIO files, etc. from the home directory of the old SD card to the new one.
+Copy the OneWire executable tstfind across (you will use it later).
+You may need to "chmod 755" the files to make them executable.
+
+Reboot the Pi for the 39-rob.rules file to take effect.
+
+INSTALL STREAMING
+
+pacman -S autoconf
+pacman -S automake
+pacman -S libtool
+pacman -S libupnp
+pacman -S gstreamer
+pacman -S gmrender-resurrect-git
+
+[Note: not sure if the ones above gstreamer are really necessary since we aren't compiling the source but it can't do any harm to have these around for later]
+
+Edit /etc/conf.d/gmediarender to make the friendlyname RoboOne.
+
+Start the service by entering:
+
+systemctl start gmediarender
+
+With a speaker plugged into the Pi, check that you can stream to "RoboOne" from Windows Media Player (or something) on a remote PC.
+
+Enable the streaming service to run at boot by entering:
+
+systemctl enable gmediarender
+
+MAKE A BACKUP
+Beyond here we fiddle with boot stuff so best make a backup now in case it goes belly-up.  You can use Win32DiskImager since you will only be writing the image back to this SD card (if you want to write to another SD card you should use dd to make an image of just the 15,499,999 blocks that are our good maximum size).  So, shutdown the Pi with:
+
+shutdown -hP now
+
+...and make a backup of the SD card.
+
+CHECK THAT THE SD CARD WORKS IN ROBOONE
+
+Up until this point you could have been running with any Pi.  From now on the SD card needs to be in the Pi that's inside RoboOne.  Put it there and boot, plugging into the Ethernet to poke around at first.  Look in /dev/serial/by-id:
+
+ls /dev/serial/by-id
+
+It should show:
+
+usb-FTDI_FT232R_USB_UART_A601ED4K-if00-port0
+usb-Prolific_Technology_Inc._USB-Serial_Controller-if00-port0
+
+Power up the Orangutan board and check that you can talk to it via Picocom with:
+
+sh ./RoboOneSerial.sh
+
+Check that you can talk to the XBee with:
+
+sh ./XBee.sh
+
+...and then type +++ (do not press enter) and wait for a few seconds.  You should get back "OK".  Wait a further 10 seconds and the XBee will drop out of command mode again.
+
+Check that you can talk to USBSerial by running a RoboOne executable that talks to the OneWire bus, for example use tstfind from the OneWire libraries (ftp it onto the Pi):
+
+./tstfind /dev/USBSerial
+
+INSTALL/SET-UP AUDIO INPUT
+
+Enable the USB microphone as follows.  Start alsamixer:
+
+alsamixer
+
+Press 's' to select soundcard and chose the "USB PnP Sound Device".  Press TAB until you get to Capture and use the up-arrow to select maximum volume.  Press ESC to exit alsamixer.  Now save these settings by entering:
+
+alsactl store
+
+Make a recording with:
+
+arecord -D plughw:1,0 test.wav
+
+Press CTRL-C when you've captured something.  Play the capture back with:
+
+aplay test.wav
+
+...and ensure that you can hear what you recorded.  I did, but aplay seemed to crash the Pi afterwards.  This doesn't seem to be a microphone problem though, it's something to do with playing .wav files, which are quite processor intensive.
+
+ACTIVATE WIFI DONGLE
+
+Bring up the Wifi dongle by entering:
+
+ip link set wlan0 up
+
+Load the relevant modules:
+
+pacman -S iw
+pacman -S wpa_supplicant
+pacman -S wireless_tools
+pacman -S netctl
+pacman -s dialog
+
+Then use the menu to attach to the wifi network:
+
+wifi-menu wlan0
+
+During this process I was offered to save a configuration file name which had an initial capital letter; I chose to change this to lower case.  Not sure if it mattered or not.
+
+After this I rebooted as things weren't working until I did so.  After rebooting enter:
+
+iw dev wlan0 link
+
+...and hopefully you will see something like "Connected to..." appear.
+
+If all is well, enable the service to start at boot by entering:
+
+netctl enable wlan0-meades18
+
+...and reboot to check that it has persisted.
+
+INSTALL STREAMING VIDEO
+
+Get raspivid and netcat:
+
+pacman -S raspberrypi-firmware-tools
+pacman -S openbsd-netcat
+
+raspvid ends up in an odd place, so edit /etc/profile and add to it:
+
+PATH="$PATH:/opt/vc/bin"
+
+Reload this profile by entering:
+
+source /etc/profile
+
+Confirm this has succeeded by entering:
+
+echo $PATH
+
+Now check that the camera streams.  On a PC with netcat and mplayer installed, run the batch file in c:\Program Files (x86)\Netcat:
+
+c:\Program Files (x86)\Netcat\streamvid.bat
+
+FYI, the command line this runs on the PC is:
+
+nc -L -p 5001 | ..\mplayer\mplayer -fps 31 -cache 1024 -
+
+On the Pi (assuming that the target PC is 10.10.1.2), enter:
+
+sh ./streamvid.sh 10.10.1.2
+
+If you get:
+
+# /opt/vc/bin/raspistill -o image.jpg
+mmal: mmal_vc_component_create: failed to create component 'vc.ril.camera' (1:ENOMEM)
+mmal: mmal_component_create_core: could not create component 'vc.ril.camera' (1)
+mmal: Failed to create camera component
+mmal: main: Failed to create camera component
+mmal: Camera is not enabled in this build. Try running "sudo raspi-config" and ensure that "camera" has been enabled
+
+...you need to append the following to /boot/config.txt:
+
+start_file=start_x.elf
+fixup_file=fixup_x.dat
+
+...and reboot, then enter:
+
+sh ./streamvid.sh 10.10.1.2
+
+...once more.
+
+The streamed video image from the Pi camera should now appear on the PC monitor.
+
+ENABLE TTY ON USB0 (XBeeUSB)
+
+Enter:
+
+ln -s /lib/systemd/system/serial-getty@.service /etc/systemd/system/getty.target.wants/serial-getty@XBeeUSB.service
+
+Now edit configuration file /lib/systemd/system/serial-getty@.service so that:
+
+ExecStart=-/sbin/agetty --keep-baud %I 115200,38400,9600 $TERM
+
+...becomes:
+
+ExecStart=-/sbin/agetty --local-line --noclear %I 38400 $TERM
+
+Start the getty service by entering:
+
+systemctl start serial-getty@XBeeUSB.service
+
+Check that you can now log into the Pi via the XBee.  Assuming you can, make the service start at boot by entering:
+
+systemctl enable serial-getty@XBeeUSB.service
+
+MAKE ANOTHER BACKUP
+We'll be fiddling with boot things again, so shut down the Pi and make a back-up.
+
+INSTALL ROBOTEQ SOFTWARE FOR RIO/AHRS
+
+The original RIO install script is not compatible with Arch Linux so you will need to run rio_board_install_systemd.sh and install the script rioboard_d.service instead.  Make sure you are in the directory where rio_board_install_systemd.sh and rioboard_d.service are located and enter:
+
+chmod 755 rio_board_install_systemd.sh
+sh ./rio_board_install_systemd.sh
+
+Follow the instructions given and, when done, reboot.
+
+If you have been successful the green LED on the RIO/AHRS should be flashing at 4 Hz rather than 1 Hz.  Now run the test program provided by RIO:
+
+cd /riofiles
+chomd 755 riboard_test
+sudo ./rioboard_test
+
+Note that the test program MUST be run with root privileges or it won't be able to access shared memory.  If a load of numbers stream up your screen, you're done.
+
+MAKE YET ANOTHER BACKUP
+Now everything is working, make backup 1.0.
+

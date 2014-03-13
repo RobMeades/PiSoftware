@@ -1,0 +1,3 @@
+ACTION=="add", ATTRS{interface}=="FT232R USB UART", MODE="7777", SYMLINK+="XBeeUSB"
+ACTION=="add", ATTRS{interface}=="Pololu Orangutan X2 Serial Adapter", MODE="7777", SYMLINK+="OrangutanUSB"
+ACTION=="add", ATTRS{manufacturer}=="Prolific Technology Inc.", MODE="7777", SYMLINK+="USBSerial"

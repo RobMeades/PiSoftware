@@ -1,0 +1,11 @@
+[Unit]
+Description=RioBoard daemon
+Wants=multi-user.target
+
+[Service]
+Type=forking
+ExecStart=/usr/sbin/rioboard_d
+ExecStop=killall rioboard_d
+
+[Install]
+WantedBy=multi-user.target
