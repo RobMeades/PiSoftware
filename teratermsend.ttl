@@ -42,7 +42,7 @@ goto finish
 :checkifloggedin
 statusbox "Checking if we're logged in already..." messageBoxTitle
 sendln
-wait "~$"
+wait "~]$"
 if result = 0 goto start
 logOutAtEnd = 0
 goto alreadyloggedin
@@ -59,12 +59,12 @@ sendln "pi"
 wait "Password:"
 sendln "18victoria"
 statusbox "Waiting for prompt..." messageBoxTitle
-wait "~$"
+wait "~]$"
 
 :alreadyloggedin
 statusbox "Deleting file on device..." messageBoxTitle
 sendln deleteFileOnDevice
-wait "~$"
+wait "~]$"
 ;Start zmodem receive on the other end
 statusbox "Starting Zmodem on Pi..." messageBoxTitle
 sendln "rz"
@@ -77,7 +77,7 @@ goto finish
 
 :zmodemsuccess
 sendln makeexe
-wait "~$"
+wait "~]$"
 goto writesuccess
 
 :writesuccess
@@ -93,7 +93,7 @@ goto finish
 :logout
 statusbox "Logging out..." messageBoxTitle
 sendln
-wait "~$"
+wait "~]$"
 sendln "exit"
 wait "login:"
 
