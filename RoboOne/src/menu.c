@@ -6,7 +6,6 @@
 #include <ow_bus.h>
 #include <menu.h>
 
-
 /*
  * MANIFEST CONSTANTS
  */
@@ -16,6 +15,12 @@
 #define KEY_BACKSPACE '\x08'
 #define SCREEN_BACKSPACE "\x1b[1D" /* ANSI escape sequence for back one space: ESC [ 1 D */
 #define COMMAND_PROMPT "\nCommand (? for help) "
+#define GENERIC_FAILURE_MSG "Failed!\n"
+#define READ_FAILURE_MSG "Read failure.\n"
+#define SWAP_BATTERY_PROMPT "Are you sure you want to change the battery (Y/N)?: "
+#define SWAP_BATTERY_STATE_PROMPT "Is the new battery fully charged (Y) (N if it is discharged)?: "
+#define SWAP_BATTERY_CNF_MSG "Battery data updated.\n"
+#define BATTERY_CAPACITY 2200
 
 /*
  * STATIC FUNCTION PROTOTYPES
@@ -27,6 +32,10 @@ static Bool displayCurrents (void);
 static Bool displayVoltages (void);
 static Bool displayRemainingCapacities (void);
 static Bool displayLifetimeChargesDischarges (void);
+static Bool swapRioBatteryCnf (void);
+static Bool swapO1BatteryCnf (void);
+static Bool swapO2BatteryCnf (void);
+static Bool swapO3BatteryCnf (void);
 static Bool performCalAllBatteryMonitorsCnf ();
 
 /*
@@ -55,6 +64,10 @@ Command gCommandList[] = {{"?", &commandHelp, "display command help"},
  						  {"A", &displayRemainingCapacities, "display the accumulated remaining capacities"},
  						  {"L", &displayLifetimeChargesDischarges, "display the lifetime charge/discharge accumulators"},
  						  {"Q", &performCalAllBatteryMonitorsCnf, "calibrate battery monitors"},
+                          {"SP", &swapRioBatteryCnf, "swap the battery connected to the RIO/Pi"},
+                          {"S1", &swapO1BatteryCnf, "swap the battery connected to the O1"},
+                          {"S2", &swapO2BatteryCnf, "swap the battery connected to the O2"},
+                          {"S3", &swapO3BatteryCnf, "swap the battery connected to the O3"},
  						  {"PR!", &togglePiRst, "toggle reset to the Pi"},  /* Keep gIndexOfFirstSwitchCommand pointed at here and then we will give user feedback of the result */
  						  {"HP!", &toggleOPwr, "toggle power to the hindbrain (AKA Orangutan)"},
  						  {"HR!", &toggleORst, "toggle reset to the hindbrain (AKA Orangutan)"},
@@ -88,6 +101,8 @@ UInt8 gIndexOfFirstSwitchCommand = 7;
 
 /*
  * Print the possible commands
+ *
+ * @return  true.
  */
 static Bool commandHelp (void)
 {
@@ -105,6 +120,8 @@ static Bool commandHelp (void)
 
 /*
  * A dummy command for exit
+ * 
+ * @return  true.
  */
 static Bool commandExit (void)
 {
@@ -114,6 +131,8 @@ static Bool commandExit (void)
 /*
  * Display the current readings from all
  * the batteries.
+ *
+ * @return  true if successful, otherwise false.
  */
 static Bool displayCurrents (void)
 {
@@ -143,7 +162,7 @@ static Bool displayCurrents (void)
     }
     else
     {
-        printf ("Read failure.\n");
+        printf (READ_FAILURE_MSG);
     }
         
     return success;    
@@ -152,6 +171,8 @@ static Bool displayCurrents (void)
 /*
  * Display the Voltage readings from all
  * the batteries.
+ *
+ * @return  true if successful, otherwise false.
  */
 static Bool displayVoltages (void)
 {
@@ -181,7 +202,7 @@ static Bool displayVoltages (void)
     }
     else
     {
-        printf ("Read failure.\n");
+        printf (READ_FAILURE_MSG);
     }
         
     return success;    
@@ -190,6 +211,8 @@ static Bool displayVoltages (void)
 /*
  * Display the accumulated remaining capacity
  * readings from all the battery monitors.
+ *
+ * @return  true if successful, otherwise false.
  */
 static Bool displayRemainingCapacities (void)
 {
@@ -219,14 +242,17 @@ static Bool displayRemainingCapacities (void)
     }
     else
     {
-        printf ("Read failure.\n");
+        printf (READ_FAILURE_MSG);
     }
         
     return success;    
 }
+
 /*
  * Display the lifetime charge/discharge accumulator
  * readings from all the battery monitors.
+ *
+ * @return  true if successful, otherwise false.
  */
 static Bool displayLifetimeChargesDischarges (void)
 {
@@ -261,7 +287,7 @@ static Bool displayLifetimeChargesDischarges (void)
     }
     else
     {
-        printf ("Read failure.\n");
+        printf (READ_FAILURE_MSG);
     }
         
     return success;    
@@ -272,6 +298,8 @@ static Bool displayLifetimeChargesDischarges (void)
  * but wait for a confirm key to be pressed first
  * as this is something that the user has to have
  * prepared for and shouldn't be run accidentally.
+ *
+ * @return  true if successful, otherwise false.
  */
 static bool performCalAllBatteryMonitorsCnf (void)
 {
@@ -287,11 +315,199 @@ static bool performCalAllBatteryMonitorsCnf (void)
         }
         else
         {
-            printf ("Failed!\n");
+            printf (GENERIC_FAILURE_MSG);
         }
     }
     
     return success;
+}
+
+/*
+ * Swap the battery connected to the RIO/Pi/5v.
+ * This involves zeroing the accumulators, setting
+ * the remaining capacity to something sensible
+ * and update the elapsed time (this latter because
+ * that's the way the DS2438 chip is built).
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool swapRioBatteryCnf (void)
+{
+    Bool success = true;
+    UInt16 remainingCapacity = 0;
+    UInt32 timeTicks;
+    
+    timeTicks = getSystemTicks();
+    if (timeTicks != 0)
+    {
+        if (getYesInput (SWAP_BATTERY_PROMPT))
+        {
+            /* Check that the new battery is fully charged */
+            if (getYesInput (SWAP_BATTERY_STATE_PROMPT))
+            {
+                remainingCapacity = BATTERY_CAPACITY;
+            }
+            
+            /* Now do the swap */
+            success = swapRioBattery (timeTicks, remainingCapacity);
+        }
+    }
+    else
+    {
+        success = false;
+    }
+
+    if (success)
+    {
+        printf (SWAP_BATTERY_CNF_MSG);
+    }
+    else
+    {
+        printf (GENERIC_FAILURE_MSG);
+    }
+    
+    return success;    
+}
+
+/*
+ * Swap the battery connected to the O1.
+ * This involves zeroing the accumulators, setting
+ * the remaining capacity to something sensible
+ * and update the elapsed time (this latter because
+ * that's the way the DS2438 chip is built).
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool swapO1BatteryCnf (void)
+{
+    Bool success = true;
+    UInt16 remainingCapacity = 0;
+    UInt32 timeTicks;
+    
+    timeTicks = getSystemTicks();
+    if (timeTicks != 0)
+    {
+        if (getYesInput (SWAP_BATTERY_PROMPT))
+        {
+            /* Check that the new battery is fully charged */
+            if (getYesInput (SWAP_BATTERY_STATE_PROMPT))
+            {
+                remainingCapacity = BATTERY_CAPACITY;
+            }
+            
+            /* Now do the swap */
+            success = swapO1Battery (timeTicks, remainingCapacity);
+        }
+    }
+    else
+    {
+        success = false;
+    }
+    
+    if (success)
+    {
+        printf (SWAP_BATTERY_CNF_MSG);
+    }
+    else
+    {
+        printf (GENERIC_FAILURE_MSG);
+    }
+
+    return success;    
+}
+
+/*
+ * Swap the battery connected to the O2.
+ * This involves zeroing the accumulators, setting
+ * the remaining capacity to something sensible
+ * and update the elapsed time (this latter because
+ * that's the way the DS2438 chip is built).
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool swapO2BatteryCnf (void)
+{
+    Bool success = true;
+    UInt16 remainingCapacity = 0;
+    UInt32 timeTicks;
+    
+    timeTicks = getSystemTicks();
+    if (timeTicks != 0)
+    {
+        if (getYesInput (SWAP_BATTERY_PROMPT))
+        {
+            /* Check that the new battery is fully charged */
+            if (getYesInput (SWAP_BATTERY_STATE_PROMPT))
+            {
+                remainingCapacity = BATTERY_CAPACITY;
+            }
+            
+            /* Now do the swap */
+            success = swapO2Battery (timeTicks, remainingCapacity);
+        }
+    }
+    else
+    {
+        success = false;
+    }
+    
+    if (success)
+    {
+        printf (SWAP_BATTERY_CNF_MSG);
+    }
+    else
+    {
+        printf (GENERIC_FAILURE_MSG);
+    }
+
+    return success;    
+}
+
+/*
+ * Swap the battery connected to the O3.
+ * This involves zeroing the accumulators, setting
+ * the remaining capacity to something sensible
+ * and update the elapsed time (this latter because
+ * that's the way the DS2438 chip is built).
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool swapO3BatteryCnf (void)
+{
+    Bool success = true;
+    UInt16 remainingCapacity = 0;
+    UInt32 timeTicks;
+    
+    timeTicks = getSystemTicks();
+    if (timeTicks != 0)
+    {
+        if (getYesInput (SWAP_BATTERY_PROMPT))
+        {
+            /* Check that the new battery is fully charged */
+            if (getYesInput (SWAP_BATTERY_STATE_PROMPT))
+            {
+                remainingCapacity = BATTERY_CAPACITY;
+            }
+            
+            /* Now do the swap */
+            success = swapO3Battery (timeTicks, remainingCapacity);
+        }
+    }
+    else
+    {
+        success = false;
+    }
+
+    if (success)
+    {
+        printf (SWAP_BATTERY_CNF_MSG);
+    }
+    else
+    {
+        printf (GENERIC_FAILURE_MSG);
+    }
+   
+    return success;    
 }
 
 /*

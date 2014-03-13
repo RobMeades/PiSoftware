@@ -6,6 +6,7 @@ Bool startOneWireBus (void);
 void stopOneWireBus (void);
 Bool setupDevices (void);
 UInt8 findAllDevices (void);
+UInt32 getSystemTicks (void);
 
 Bool toggleOPwr (void);
 Bool toggleORst (void);
@@ -51,3 +52,7 @@ Bool performCalRioBatteryMonitor (void);
 Bool performCalO1BatteryMonitor (void);
 Bool performCalO2BattMonitor (void);
 Bool performCalO3BattMonitor (void);
+Bool swapRioBattery (UInt32 systemTime, UInt16 remainingCapacity);
+Bool swapO1Battery (UInt32 systemTime, UInt16 remainingCapacity);
+Bool swapO2Battery (UInt32 systemTime, UInt16 remainingCapacity);
+Bool swapO3Battery (UInt32 systemTime, UInt16 remainingCapacity);

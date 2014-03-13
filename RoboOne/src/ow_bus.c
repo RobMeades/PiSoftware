@@ -4,6 +4,7 @@
  
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <ownet.h>
 #include <atod26.h>
 #include <rob_system.h>
@@ -290,9 +291,8 @@ Bool startOneWireBus (void)
 }
 
 /*
- * Shut stuff down:
- *
- * - Release the serial port
+ * Shut stuff down, which is just
+ * releasing the serial port
  * 
  * @return  none.
  */
@@ -300,6 +300,28 @@ void stopOneWireBus (void)
 {
     printProgress ("Closing port.\n");
     owRelease (gPortNumber);
+}
+
+/*
+ * Get the system time in ticks and in a
+ * UInt32.  This is used to set the time
+ * inside the DS4238 devices.
+ * 
+ * @return  the system ticks as a UInt32,
+ *          which will be zero if the
+ *          call fails.
+ */
+UInt32 getSystemTicks (void)
+{
+    struct timespec time;
+
+    if (clock_gettime (CLOCK_REALTIME, &time) != 0)
+    {
+        /* If the call fails, set the time returned to zero */
+        time.tv_sec = 0;
+    }
+    
+    return (UInt32) time.tv_sec;
 }
 
 /*
@@ -388,8 +410,16 @@ Bool setupDevices (void)
                 case OW_TYPE_DS2438_BATTERY_MONITOR:
                 {
                     UInt8 threshold = DEFAULT_DS2438_THRESHOLD;
+                    UInt32 timeTicks;
+
                     /* Write the config register and the threshold register */
                     success = writeNVConfigThresholdDS2438 (gPortNumber, pAddress, &gDeviceStaticConfigList[i].specifics.ds2438.config, &threshold);
+                    if (success)
+                    {
+                        /* Set the time */
+                        timeTicks = getSystemTicks ();
+                        success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[i].address.value[0], &timeTicks, PNULL);
+                    }
                 }
                 break;
                 case OW_TYPE_DS2408_PIO:
@@ -886,7 +916,8 @@ Bool readO3RemainingCapacity (UInt16 *pRemainingCapacity)
 /*
  * Read the lifetime charge/discharge data of the Rio/Pi/5V battery.
  *
- * pCurrent  a pointer to somewhere to put the Voltage reading.
+ * pCharge  a pointer to somewhere to put the charge reading.
+ * pDischarge  a pointer to somewhere to put the discharge reading.
  * 
  * @return  true if successful, otherwise false.
  */
@@ -898,7 +929,8 @@ Bool readRioBattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
 /*
  * Read the lifetime charge/discharge data of the O1 battery.
  *
- * pCurrent  a pointer to somewhere to put the Voltage reading.
+ * pCharge  a pointer to somewhere to put the charge reading.
+ * pDischarge  a pointer to somewhere to put the discharge reading.
  * 
  * @return  true if successful, otherwise false.
  */
@@ -910,7 +942,8 @@ Bool readO1BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
 /*
  * Read the lifetime charge/discharge data of the O2 battery.
  *
- * pCurrent  a pointer to somewhere to put the Voltage reading.
+ * pCharge  a pointer to somewhere to put the charge reading.
+ * pDischarge  a pointer to somewhere to put the discharge reading.
  * 
  * @return  true if successful, otherwise false.
  */
@@ -922,7 +955,8 @@ Bool readO2BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
 /*
  * Read the lifetime charge/discharge data of the O3 battery.
  *
- * pCurrent  a pointer to somewhere to put the Voltage reading.
+ * pCharge  a pointer to somewhere to put the charge reading.
+ * pDischarge  a pointer to somewhere to put the discharge reading.
  * 
  * @return  true if successful, otherwise false.
  */
@@ -1011,4 +1045,104 @@ Bool performCalO3BatteryMonitor (void)
 {
     printProgress ("WARNING: calibrating O3 battery monitors, make sure no current is flowing!\n");
     return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL);
+}
+
+/*
+ * Set the remaining capacity data of the Rio/Pi/5V battery
+ * and the time, then reset the charge/discharge
+ * accumulators as well.
+ *
+ * systemTime          the system time in seconds.
+ * remainingCapacity   the remaining capacity in mAhrs.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool swapRioBattery (UInt32 systemTime, UInt16 remainingCapacity)
+{
+    Bool success;
+    UInt32 zero = 0;
+    
+    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity);
+    
+    if (success)
+    {
+        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &zero, &zero);;
+    }
+    
+    return success;
+}
+
+/*
+ * Set the remaining capacity data of the O1 battery
+ * and the time, then reset the charge/discharge
+ * accumulators as well.
+ *
+ * systemTime          the system time in seconds.
+ * remainingCapacity   the remaining capacity in mAhrs.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool swapO1Battery (UInt32 systemTime, UInt16 remainingCapacity)
+{
+    Bool success;
+    UInt32 zero = 0;
+    
+    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity);
+    
+    if (success)
+    {
+        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &zero, &zero);;
+    }
+    
+    return success;
+}
+
+/*
+ * Set the remaining capacity data of the O2 battery
+ * and the time, then reset the charge/discharge
+ * accumulators as well.
+ *
+ * systemTime          the system time in seconds.
+ * remainingCapacity   the remaining capacity in mAhrs.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool swapO2Battery (UInt32 systemTime, UInt16 remainingCapacity)
+{
+    Bool success;
+    UInt32 zero = 0;
+    
+    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity);
+    
+    if (success)
+    {
+        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &zero, &zero);;
+    }
+    
+    return success;
+}
+
+/*
+ * Set the remaining capacity data of the O3 battery
+ * and the time, then reset the charge/discharge
+ * accumulators as well.
+ *
+ * systemTime          the system time in seconds.
+ * remainingCapacity   the remaining capacity in mAhrs.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool swapO3Battery (UInt32 systemTime, UInt16 remainingCapacity)
+{
+    Bool success;
+    UInt32 zero = 0;
+    
+    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity);
+    
+    if (success)
+    {
+        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &zero, &zero);;
+    }
+    
+    return success;
 }
