@@ -2,6 +2,7 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
+/* #include <ncurses.h> */
 #include <rob_system.h>
 #include <ow_bus.h>
 #include <menu.h>
@@ -32,6 +33,7 @@ static Bool displayCurrents (void);
 static Bool displayVoltages (void);
 static Bool displayRemainingCapacities (void);
 static Bool displayLifetimeChargesDischarges (void);
+static Bool displayDashboard (void);
 static Bool swapRioBatteryCnf (void);
 static Bool swapO1BatteryCnf (void);
 static Bool swapO2BatteryCnf (void);
@@ -63,6 +65,7 @@ Command gCommandList[] = {{"?", &commandHelp, "display command help"},
  						  {"V", &displayVoltages, "display Voltage readings"},
  						  {"A", &displayRemainingCapacities, "display the accumulated remaining capacities"},
  						  {"L", &displayLifetimeChargesDischarges, "display the lifetime charge/discharge accumulators"},
+ 						  {"D", &displayDashboard, "display a dashboard of useful information"},
  						  {"Q", &performCalAllBatteryMonitorsCnf, "calibrate battery monitors"},
                           {"SP", &swapRioBatteryCnf, "swap the battery connected to the RIO/Pi"},
                           {"S1", &swapO1BatteryCnf, "swap the battery connected to the O1"},
@@ -79,8 +82,8 @@ Command gCommandList[] = {{"?", &commandHelp, "display command help"},
  						  {"HB-", &setOPwrBattOff, "switch hindbrain (AKA Orangutan) battery power off"},
  						  {"HM+", &setOPwr12VOn, "switch hindbrain (AKA Orangutan) mains power on"},
  						  {"HM-", &setOPwr12VOff, "switch hindbrain (AKA Orangutan) mains power off"},
- 						  {"C*+", &setAllBatteryChargersOn, "switch all chargers on"},
- 						  {"C*-", &setAllBatteryChargersOff, "switch all chargers off"},
+ 						  {"CX+", &setAllBatteryChargersOn, "switch all chargers on"},
+ 						  {"CX-", &setAllBatteryChargersOff, "switch all chargers off"},
  						  {"CP+", &setRioBatteryChargerOn, "switch RIO/Pi charger on"},
  						  {"CP-", &setRioBatteryChargerOff, "switch RIO/Pi charger off"},
  						  {"CH+", &setAllOChargersOn, "switch all hindbrain chargers on"},
@@ -93,7 +96,7 @@ Command gCommandList[] = {{"?", &commandHelp, "display command help"},
  						  {"C3-", &setO3BatteryChargerOff, "switch hindbrain charger 3 off"}};
 
 UInt8 gIndexOfExitCommand = 1;         /* Keep this pointed at the "X" command entry above */
-UInt8 gIndexOfFirstSwitchCommand = 7;
+UInt8 gIndexOfFirstSwitchCommand = 11;
 
 /*
  * STATIC FUNCTIONS
@@ -136,7 +139,7 @@ static Bool commandExit (void)
  */
 static Bool displayCurrents (void)
 {
-    Bool success = true;
+    Bool success;
     SInt16 rioCurrent;
     SInt16 o1Current;
     SInt16 o2Current;
@@ -158,7 +161,7 @@ static Bool displayCurrents (void)
     
     if (success)
     {
-        printf ("Currents (mA): Pi/RIO %d, O* %d, O1 %d, O2 %d, O3 %d (-ve is discharge).\n", rioCurrent, o1Current + o2Current + o3Current, o1Current, o2Current, o3Current);                
+        printf ("Currents (mA): Pi/RIO %d, Ox %d, O1 %d, O2 %d, O3 %d (-ve is discharge).\n", rioCurrent, o1Current + o2Current + o3Current, o1Current, o2Current, o3Current);                
     }
     else
     {
@@ -176,7 +179,7 @@ static Bool displayCurrents (void)
  */
 static Bool displayVoltages (void)
 {
-    Bool success = true;
+    Bool success;
     UInt16 rioVoltage;
     UInt16 o1Voltage;
     UInt16 o2Voltage;
@@ -216,7 +219,7 @@ static Bool displayVoltages (void)
  */
 static Bool displayRemainingCapacities (void)
 {
-    Bool success = true;
+    Bool success;
     UInt16 rioRemainingCapacity;
     UInt16 o1RemainingCapacity;
     UInt16 o2RemainingCapacity;
@@ -238,7 +241,7 @@ static Bool displayRemainingCapacities (void)
     
     if (success)
     {
-        printf ("Remaining capacity (mAhr): Pi/RIO %u, O* %u, O1 %u, O2 %u, O3 %u.\n", rioRemainingCapacity, o1RemainingCapacity + o2RemainingCapacity + o3RemainingCapacity, o1RemainingCapacity, o2RemainingCapacity, o3RemainingCapacity);                
+        printf ("Remaining capacity (mAhr): Pi/RIO %u, Ox %u, O1 %u, O2 %u, O3 %u.\n", rioRemainingCapacity, o1RemainingCapacity + o2RemainingCapacity + o3RemainingCapacity, o1RemainingCapacity, o2RemainingCapacity, o3RemainingCapacity);                
     }
     else
     {
@@ -256,7 +259,7 @@ static Bool displayRemainingCapacities (void)
  */
 static Bool displayLifetimeChargesDischarges (void)
 {
-    Bool success = true;
+    Bool success;
     UInt32 rioLifetimeCharge;
     UInt32 o1LifetimeCharge;
     UInt32 o2LifetimeCharge;
@@ -290,6 +293,41 @@ static Bool displayLifetimeChargesDischarges (void)
         printf (READ_FAILURE_MSG);
     }
         
+    return success;    
+}
+
+/*
+ * Display a dashboard of useful information.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool displayDashboard (void)
+{
+    Bool success = true;
+
+#if 1
+    printf ("Dashboard not yet implemented.\n");    
+#else
+    /* Set up curses for unbuffered input with no delay */
+    initscr();
+    cbreak();
+    noecho();
+    nodelay (stdscr, true);
+    printf ("DASHBOARD: press any key to return to the menu.\n");
+    while (success && (ch = getch()) == ERR)
+    {
+        UInt8 pinsState;
+        success = readChargerStatePins (&pinsState);
+        printf ("Charger pins state: 0x%.2x.\r", pinsState);
+    }
+    
+    if (!success)
+    {
+        printf (READ_FAILURE_MSG);
+    }
+    endwin();
+#endif
+    
     return success;    
 }
 
@@ -342,14 +380,25 @@ static Bool swapRioBatteryCnf (void)
     {
         if (getYesInput (SWAP_BATTERY_PROMPT))
         {
+            printf("\n");
             /* Check that the new battery is fully charged */
             if (getYesInput (SWAP_BATTERY_STATE_PROMPT))
             {
                 remainingCapacity = BATTERY_CAPACITY;
             }
+            printf("\n");
             
             /* Now do the swap */
             success = swapRioBattery (timeTicks, remainingCapacity);
+            
+            if (success)
+            {
+                printf (SWAP_BATTERY_CNF_MSG);
+            }
+            else
+            {
+                printf (GENERIC_FAILURE_MSG);
+            }            
         }
     }
     else
@@ -357,15 +406,6 @@ static Bool swapRioBatteryCnf (void)
         success = false;
     }
 
-    if (success)
-    {
-        printf (SWAP_BATTERY_CNF_MSG);
-    }
-    else
-    {
-        printf (GENERIC_FAILURE_MSG);
-    }
-    
     return success;    
 }
 
@@ -389,28 +429,30 @@ static Bool swapO1BatteryCnf (void)
     {
         if (getYesInput (SWAP_BATTERY_PROMPT))
         {
+            printf("\n");
             /* Check that the new battery is fully charged */
             if (getYesInput (SWAP_BATTERY_STATE_PROMPT))
             {
                 remainingCapacity = BATTERY_CAPACITY;
             }
+            printf("\n");
             
             /* Now do the swap */
             success = swapO1Battery (timeTicks, remainingCapacity);
+            
+            if (success)
+            {
+                printf (SWAP_BATTERY_CNF_MSG);
+            }
+            else
+            {
+                printf (GENERIC_FAILURE_MSG);
+            }            
         }
     }
     else
     {
         success = false;
-    }
-    
-    if (success)
-    {
-        printf (SWAP_BATTERY_CNF_MSG);
-    }
-    else
-    {
-        printf (GENERIC_FAILURE_MSG);
     }
 
     return success;    
@@ -436,28 +478,30 @@ static Bool swapO2BatteryCnf (void)
     {
         if (getYesInput (SWAP_BATTERY_PROMPT))
         {
+            printf("\n");
             /* Check that the new battery is fully charged */
             if (getYesInput (SWAP_BATTERY_STATE_PROMPT))
             {
                 remainingCapacity = BATTERY_CAPACITY;
             }
+            printf("\n");
             
             /* Now do the swap */
             success = swapO2Battery (timeTicks, remainingCapacity);
+            
+            if (success)
+            {
+                printf (SWAP_BATTERY_CNF_MSG);
+            }
+            else
+            {
+                printf (GENERIC_FAILURE_MSG);
+            }            
         }
     }
     else
     {
         success = false;
-    }
-    
-    if (success)
-    {
-        printf (SWAP_BATTERY_CNF_MSG);
-    }
-    else
-    {
-        printf (GENERIC_FAILURE_MSG);
     }
 
     return success;    
@@ -483,28 +527,30 @@ static Bool swapO3BatteryCnf (void)
     {
         if (getYesInput (SWAP_BATTERY_PROMPT))
         {
+            printf("\n");
             /* Check that the new battery is fully charged */
             if (getYesInput (SWAP_BATTERY_STATE_PROMPT))
             {
                 remainingCapacity = BATTERY_CAPACITY;
             }
+            printf("\n");
             
             /* Now do the swap */
             success = swapO3Battery (timeTicks, remainingCapacity);
+            
+            if (success)
+            {
+                printf (SWAP_BATTERY_CNF_MSG);
+            }
+            else
+            {
+                printf (GENERIC_FAILURE_MSG);
+            }            
         }
     }
     else
     {
         success = false;
-    }
-
-    if (success)
-    {
-        printf (SWAP_BATTERY_CNF_MSG);
-    }
-    else
-    {
-        printf (GENERIC_FAILURE_MSG);
     }
    
     return success;    

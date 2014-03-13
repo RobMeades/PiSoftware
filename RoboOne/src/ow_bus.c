@@ -79,7 +79,10 @@ typedef enum OwDeviceTypeTag
 typedef struct OwDS2408Tag
 {
     UInt8 config;
-    UInt8 pinsState;
+    UInt8 pinsState; /* A 1 at a bit position means the transistor floats and 
+                        the pin can be an input, a 0 at a bit position 
+                        means the transistor is switched on, so the pin is
+                        dragged to ground and this is definitely an output. */ 
 } OwDS2408;
 
 /* Device specific information for the DS2438 battery monitoring OneWire device */
@@ -234,12 +237,14 @@ static Bool togglePins (OwDeviceName deviceName, UInt8 pinsMask)
 /*
  * Set a pin or pins to on (i.e. 5 Volts) or off (i.e. ground). 
  * 
- * deviceName  the PIO device that the pins belong to.
- * pinMask     the pins to be set to 5 Volts or ground. 
+ * deviceName       the PIO device that the pins belong to.
+ * pinsMask         the pins to be set to 5 Volts or ground. 
+ * setPinsTo5Volts  whether the masked pins are to be set to
+ *                  5V (== true) or ground.
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setPins (OwDeviceName deviceName, UInt8 pinMask, Bool setPinsTo5Volts)
+static Bool setPins (OwDeviceName deviceName, UInt8 pinsMask, Bool setPinsTo5Volts)
 {
     Bool  success = true;
     UInt8 pinsState;
@@ -250,13 +255,31 @@ static Bool setPins (OwDeviceName deviceName, UInt8 pinMask, Bool setPinsTo5Volt
     /* Set or reset the ones masked in */
     if (setPinsTo5Volts)
     {
-        pinsState |= pinMask;
+        pinsState |= pinsMask;
     }
     else
     {
-        pinsState &=~ pinMask;
+        pinsState &=~ pinsMask;
     }
     success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+    
+    return success;
+}
+
+/*
+ * Read a set of pins. 
+ * 
+ * deviceName  the PIO device that the pins belong to.
+ * pPinsState  the returned state of the pins.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool readPins (OwDeviceName deviceName, UInt8 *pPinsState)
+{
+    Bool  success = true;
+    
+    /* Read the last state of the pins */
+    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], pPinsState);
     
     return success;
 }
@@ -470,6 +493,18 @@ Bool setupDevices (void)
     }
 
     return success;
+}
+
+/*
+ * Read the charger state pins.
+ *
+ * pPinsState  the state of the charger pins.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readChargerStatePins (UInt8 *pPinsState)
+{
+    return readPins (OW_NAME_CHARGER_STATE_PIO, pPinsState);
 }
 
 /*

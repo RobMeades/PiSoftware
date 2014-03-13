@@ -8,6 +8,7 @@ Bool setupDevices (void);
 UInt8 findAllDevices (void);
 UInt32 getSystemTicks (void);
 
+Bool readChargerStatePins (UInt8 *pPinsState);
 Bool toggleOPwr (void);
 Bool toggleORst (void);
 Bool togglePiRst (void);

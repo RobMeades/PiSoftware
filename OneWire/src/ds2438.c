@@ -211,7 +211,7 @@ static Bool writeSPPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 pa
  */
 static Bool readAdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, Bool isVdd, UInt16 * pVoltage)
 {
-    Bool success;
+    Bool success = true;
     Bool done = false;
     UInt8 buffer[20];
     UInt8 busyByte;
