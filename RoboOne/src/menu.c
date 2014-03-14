@@ -5,6 +5,7 @@
 #include <rob_system.h>
 #include <ow_bus.h>
 #include <menu.h>
+#include <dashboard.h>
 #include <curses.h>
 
 /*
@@ -16,8 +17,6 @@
 #define BACKSPACE_KEY '\x08'
 #define SCREEN_BACKSPACE "\x1b[1D" /* ANSI escape sequence for back one space: ESC [ 1 D */
 #define COMMAND_PROMPT "\nCommand (? for help) "
-#define GENERIC_FAILURE_MSG "Failed!\n"
-#define READ_FAILURE_MSG "Read failure.\n"
 #define SWAP_BATTERY_PROMPT "Are you sure you want to change the battery (Y/N)?: "
 #define SWAP_BATTERY_STATE_PROMPT "Is the new battery fully charged (Y) (N if it is discharged)?: "
 #define SWAP_BATTERY_CNF_MSG "Battery data updated.\n"
@@ -33,7 +32,6 @@ static Bool displayCurrents (void);
 static Bool displayVoltages (void);
 static Bool displayRemainingCapacities (void);
 static Bool displayLifetimeChargesDischarges (void);
-static Bool displayDashboard (void);
 static Bool swapRioBatteryCnf (void);
 static Bool swapO1BatteryCnf (void);
 static Bool swapO2BatteryCnf (void);
@@ -58,7 +56,8 @@ typedef struct CommandTag
 
 /* Array of possible commands.  All command strings MUST be unique.
  * Try not to begin any with a Y or N to avoid accidental cross-over with
- * Y/N confirmation prompts. */
+ * Y/N confirmation prompts.
+ * IF YOU MODIFY THIS KEEP THE INDEX ENTRIES UP TO DATE BELOW */
 Command gCommandList[] = {{"?", &commandHelp, "display command help"},
 						  {"X", &commandExit, "exit this program"},
 						  {"I", &displayCurrents, "display current readings"},
@@ -96,7 +95,7 @@ Command gCommandList[] = {{"?", &commandHelp, "display command help"},
  						  {"C3-", &setO3BatteryChargerOff, "switch hindbrain charger 3 off"}};
 
 UInt8 gIndexOfExitCommand = 1;         /* Keep this pointed at the "X" command entry above */
-UInt8 gIndexOfFirstSwitchCommand = 11;
+UInt8 gIndexOfFirstSwitchCommand = 12;
 
 /*
  * STATIC FUNCTIONS
@@ -165,7 +164,7 @@ static Bool displayCurrents (void)
     }
     else
     {
-        printf (READ_FAILURE_MSG);
+        printf ("%s\n", READ_FAILURE_MSG);
     }
         
     return success;    
@@ -205,7 +204,7 @@ static Bool displayVoltages (void)
     }
     else
     {
-        printf (READ_FAILURE_MSG);
+        printf ("%s\n", READ_FAILURE_MSG);
     }
         
     return success;    
@@ -245,7 +244,7 @@ static Bool displayRemainingCapacities (void)
     }
     else
     {
-        printf (READ_FAILURE_MSG);
+        printf ("%s\n", READ_FAILURE_MSG);
     }
         
     return success;    
@@ -290,44 +289,9 @@ static Bool displayLifetimeChargesDischarges (void)
     }
     else
     {
-        printf (READ_FAILURE_MSG);
+        printf ("%s\n", READ_FAILURE_MSG);
     }
         
-    return success;    
-}
-
-/*
- * Display a dashboard of useful information.
- *
- * @return  true if successful, otherwise false.
- */
-static Bool displayDashboard (void)
-{
-    Bool success = true;
-
-#if 1
-    printf ("Dashboard not yet implemented.\n");    
-#else
-    /* Set up curses for unbuffered input with no delay */
-    initscr();
-    cbreak();
-    noecho();
-    nodelay (stdscr, true);
-    printf ("DASHBOARD: press any key to return to the menu.\n");
-    while (success && (ch = getch()) == ERR)
-    {
-        UInt8 pinsState;
-        success = readChargerStatePins (&pinsState);
-        printf ("Charger pins state: 0x%.2x.\r", pinsState);
-    }
-    
-    if (!success)
-    {
-        printf (READ_FAILURE_MSG);
-    }
-    endwin();
-#endif
-    
     return success;    
 }
 
@@ -353,7 +317,7 @@ static bool performCalAllBatteryMonitorsCnf (void)
         }
         else
         {
-            printf (GENERIC_FAILURE_MSG);
+            printf ("%s\n", GENERIC_FAILURE_MSG);
         }
     }
     
@@ -397,7 +361,7 @@ static Bool swapRioBatteryCnf (void)
             }
             else
             {
-                printf (GENERIC_FAILURE_MSG);
+                printf ("%s\n", GENERIC_FAILURE_MSG);
             }            
         }
     }
@@ -446,7 +410,7 @@ static Bool swapO1BatteryCnf (void)
             }
             else
             {
-                printf (GENERIC_FAILURE_MSG);
+                printf ("%s\n", GENERIC_FAILURE_MSG);
             }            
         }
     }
@@ -495,7 +459,7 @@ static Bool swapO2BatteryCnf (void)
             }
             else
             {
-                printf (GENERIC_FAILURE_MSG);
+                printf ("%s\n", GENERIC_FAILURE_MSG);
             }            
         }
     }
@@ -544,7 +508,7 @@ static Bool swapO3BatteryCnf (void)
             }
             else
             {
-                printf (GENERIC_FAILURE_MSG);
+                printf ("%s\n", GENERIC_FAILURE_MSG);
             }            
         }
     }
@@ -607,7 +571,7 @@ Bool getYesInput (Char *pPrompt)
     {
         /* Save current settings and then set us up for no echo, non-canonical (i.e. no need for enter) */
         memcpy (&newSettings, &savedSettings, sizeof (newSettings));
-        newSettings.c_lflag &= ~(ICANON | ECHO | ECHOK | ECHONL | ECHOPRT | ECHOKE | ICRNL);
+        newSettings.c_lflag &= ~(ICANON | ECHO | ECHOK | ECHONL | ECHOKE | ICRNL);
         tcsetattr (STDIN_FILENO, TCSANOW, &newSettings);
         
         /* Prompt for input and get the answer */
@@ -649,7 +613,7 @@ Bool runMenu (void)
     	{
     		/* Save current settings and then set us up for no echo, non-canonical (i.e. no need for enter) */
     		memcpy (&newSettings, &savedSettings, sizeof (newSettings));
-    		newSettings.c_lflag &= ~(ICANON | ECHO | ECHOK | ECHONL | ECHOPRT | ECHOKE | ICRNL);
+    		newSettings.c_lflag &= ~(ICANON | ECHO | ECHOK | ECHONL | ECHOKE | ICRNL);
     		tcsetattr (STDIN_FILENO, TCSANOW, &newSettings);
     
     		/* Prompt for input */

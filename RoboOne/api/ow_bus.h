@@ -2,6 +2,14 @@
  * Public stuff to do with the One Wire bus.
  */ 
 
+/*
+ * MANIFEST CONSTANTS
+ */
+
+/*
+ *  FUNCTION PROTOTYPES
+ */
+
 Bool startOneWireBus (void);
 void stopOneWireBus (void);
 Bool setupDevices (void);
@@ -47,7 +55,7 @@ Bool readO3RemainingCapacity (UInt16 *pRemainingCapacity);
 Bool readRioBattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge);
 Bool readO1BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge);
 Bool readO2BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge);
-Bool readO2BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge);
+Bool readO3BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge);
 Bool performCalAllBatteryMonitors (void);
 Bool performCalRioBatteryMonitor (void);
 Bool performCalO1BatteryMonitor (void);
