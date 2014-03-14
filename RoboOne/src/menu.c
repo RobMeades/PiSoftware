@@ -2,10 +2,10 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
-/* #include <ncurses.h> */
 #include <rob_system.h>
 #include <ow_bus.h>
 #include <menu.h>
+#include <curses.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -13,7 +13,7 @@
 
 #define MAX_NUM_CHARS_IN_COMMAND 4 /* includes a null terminator */
 #define KEY_COMMAND_CANCEL '\x1b'   /* the escape key */
-#define KEY_BACKSPACE '\x08'
+#define BACKSPACE_KEY '\x08'
 #define SCREEN_BACKSPACE "\x1b[1D" /* ANSI escape sequence for back one space: ESC [ 1 D */
 #define COMMAND_PROMPT "\nCommand (? for help) "
 #define GENERIC_FAILURE_MSG "Failed!\n"
@@ -670,7 +670,7 @@ Bool runMenu (void)
     					}
     				}
     				break;
-    				case KEY_BACKSPACE:
+    				case BACKSPACE_KEY:
     				{
     	                /* Set last entry to zero and go back one on the screen */
     					if (numEntries > 0)

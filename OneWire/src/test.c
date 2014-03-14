@@ -12,6 +12,7 @@
 
 #define MAX_BATTERY_DEVICES 5
 #define MAX_IO_DEVICES 5
+#define ONEWIRE_PORT "/dev/USBSerial"
 
 /*
  * main for testing

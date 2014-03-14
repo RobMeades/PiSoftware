@@ -10,7 +10,7 @@
 /*
  * Assert function for debugging (should be called via the macros in rob_system.c).
  */
-bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 param1)
+Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 param1)
 {
     if (pText)
     {
