@@ -462,6 +462,13 @@ sudo ./rioboard_test
 
 Note that the test program MUST be run with root privileges or it won't be able to access shared memory.  If a load of numbers stream up your screen, you're done.
 
+ENVIRONMENT VARIABLES
+Using curses, which I do on RoboOne, has the unfortunate effect of fiddling with the way output is buffered and this is something that cannot be modified within the execution of a program.  To stop it doing this, edit /etc/profiles and add at the end of it:
+
+# Stop curses from fiddling with setbuf
+NCURSES_NO_SETBUF=1
+export NCURSES_NO_SETBUF
+
 MAKE YET ANOTHER BACKUP
 Now everything is working, make backup 1.0.
 
