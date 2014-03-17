@@ -1,5 +1,10 @@
 /*
- * One Wire bus handling thread for RoboOne.
+ * OneWire bus handling thread for RoboOne.
+ * This file encapsulates all the knowledge of
+ * what is conected to what on the OneWire bus
+ * so that nothing outside here should need to
+ * know the contents of hw_config.h or the bus
+ * state.
  */ 
  
 #include <stdio.h>
@@ -40,9 +45,10 @@
 #define RELAY_IO_CONFIG               DEFAULT_DS2408_CONFIG
 #define GENERAL_PURPOSE_IO_CONFIG     DEFAULT_DS2408_CONFIG
 
-/* All pins low to begin with apart from charger state which is allowed to float as an input */
+/* All pins low to begin with apart from charger state which is allowed to float as an input
+ * and the Schottky pins which have specific settings */
 #define CHARGER_STATE_IO_PIN_CONFIG   0xFF
-#define SCHOTTKY_IO_PIN_CONFIG        0x00
+#define SCHOTTKY_IO_PIN_CONFIG        ~(SCHOTTKY_O_PWR_TOGGLE | SCHOTTKY_O_RESET_TOGGLE | SCHOTTKY_RIO_PWR_BATT_OFF | SCHOTTKY_RIO_PWR_12V_ON) 
 #define RELAY_IO_PIN_CONFIG           0x00
 #define GENERAL_PURPOSE_IO_PIN_CONFIG 0x00
 
@@ -212,7 +218,7 @@ static Bool togglePins (OwDeviceName deviceName, UInt8 pinsMask)
     Bool  success = true;
     UInt8 pinsState;
     UInt8 i;
-    
+
     /* Read the last state of the pins */
     success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
     
@@ -227,6 +233,7 @@ static Bool togglePins (OwDeviceName deviceName, UInt8 pinsMask)
         {
             pinsState |= pinsMask;
         }
+        
         success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
         msDelay (TOGGLE_DELAY_MS);
     }
@@ -458,7 +465,7 @@ Bool setupDevices (void)
                         if (success)
                         {
                             pinsState = gDeviceStaticConfigList[i].specifics.ds2408.pinsState;                     
-                            success = channelAccessWriteDS2408 (gPortNumber, pAddress, &pinsState);
+                            /* success = channelAccessWriteDS2408 (gPortNumber, pAddress, &pinsState); TODO: reinstate this */
                         }
                     }
                 }
@@ -519,6 +526,35 @@ Bool toggleOPwr (void)
 }
 
 /*
+ * Read the state of Orangutan power relay.
+ *
+ * pIsOn  a place to return the state, true
+ *        for On.  May be PNULL, in which case
+ *        the read is performed but no value
+ *        is returned.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readOPwr (Bool *pIsOn)
+{
+    Bool success;
+    UInt8 pPinsState;
+    
+    success = readPins (OW_NAME_SCHOTTKY_PIO, &pPinsState);
+    
+    if (success && (pIsOn != PNULL))
+    {
+        *pIsOn = false;
+        if (pPinsState & SCHOTTKY_O_PWR_TOGGLE)
+        {
+            *pIsOn = true;
+        }        
+    }
+    
+    return success;
+}
+
+/*
  * Switch the Orangutan reset relay from it's current 
  * state to the reverse and back again.
  *
@@ -530,6 +566,35 @@ Bool toggleORst (void)
 }
 
 /*
+ * Read the state of Orangutan reset relay.
+ *
+ * pIsOn  a place to return the state, true
+ *        for On.  May be PNULL, in which case
+ *        the read is performed but no value
+ *        is returned.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readORst (Bool *pIsOn)
+{
+    Bool success;
+    UInt8 pPinsState;
+    
+    success = readPins (OW_NAME_SCHOTTKY_PIO, &pPinsState);
+    
+    if (success && (pIsOn != PNULL))
+    {
+        *pIsOn = false;
+        if (pPinsState & SCHOTTKY_O_RESET_TOGGLE)
+        {
+            *pIsOn = true;
+        }        
+    }
+    
+    return success;
+}
+
+/*
  * Switch the Raspberry Pi reset relay from it's current 
  * state to the reverse and back again.
  *
@@ -537,7 +602,11 @@ Bool toggleORst (void)
  */
 Bool togglePiRst (void)
 {
-    return togglePins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_PI_RESET_TOGGLE);
+    Bool success = true;
+    
+    /* TODO: do this via signalling to the Orangutan */
+    
+    return success;
 }
 
 /*
@@ -563,6 +632,35 @@ Bool setRioPwr12VOff (void)
 }
 
 /*
+ * Read the state of 12V power to the Rio.
+ *
+ * pIsOn  a place to return the state, true
+ *        for On.  May be PNULL, in which case
+ *        the read is performed but no value
+ *        is returned.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readRioPwr12V (Bool *pIsOn)
+{
+    Bool success;
+    UInt8 pPinsState;
+    
+    success = readPins (OW_NAME_SCHOTTKY_PIO, &pPinsState);
+    
+    if (success && (pIsOn != PNULL))
+    {
+        *pIsOn = false;
+        if (pPinsState & SCHOTTKY_RIO_PWR_12V_ON)
+        {
+            *pIsOn = true;
+        }        
+    }
+    
+    return success;
+}
+
+/*
  * Switch the relay that allows on-board battery
  * power to be supplied to the RIO to ON.
  *
@@ -582,6 +680,38 @@ Bool setRioPwrBattOn (void)
 Bool setRioPwrBattOff (void)
 {
     return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_BATT_OFF, true);
+}
+
+/*
+ * Read the state of battery power to the Rio.
+ * Note that what is returned is the state of
+ * battery power, not the relay (since the relay
+ * switches ON to switch the battery power OFF).
+ *
+ * pIsOn  a place to return the state, true
+ *        for On.  May be PNULL, in which case
+ *        the read is performed but no value
+ *        is returned.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readRioPwrBatt (Bool *pIsOn)
+{
+    Bool success;
+    UInt8 pPinsState;
+    
+    success = readPins (OW_NAME_SCHOTTKY_PIO, &pPinsState);
+    
+    if (success && (pIsOn != PNULL))
+    {
+        *pIsOn = true;
+        if (pPinsState & SCHOTTKY_RIO_PWR_BATT_OFF)
+        {
+            *pIsOn = false;
+        }        
+    }
+    
+    return success;
 }
 
 /*
@@ -607,6 +737,35 @@ Bool setOPwr12VOff (void)
 }
 
 /*
+ * Read the state of 12V power to the Orangutan.
+ *
+ * pIsOn  a place to return the state, true
+ *        for On.  May be PNULL, in which case
+ *        the read is performed but no value
+ *        is returned.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readOPwr12V (Bool *pIsOn)
+{
+    Bool success;
+    UInt8 pPinsState;
+    
+    success = readPins (OW_NAME_RELAY_PIO, &pPinsState);
+    
+    if (success && (pIsOn != PNULL))
+    {
+        *pIsOn = false;
+        if (pPinsState & RELAY_O_PWR_12V_ON)
+        {
+           *pIsOn = true;
+        }        
+    }
+    
+    return success;
+}
+
+/*
  * Switch the relay that allows on-board battery
  * power to be supplied to the Orangutan to ON.
  *
@@ -626,6 +785,38 @@ Bool setOPwrBattOn (void)
 Bool setOPwrBattOff (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_BATT_OFF, true);
+}
+
+/*
+ * Read the state of battery power to the Orangutan.
+ * Note that what is returned is the state of
+ * battery power, not the relay (since the relay
+ * switches ON to switch the battery power OFF).
+ *
+ * pIsOn  a place to return the state, true
+ *        for On.  May be PNULL, in which case
+ *        the read is performed but no value
+ *        is returned.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readOPwrBatt (Bool *pIsOn)
+{
+    Bool success;
+    UInt8 pPinsState;
+    
+    success = readPins (OW_NAME_RELAY_PIO, &pPinsState);
+    
+    if (success && (pIsOn != PNULL))
+    {
+        *pIsOn = true;
+        if (pPinsState & RELAY_O_PWR_BATT_OFF)
+        {
+            *pIsOn = false;
+        }        
+    }
+    
+    return success;
 }
 
 /*
@@ -649,6 +840,36 @@ Bool setRioBatteryChargerOff (void)
 }
 
 /*
+ * Read whether the charger is connected
+ * to the Rio battery.
+ *
+ * pIsOn  a place to return the state, true
+ *        for On.  May be PNULL, in which case
+ *        the read is performed but no value
+ *        is returned.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readRioBatteryCharger (Bool *pIsOn)
+{
+    Bool success;
+    UInt8 pPinsState;
+    
+    success = readPins (OW_NAME_RELAY_PIO, &pPinsState);
+    
+    if (success && (pIsOn != PNULL))
+    {
+        *pIsOn = false;
+        if (pPinsState & RELAY_RIO_CHARGER_ON)
+        {
+            *pIsOn = true;
+        }        
+    }
+    
+    return success;
+}
+
+/*
  * Switch the O1 battery charger to ON.
  *
  * @return  true if successful, otherwise false.
@@ -666,6 +887,36 @@ Bool setO1BatteryChargerOn (void)
 Bool setO1BatteryChargerOff (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O1_CHARGER_ON, false);
+}
+
+/*
+ * Read whether the charger is connected
+ * to Orangutan battery number 1.
+ *
+ * pIsOn  a place to return the state, true
+ *        for On.  May be PNULL, in which case
+ *        the read is performed but no value
+ *        is returned.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readO1BatteryCharger (Bool *pIsOn)
+{
+    Bool success;
+    UInt8 pPinsState;
+    
+    success = readPins (OW_NAME_RELAY_PIO, &pPinsState);
+    
+    if (success && (pIsOn != PNULL))
+    {
+        *pIsOn = false;
+        if (pPinsState & RELAY_O1_CHARGER_ON)
+        {
+            *pIsOn = true;
+        }        
+    }
+    
+    return success;
 }
 
 /*
@@ -689,6 +940,36 @@ Bool setO2BatteryChargerOff (void)
 }
 
 /*
+ * Read whether the charger is connected
+ * to Orangutan battery number 2.
+ *
+ * pIsOn  a place to return the state, true
+ *        for On.  May be PNULL, in which case
+ *        the read is performed but no value
+ *        is returned.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readO2BatteryCharger (Bool *pIsOn)
+{
+    Bool success;
+    UInt8 pPinsState;
+    
+    success = readPins (OW_NAME_RELAY_PIO, &pPinsState);
+    
+    if (success && (pIsOn != PNULL))
+    {
+        *pIsOn = false;
+        if (pPinsState & RELAY_O2_CHARGER_ON)
+        {
+            *pIsOn = true;
+        }        
+    }
+    
+    return success;
+}
+
+/*
  * Switch the O3 battery charger to ON.
  *
  * @return  true if successful, otherwise false.
@@ -706,6 +987,36 @@ Bool setO3BatteryChargerOn (void)
 Bool setO3BatteryChargerOff (void)
 {
     return setPins (OW_NAME_RELAY_PIO, RELAY_O3_CHARGER_ON, false);
+}
+
+/*
+ * Read whether the charger is connected
+ * to Orangutan battery number 3.
+ *
+ * pIsOn  a place to return the state, true
+ *        for On.  May be PNULL, in which case
+ *        the read is performed but no value
+ *        is returned.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readO3BatteryCharger (Bool *pIsOn)
+{
+    Bool success;
+    UInt8 pPinsState;
+    
+    success = readPins (OW_NAME_RELAY_PIO, &pPinsState);
+    
+    if (success && (pIsOn != PNULL))
+    {
+        *pIsOn = false;
+        if (pPinsState & RELAY_O3_CHARGER_ON)
+        {
+            *pIsOn = true;
+        }        
+    }
+    
+    return success;
 }
 
 /*

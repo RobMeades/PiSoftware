@@ -17,6 +17,10 @@
 #define BACKSPACE_KEY '\x08'
 #define SCREEN_BACKSPACE "\x1b[1D" /* ANSI escape sequence for back one space: ESC [ 1 D */
 #define COMMAND_PROMPT "\nCommand (? for help) "
+#define GPIO_HEADING_STRING " HPTg  HRTg  Pi12V PiBat H12V HBat  PiChg H1Chg H2Chg H3Chg "
+#define GPIO_ON_STRING "  ON  "
+#define GPIO_OFF_STRING " OFF  "
+#define GPIO_DONT_KNOW_STRING "  ??  "
 #define SWAP_BATTERY_PROMPT "Are you sure you want to change the battery (Y/N)?: "
 #define SWAP_BATTERY_STATE_PROMPT "Is the new battery fully charged (Y) (N if it is discharged)?: "
 #define SWAP_BATTERY_CNF_MSG "Battery data updated.\n"
@@ -32,6 +36,7 @@ static Bool displayCurrents (void);
 static Bool displayVoltages (void);
 static Bool displayRemainingCapacities (void);
 static Bool displayLifetimeChargesDischarges (void);
+static Bool displayGpioStates (void);
 static Bool swapRioBatteryCnf (void);
 static Bool swapO1BatteryCnf (void);
 static Bool swapO2BatteryCnf (void);
@@ -63,16 +68,17 @@ Command gCommandList[] = {{"?", &commandHelp, "display command help"},
 						  {"I", &displayCurrents, "display current readings"},
  						  {"V", &displayVoltages, "display Voltage readings"},
  						  {"A", &displayRemainingCapacities, "display the accumulated remaining capacities"},
- 						  {"L", &displayLifetimeChargesDischarges, "display the lifetime charge/discharge accumulators"},
+ 						  {"G", &displayGpioStates, "display the state of all the GPIO pins"},
+                          {"L", &displayLifetimeChargesDischarges, "display the lifetime charge/discharge accumulators"},
  						  {"D", &displayDashboard, "display a dashboard of useful information"},
  						  {"Q", &performCalAllBatteryMonitorsCnf, "calibrate battery monitors"},
                           {"SP", &swapRioBatteryCnf, "swap the battery connected to the RIO/Pi"},
                           {"S1", &swapO1BatteryCnf, "swap the battery connected to the O1"},
                           {"S2", &swapO2BatteryCnf, "swap the battery connected to the O2"},
                           {"S3", &swapO3BatteryCnf, "swap the battery connected to the O3"},
- 						  {"PR!", &togglePiRst, "toggle reset to the Pi"},  /* Keep gIndexOfFirstSwitchCommand pointed at here and then we will give user feedback of the result */
- 						  {"HP!", &toggleOPwr, "toggle power to the hindbrain (AKA Orangutan)"},
- 						  {"HR!", &toggleORst, "toggle reset to the hindbrain (AKA Orangutan)"},
+ 						  {"PR", &togglePiRst, "toggle reset to the Pi [not implemented]"},  /* Keep gIndexOfFirstSwitchCommand pointed at here and then we will give user feedback of the result */
+ 						  {"HP", &toggleOPwr, "toggle power to the hindbrain (AKA Orangutan)"},
+ 						  {"HR", &toggleORst, "toggle reset to the hindbrain (AKA Orangutan)"},
  						  {"PB+", &setRioPwrBattOn, "switch RIO/Pi battery power on"},
  						  {"PB-", &setRioPwrBattOff, "switch RIO/Pi battery power off"},
  						  {"PM+", &setRioPwr12VOn, "switch RIO/Pi mains power on"},
@@ -95,7 +101,7 @@ Command gCommandList[] = {{"?", &commandHelp, "display command help"},
  						  {"C3-", &setO3BatteryChargerOff, "switch hindbrain charger 3 off"}};
 
 UInt8 gIndexOfExitCommand = 1;         /* Keep this pointed at the "X" command entry above */
-UInt8 gIndexOfFirstSwitchCommand = 12;
+UInt8 gIndexOfFirstSwitchCommand = 13;
 
 /*
  * STATIC FUNCTIONS
@@ -293,6 +299,72 @@ static Bool displayLifetimeChargesDischarges (void)
     }
         
     return success;    
+}
+
+/* Little helper function for the GPIO states
+ * display function below
+ * 
+ * isKnown  whether the state of the GPIO is known
+ *          or not.
+ * isOn     whether the state of the GPIO is ON or OFF.
+ * 
+ * @return  none.
+ */
+static void displayGpioStatesHelper (Bool isKnown, Bool isOn)
+{
+    if (isKnown)
+    {
+        if (isOn)
+        {
+            printf ("  ON  ");
+        }
+        else
+        {
+            printf (" OFF  ");
+        }
+    }
+    else
+    {
+        printf ("  ??  ");
+    }    
+}
+
+/*
+ * Display the state of all the GPIO pins
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool displayGpioStates (void)
+{
+    Bool success;
+    Bool isOn;
+ 
+    printf ("%s\n", GPIO_HEADING_STRING);
+    
+    success = readOPwr (&isOn);
+    displayGpioStatesHelper (success, isOn);
+    success = readORst (&isOn);
+    displayGpioStatesHelper (success, isOn);
+    success = readRioPwr12V (&isOn);
+    displayGpioStatesHelper (success, isOn);
+    success = readRioPwrBatt (&isOn);
+    displayGpioStatesHelper (success, isOn);
+    success = readOPwr12V (&isOn);
+    displayGpioStatesHelper (success, isOn);
+    success = readOPwrBatt (&isOn);
+    displayGpioStatesHelper (success, isOn);
+    success = readRioBatteryCharger (&isOn);
+    displayGpioStatesHelper (success, isOn);
+    success = readO1BatteryCharger (&isOn);
+    displayGpioStatesHelper (success, isOn);
+    success = readO2BatteryCharger (&isOn);
+    displayGpioStatesHelper (success, isOn);
+    success = readO3BatteryCharger (&isOn);
+    displayGpioStatesHelper (success, isOn);
+
+    printf ("\n");
+    
+    return success;
 }
 
 /*
