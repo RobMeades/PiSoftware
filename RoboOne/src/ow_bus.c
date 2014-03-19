@@ -48,9 +48,19 @@
 /* All pins low to begin with apart from charger state which is allowed to float as an input
  * and the Schottky pins which have specific settings */
 #define CHARGER_STATE_IO_PIN_CONFIG   0xFF
-#define SCHOTTKY_IO_PIN_CONFIG        ~(SCHOTTKY_O_PWR_TOGGLE | SCHOTTKY_O_RESET_TOGGLE | SCHOTTKY_RIO_PWR_BATT_OFF | SCHOTTKY_RIO_PWR_12V_ON) 
+/* #define SCHOTTKY_IO_PIN_CONFIG        ~(SCHOTTKY_O_PWR_TOGGLE | SCHOTTKY_O_RESET_TOGGLE | SCHOTTKY_RIO_PWR_BATT_OFF | SCHOTTKY_RIO_PWR_12V_ON) */ 
+/* TODO: set this back to the above once the initialisation thing is sorted */
+#define SCHOTTKY_IO_PIN_CONFIG        (SCHOTTKY_RIO_PWR_BATT_OFF | SCHOTTKY_RIO_PWR_12V_ON) & ~(SCHOTTKY_O_PWR_TOGGLE | SCHOTTKY_O_RESET_TOGGLE | SCHOTTKY_RIO_PWR_BATT_OFF) 
 #define RELAY_IO_PIN_CONFIG           0x00
 #define GENERAL_PURPOSE_IO_PIN_CONFIG 0x00
+
+/* Which pin positions should have their state tracked through
+ * the locally stored pinsState rather than by just reading
+ * back the pins directly */
+#define CHARGER_STATE_IO_SHADOW_MASK    0x00
+#define SCHOTTKY_IO_SHADOW_MASK         0x00
+#define RELAY_IO_SHADOW_MASK            (RELAY_O_PWR_12V_ON | RELAY_O_PWR_BATT_OFF | RELAY_RIO_CHARGER_ON | RELAY_O1_CHARGER_ON | RELAY_O2_CHARGER_ON | RELAY_O3_CHARGER_ON)
+#define GENERAL_PURPOSE_IO_SHADOW_MASK  0x00
 
 /*
  * TYPES
@@ -85,6 +95,16 @@ typedef enum OwDeviceTypeTag
 typedef struct OwDS2408Tag
 {
     UInt8 config;
+    UInt8 shadowMask; /* If a bit is set to 1 then for that pin the
+                         corresponding bit position in pinsState
+                         represents the current state of the pin, if set
+                         a bit is set to 0 then the port can be read
+                         to determine that bit's current state.  This is
+                         useful if the thing connected to the IO port
+                         switches at a relatively low voltage (e.g. if it
+                         is 3.3V/5V compatible) so the read-back would
+                         think that the device is always off even when it
+                         is actually switched on */
     UInt8 pinsState; /* A 1 at a bit position means the transistor floats and 
                         the pin can be an input, a 0 at a bit position 
                         means the transistor is switched on, so the pin is
@@ -128,10 +148,10 @@ OwDevicesStaticConfig gDeviceStaticConfigList[] =
           {OW_NAME_O1_BATTERY_MONITOR, {{SBATTERY_FAM, 0x84, 0x0d, 0xb3, 0x01, 0x00, 0x00, 0x09}}, {{O1_BATTERY_MONITOR_CONFIG}}},
           {OW_NAME_O2_BATTERY_MONITOR, {{SBATTERY_FAM, 0xdd, 0x29, 0xb3, 0x01, 0x00, 0x00, 0x56}}, {{O2_BATTERY_MONITOR_CONFIG}}},
           {OW_NAME_O3_BATTERY_MONITOR, {{SBATTERY_FAM, 0x82, 0x30, 0xb3, 0x01, 0x00, 0x00, 0xd3}}, {{O3_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_CHARGER_STATE_PIO, {{PIO_FAM, 0x8d, 0xf2, 0x0c, 0x00, 0x00, 0x00, 0xb4}}, {{CHARGER_STATE_IO_CONFIG, CHARGER_STATE_IO_PIN_CONFIG}}},
-          {OW_NAME_SCHOTTKY_PIO, {{PIO_FAM, 0x7f, 0x6e, 0x0d, 0x00, 0x00, 0x00, 0xb1}}, {{SCHOTTKY_IO_CONFIG, SCHOTTKY_IO_PIN_CONFIG}}},
-          {OW_NAME_RELAY_PIO, {{PIO_FAM, 0x5e, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x8d}}, {{RELAY_IO_CONFIG, RELAY_IO_PIN_CONFIG}}},
-          {OW_NAME_GENERAL_PURPOSE_PIO, {{PIO_FAM, 0x50, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x9e}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
+          {OW_NAME_CHARGER_STATE_PIO, {{PIO_FAM, 0x8d, 0xf2, 0x0c, 0x00, 0x00, 0x00, 0xb4}}, {{CHARGER_STATE_IO_CONFIG, CHARGER_STATE_IO_SHADOW_MASK, CHARGER_STATE_IO_PIN_CONFIG}}},
+          {OW_NAME_SCHOTTKY_PIO, {{PIO_FAM, 0x7f, 0x6e, 0x0d, 0x00, 0x00, 0x00, 0xb1}}, {{SCHOTTKY_IO_CONFIG, SCHOTTKY_IO_SHADOW_MASK, SCHOTTKY_IO_PIN_CONFIG}}},
+          {OW_NAME_RELAY_PIO, {{PIO_FAM, 0x5e, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x8d}}, {{RELAY_IO_CONFIG, RELAY_IO_SHADOW_MASK, RELAY_IO_PIN_CONFIG}}},
+          {OW_NAME_GENERAL_PURPOSE_PIO, {{PIO_FAM, 0x50, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x9e}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_SHADOW_MASK, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
 
 /* Obviously these need to be in the same order as the above */
 Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
@@ -203,6 +223,58 @@ static OwDeviceType getDeviceType (const UInt8 *pAddress)
     return type;
 }    
       
+#if 0
+/*
+ * Read a set of pins. 
+ * 
+ * deviceName  the PIO device that the pins belong to.
+ * pPinsState  the returned state of the pins.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool readPins (OwDeviceName deviceName, UInt8 *pPinsState)
+{
+    Bool  success = true;
+    
+    /* Read the last state of the pins */
+    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], pPinsState);
+    
+    return success;
+}
+
+/*
+ * Set a pin or pins to on (i.e. 5 Volts) or off (i.e. ground). 
+ * 
+ * deviceName       the PIO device that the pins belong to.
+ * pinsMask         the pins to be set to 5 Volts or ground. 
+ * setPinsTo5Volts  whether the masked pins are to be set to
+ *                  5V (== true) or ground.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setPins (OwDeviceName deviceName, UInt8 pinsMask, Bool setPinsTo5Volts)
+{
+    Bool  success = true;
+    UInt8 pinsState;
+    
+    /* Read the last state of the pins */
+    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+    
+    /* Set or reset the ones masked in */
+    if (setPinsTo5Volts)
+    {
+        pinsState |= pinsMask;
+    }
+    else
+    {
+        pinsState &=~ pinsMask;
+    }
+    
+    success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+    
+    return success;
+}
+
 /*
  * Toggle a pin or pins from their current state to the
  * reverse and back again. 
@@ -241,8 +313,75 @@ static Bool togglePins (OwDeviceName deviceName, UInt8 pinsMask)
     return success;
 }
 
+#endif
+
 /*
- * Set a pin or pins to on (i.e. 5 Volts) or off (i.e. ground). 
+ * Given a pinsState, mask into it the pins that 
+ * are shadowed locally. 
+ * 
+ * deviceName  the PIO device that the pins belong to.
+ * pinsState   the state of the pins according to the
+ *             device itself. 
+ *
+ * @return  the new pinsState.
+ */
+static UInt8 accountForShadow (OwDeviceName deviceName, UInt8 pinsState)
+{
+    UInt8 mask;
+    UInt8 i;
+    
+    mask = 1;
+    printf ("Pins in 0x%.2x\n", pinsState);
+    printf ("Shadow mask 0x%.2x\n", gDeviceStaticConfigList[deviceName].specifics.ds2408.shadowMask);
+    printf ("Shadow state 0x%.2x\n", gDeviceStaticConfigList[deviceName].specifics.ds2408.pinsState);
+    for (i = 0; i < 8; i++)
+    {            
+        if (gDeviceStaticConfigList[deviceName].specifics.ds2408.shadowMask & mask)
+        {
+            if (gDeviceStaticConfigList[deviceName].specifics.ds2408.pinsState & mask)
+            {
+                pinsState |= mask;
+            }
+            else
+            {
+                pinsState &= ~mask;                    
+            }
+        }
+        mask <<= 1;
+    }
+    
+    printf ("Pins out 0x%.2x\n", pinsState);
+    return pinsState;
+}
+
+/*
+ * Read a set of pins and use the shadow state
+ * if that is configured for this. 
+ * 
+ * deviceName  the PIO device that the pins belong to.
+ * pPinsState  the returned state of the pins.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool readPinsWithShadow (OwDeviceName deviceName, UInt8 *pPinsState)
+{
+    Bool success = true;
+    
+    /* Read the last state of the pins */
+    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], pPinsState);
+    if (success)
+    {
+        /* Now check against the shadow mask and for those pins use pinsState instead of the read-back state */
+        *pPinsState = accountForShadow (deviceName, *pPinsState);
+    }
+    
+    return success;
+}
+
+/*
+ * Set a pin or pins to on (i.e. 5 Volts) or off
+ * (i.e. ground) and take into account the shadow
+ * state if necessary. 
  * 
  * deviceName       the PIO device that the pins belong to.
  * pinsMask         the pins to be set to 5 Volts or ground. 
@@ -251,13 +390,14 @@ static Bool togglePins (OwDeviceName deviceName, UInt8 pinsMask)
  *
  * @return  true if successful, otherwise false.
  */
-static Bool setPins (OwDeviceName deviceName, UInt8 pinsMask, Bool setPinsTo5Volts)
+static Bool setPinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask, Bool setPinsTo5Volts)
 {
     Bool  success = true;
     UInt8 pinsState;
+    UInt8 pinsStateToWrite;
     
-    /* Read the last state of the pins */
-    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+    /* Read the last state of the pins, taking shadow state into account */
+    success = readPinsWithShadow (deviceName, &pinsState);
     
     /* Set or reset the ones masked in */
     if (setPinsTo5Volts)
@@ -268,25 +408,67 @@ static Bool setPins (OwDeviceName deviceName, UInt8 pinsMask, Bool setPinsTo5Vol
     {
         pinsState &=~ pinsMask;
     }
-    success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
+    
+    /* Take a copy of the new intended state 'cos channelAccessWriteDS2408 will read back the written
+     * state which might not be what we want since we may be shadowing some pins */
+    pinsStateToWrite = pinsState;
+    success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsStateToWrite);
+    
+    /* If it worked, setup the shadow to match the result */
+    if (success)
+    {
+        gDeviceStaticConfigList[deviceName].specifics.ds2408.pinsState = pinsState;
+    }
     
     return success;
 }
 
 /*
- * Read a set of pins. 
+ * Toggle a pin or pins from their current state to the
+ * reverse and back again, taking into account the
+ * shadow state if required. 
  * 
  * deviceName  the PIO device that the pins belong to.
- * pPinsState  the returned state of the pins.
+ * pinsMask    the pins to be toggled (a bit set to 1 is
+ *             to be toggled a bit set to 0 is left alone). 
  *
  * @return  true if successful, otherwise false.
  */
-static Bool readPins (OwDeviceName deviceName, UInt8 *pPinsState)
+static Bool togglePinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask)
 {
     Bool  success = true;
-    
-    /* Read the last state of the pins */
-    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], pPinsState);
+    UInt8 pinsState;
+    UInt8 pinsStateToWrite;
+    UInt8 i;
+
+    /* Read the last state of the pins, taking shadow state into account */
+    success = readPinsWithShadow (deviceName, &pinsState);
+        
+    /* Toggle the ones masked in */
+    for (i = 0; (i < 2) && success; i++)
+    {
+        if (pinsState & pinsMask)
+        {
+            pinsState &=~ pinsMask;
+        }
+        else
+        {
+            pinsState |= pinsMask;
+        }
+        
+        /* Take a copy of the new intended state 'cos channelAccessWriteDS2408 will read back the written
+         * state which might not be what we want since we may be shadowing some pins */
+        pinsStateToWrite = pinsState;
+        success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsStateToWrite);
+
+        /* If it worked, setup the shadow to match the result */
+        if (success)
+        {
+            gDeviceStaticConfigList[deviceName].specifics.ds2408.pinsState = pinsState;
+        }
+        
+        msDelay (TOGGLE_DELAY_MS);
+    }
     
     return success;
 }
@@ -465,7 +647,7 @@ Bool setupDevices (void)
                         if (success)
                         {
                             pinsState = gDeviceStaticConfigList[i].specifics.ds2408.pinsState;                     
-                            /* success = channelAccessWriteDS2408 (gPortNumber, pAddress, &pinsState); TODO: reinstate this */
+                            success = channelAccessWriteDS2408 (gPortNumber, pAddress, &pinsState);
                         }
                     }
                 }
@@ -511,7 +693,7 @@ Bool setupDevices (void)
  */
 Bool readChargerStatePins (UInt8 *pPinsState)
 {
-    return readPins (OW_NAME_CHARGER_STATE_PIO, pPinsState);
+    return readPinsWithShadow (OW_NAME_CHARGER_STATE_PIO, pPinsState);
 }
 
 /*
@@ -522,7 +704,7 @@ Bool readChargerStatePins (UInt8 *pPinsState)
  */
 Bool toggleOPwr (void)
 {
-    return togglePins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_O_PWR_TOGGLE);
+    return togglePinsWithShadow (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_O_PWR_TOGGLE);
 }
 
 /*
@@ -538,14 +720,14 @@ Bool toggleOPwr (void)
 Bool readOPwr (Bool *pIsOn)
 {
     Bool success;
-    UInt8 pPinsState;
+    UInt8 pinsState;
     
-    success = readPins (OW_NAME_SCHOTTKY_PIO, &pPinsState);
+    success = readPinsWithShadow (OW_NAME_SCHOTTKY_PIO, &pinsState);
     
     if (success && (pIsOn != PNULL))
     {
         *pIsOn = false;
-        if (pPinsState & SCHOTTKY_O_PWR_TOGGLE)
+        if (pinsState & SCHOTTKY_O_PWR_TOGGLE)
         {
             *pIsOn = true;
         }        
@@ -562,7 +744,7 @@ Bool readOPwr (Bool *pIsOn)
  */
 Bool toggleORst (void)
 {
-    return togglePins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_O_RESET_TOGGLE);
+    return togglePinsWithShadow (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_O_RESET_TOGGLE);
 }
 
 /*
@@ -578,14 +760,14 @@ Bool toggleORst (void)
 Bool readORst (Bool *pIsOn)
 {
     Bool success;
-    UInt8 pPinsState;
+    UInt8 pinsState;
     
-    success = readPins (OW_NAME_SCHOTTKY_PIO, &pPinsState);
+    success = readPinsWithShadow (OW_NAME_SCHOTTKY_PIO, &pinsState);
     
     if (success && (pIsOn != PNULL))
     {
         *pIsOn = false;
-        if (pPinsState & SCHOTTKY_O_RESET_TOGGLE)
+        if (pinsState & SCHOTTKY_O_RESET_TOGGLE)
         {
             *pIsOn = true;
         }        
@@ -617,7 +799,7 @@ Bool togglePiRst (void)
  */
 Bool setRioPwr12VOn (void)
 {
-    return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_12V_ON, true);
+    return setPinsWithShadow (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_12V_ON, true);
 }
 
 /*
@@ -628,7 +810,7 @@ Bool setRioPwr12VOn (void)
  */
 Bool setRioPwr12VOff (void)
 {
-    return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_12V_ON, false);
+    return setPinsWithShadow (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_12V_ON, false);
 }
 
 /*
@@ -644,14 +826,14 @@ Bool setRioPwr12VOff (void)
 Bool readRioPwr12V (Bool *pIsOn)
 {
     Bool success;
-    UInt8 pPinsState;
+    UInt8 pinsState;
     
-    success = readPins (OW_NAME_SCHOTTKY_PIO, &pPinsState);
+    success = readPinsWithShadow (OW_NAME_SCHOTTKY_PIO, &pinsState);
     
     if (success && (pIsOn != PNULL))
     {
         *pIsOn = false;
-        if (pPinsState & SCHOTTKY_RIO_PWR_12V_ON)
+        if (pinsState & SCHOTTKY_RIO_PWR_12V_ON)
         {
             *pIsOn = true;
         }        
@@ -668,7 +850,7 @@ Bool readRioPwr12V (Bool *pIsOn)
  */
 Bool setRioPwrBattOn (void)
 {
-    return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_BATT_OFF, false);
+    return setPinsWithShadow (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_BATT_OFF, false);
 }
 
 /*
@@ -679,7 +861,7 @@ Bool setRioPwrBattOn (void)
  */
 Bool setRioPwrBattOff (void)
 {
-    return setPins (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_BATT_OFF, true);
+    return setPinsWithShadow (OW_NAME_SCHOTTKY_PIO, SCHOTTKY_RIO_PWR_BATT_OFF, true);
 }
 
 /*
@@ -698,14 +880,14 @@ Bool setRioPwrBattOff (void)
 Bool readRioPwrBatt (Bool *pIsOn)
 {
     Bool success;
-    UInt8 pPinsState;
+    UInt8 pinsState;
     
-    success = readPins (OW_NAME_SCHOTTKY_PIO, &pPinsState);
+    success = readPinsWithShadow (OW_NAME_SCHOTTKY_PIO, &pinsState);
     
     if (success && (pIsOn != PNULL))
     {
         *pIsOn = true;
-        if (pPinsState & SCHOTTKY_RIO_PWR_BATT_OFF)
+        if (pinsState & SCHOTTKY_RIO_PWR_BATT_OFF)
         {
             *pIsOn = false;
         }        
@@ -722,7 +904,7 @@ Bool readRioPwrBatt (Bool *pIsOn)
  */
 Bool setOPwr12VOn (void)
 {
-    return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_12V_ON, true);
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_O_PWR_12V_ON, true);
 }
 
 /*
@@ -733,7 +915,7 @@ Bool setOPwr12VOn (void)
  */
 Bool setOPwr12VOff (void)
 {
-    return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_12V_ON, false);
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_O_PWR_12V_ON, false);
 }
 
 /*
@@ -749,14 +931,14 @@ Bool setOPwr12VOff (void)
 Bool readOPwr12V (Bool *pIsOn)
 {
     Bool success;
-    UInt8 pPinsState;
+    UInt8 pinsState;
     
-    success = readPins (OW_NAME_RELAY_PIO, &pPinsState);
+    success = readPinsWithShadow (OW_NAME_RELAY_PIO, &pinsState);
     
     if (success && (pIsOn != PNULL))
     {
         *pIsOn = false;
-        if (pPinsState & RELAY_O_PWR_12V_ON)
+        if (pinsState & RELAY_O_PWR_12V_ON)
         {
            *pIsOn = true;
         }        
@@ -773,7 +955,7 @@ Bool readOPwr12V (Bool *pIsOn)
  */
 Bool setOPwrBattOn (void)
 {
-    return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_BATT_OFF, false);
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_O_PWR_BATT_OFF, false);
 }
 
 /*
@@ -784,7 +966,7 @@ Bool setOPwrBattOn (void)
  */
 Bool setOPwrBattOff (void)
 {
-    return setPins (OW_NAME_RELAY_PIO, RELAY_O_PWR_BATT_OFF, true);
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_O_PWR_BATT_OFF, true);
 }
 
 /*
@@ -803,14 +985,14 @@ Bool setOPwrBattOff (void)
 Bool readOPwrBatt (Bool *pIsOn)
 {
     Bool success;
-    UInt8 pPinsState;
+    UInt8 pinsState;
     
-    success = readPins (OW_NAME_RELAY_PIO, &pPinsState);
+    success = readPinsWithShadow (OW_NAME_RELAY_PIO, &pinsState);
     
     if (success && (pIsOn != PNULL))
     {
         *pIsOn = true;
-        if (pPinsState & RELAY_O_PWR_BATT_OFF)
+        if (pinsState & RELAY_O_PWR_BATT_OFF)
         {
             *pIsOn = false;
         }        
@@ -826,7 +1008,7 @@ Bool readOPwrBatt (Bool *pIsOn)
  */
 Bool setRioBatteryChargerOn (void)
 {
-    return setPins (OW_NAME_RELAY_PIO, RELAY_RIO_CHARGER_ON, true);
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_RIO_CHARGER_ON, true);
 }
 
 /*
@@ -836,7 +1018,7 @@ Bool setRioBatteryChargerOn (void)
  */
 Bool setRioBatteryChargerOff (void)
 {
-    return setPins (OW_NAME_RELAY_PIO, RELAY_RIO_CHARGER_ON, false);
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_RIO_CHARGER_ON, false);
 }
 
 /*
@@ -853,14 +1035,14 @@ Bool setRioBatteryChargerOff (void)
 Bool readRioBatteryCharger (Bool *pIsOn)
 {
     Bool success;
-    UInt8 pPinsState;
+    UInt8 pinsState;
     
-    success = readPins (OW_NAME_RELAY_PIO, &pPinsState);
+    success = readPinsWithShadow (OW_NAME_RELAY_PIO, &pinsState);
     
     if (success && (pIsOn != PNULL))
     {
         *pIsOn = false;
-        if (pPinsState & RELAY_RIO_CHARGER_ON)
+        if (pinsState & RELAY_RIO_CHARGER_ON)
         {
             *pIsOn = true;
         }        
@@ -876,7 +1058,7 @@ Bool readRioBatteryCharger (Bool *pIsOn)
  */
 Bool setO1BatteryChargerOn (void)
 {
-    return setPins (OW_NAME_RELAY_PIO, RELAY_O1_CHARGER_ON, true);
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_O1_CHARGER_ON, true);
 }
 
 /*
@@ -886,7 +1068,7 @@ Bool setO1BatteryChargerOn (void)
  */
 Bool setO1BatteryChargerOff (void)
 {
-    return setPins (OW_NAME_RELAY_PIO, RELAY_O1_CHARGER_ON, false);
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_O1_CHARGER_ON, false);
 }
 
 /*
@@ -903,14 +1085,14 @@ Bool setO1BatteryChargerOff (void)
 Bool readO1BatteryCharger (Bool *pIsOn)
 {
     Bool success;
-    UInt8 pPinsState;
+    UInt8 pinsState;
     
-    success = readPins (OW_NAME_RELAY_PIO, &pPinsState);
+    success = readPinsWithShadow (OW_NAME_RELAY_PIO, &pinsState);
     
     if (success && (pIsOn != PNULL))
     {
         *pIsOn = false;
-        if (pPinsState & RELAY_O1_CHARGER_ON)
+        if (pinsState & RELAY_O1_CHARGER_ON)
         {
             *pIsOn = true;
         }        
@@ -926,7 +1108,7 @@ Bool readO1BatteryCharger (Bool *pIsOn)
  */
 Bool setO2BatteryChargerOn (void)
 {
-    return setPins (OW_NAME_RELAY_PIO, RELAY_O2_CHARGER_ON, true);
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_O2_CHARGER_ON, true);
 }
 
 /*
@@ -936,7 +1118,7 @@ Bool setO2BatteryChargerOn (void)
  */
 Bool setO2BatteryChargerOff (void)
 {
-    return setPins (OW_NAME_RELAY_PIO, RELAY_O2_CHARGER_ON, false);
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_O2_CHARGER_ON, false);
 }
 
 /*
@@ -953,14 +1135,14 @@ Bool setO2BatteryChargerOff (void)
 Bool readO2BatteryCharger (Bool *pIsOn)
 {
     Bool success;
-    UInt8 pPinsState;
+    UInt8 pinsState;
     
-    success = readPins (OW_NAME_RELAY_PIO, &pPinsState);
+    success = readPinsWithShadow (OW_NAME_RELAY_PIO, &pinsState);
     
     if (success && (pIsOn != PNULL))
     {
         *pIsOn = false;
-        if (pPinsState & RELAY_O2_CHARGER_ON)
+        if (pinsState & RELAY_O2_CHARGER_ON)
         {
             *pIsOn = true;
         }        
@@ -976,7 +1158,7 @@ Bool readO2BatteryCharger (Bool *pIsOn)
  */
 Bool setO3BatteryChargerOn (void)
 {
-    return setPins (OW_NAME_RELAY_PIO, RELAY_O3_CHARGER_ON, true);
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_O3_CHARGER_ON, true);
 }
 
 /*
@@ -986,7 +1168,7 @@ Bool setO3BatteryChargerOn (void)
  */
 Bool setO3BatteryChargerOff (void)
 {
-    return setPins (OW_NAME_RELAY_PIO, RELAY_O3_CHARGER_ON, false);
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_O3_CHARGER_ON, false);
 }
 
 /*
@@ -1003,14 +1185,14 @@ Bool setO3BatteryChargerOff (void)
 Bool readO3BatteryCharger (Bool *pIsOn)
 {
     Bool success;
-    UInt8 pPinsState;
+    UInt8 pinsState;
     
-    success = readPins (OW_NAME_RELAY_PIO, &pPinsState);
+    success = readPinsWithShadow (OW_NAME_RELAY_PIO, &pinsState);
     
     if (success && (pIsOn != PNULL))
     {
         *pIsOn = false;
-        if (pPinsState & RELAY_O3_CHARGER_ON)
+        if (pinsState & RELAY_O3_CHARGER_ON)
         {
             *pIsOn = true;
         }        
