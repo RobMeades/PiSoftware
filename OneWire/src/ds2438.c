@@ -46,6 +46,7 @@
 #define TEMPERATURE_UNIT          0.03125
 #define TEMPERATURE_READ_DELAY_MS 10
 #define RSENS                     0.05
+#define VOLTAGE_MAX_MV            10200
 
 /* From the DS2438 data sheet remaining capacity (in mA hours) = ICA / (2048 * RSENS) */
 #define ICA_TO_MAHOURS(x)        (((x) * 1000) / (2048 * RSENS))
@@ -197,7 +198,11 @@ static Bool writeSPPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 pa
 }
 
 /*
- * Read A/D of the DS2438 chip (answer in mV).
+ * Read A/D of the DS2438 chip (answer in mV).  The A/D
+ * has a range of 10.23 volts but has a tendancy to read
+ * 0 as 10.23 or 10.22 volts when it's a bit stressed so
+ * this function will convert anything above VOLTAGE_MAX_MV
+ * millivolts into zero volts.
  *
  * portNumber    the port number of the port being used for the
  *               1-Wire Network.
@@ -280,6 +285,10 @@ static Bool readAdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, Bool isVdd, U
                 if (pVoltage != PNULL)
                 {
                     *pVoltage = (buffer[DS2438_VOLTAGE_REG_OFFSET] + (((UInt16) buffer[DS2438_VOLTAGE_REG_OFFSET + 1]) << 8)) * 10;
+                    if (*pVoltage > VOLTAGE_MAX_MV)
+                    {
+                        *pVoltage = 0;
+                    }
                 }
             }    
         }

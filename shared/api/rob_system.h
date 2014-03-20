@@ -21,3 +21,4 @@ typedef unsigned long UInt32;
 
 bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 param1);
 void printProgress (const Char * pFormat, ...);
+UInt32 getSystemTicks (void);

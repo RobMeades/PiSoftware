@@ -28,7 +28,7 @@ Bool disableTestModeDS2408 (SInt32 portNumber, UInt8 *pSerialNumber);
 Bool readControlRegisterDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
 Bool writeControlRegisterDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 data);
 Bool readPIOLogicStateDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
-UInt8 channelAccessReadDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
+UInt8 channelAccessReadDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData, UInt8 numBytesToRead);
 Bool channelAccessWriteDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
 Bool readPIOOutputLatchStateRegisterDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData);
 Bool readPIOActivityLatchStateRegisterDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData);

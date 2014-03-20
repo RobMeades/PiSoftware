@@ -6,6 +6,36 @@
  * MANIFEST CONSTANTS
  */
 
+#define PIO_MAX_BYTES_TO_READ        32   /* Should be the same as DS2408_MAX_BYTES_TO_READ */
+
+/*
+ * TYPES
+ */
+
+/* The chargers in the system */
+typedef enum ChargerTag
+{
+    CHARGER_RIO = 0,
+    CHARGER_O1 = 1,
+    CHARGER_O2 = 2,
+    CHARGER_O3 = 3,
+    NUM_CHARGERS,
+    CHARGER_NULL
+} Charger;
+
+/* The state that a charger can be in */
+typedef enum ChargeStateTag
+{
+    CHARGE_STATE_OFF = 0,
+    CHARGE_STATE_GREEN = 1,
+    CHARGE_STATE_FLASHING_GREEN = 2,
+    CHARGE_STATE_RED = 3,
+    CHARGE_STATE_FLASHING_RED = 4,
+    NUM_CHARGE_STATES,
+    CHARGE_STATE_NULL,
+    CHARGE_STATE_BAD
+} ChargeState;
+
 /*
  *  FUNCTION PROTOTYPES
  */
@@ -14,9 +44,9 @@ Bool startOneWireBus (void);
 void stopOneWireBus (void);
 Bool setupDevices (void);
 UInt8 findAllDevices (void);
-UInt32 getSystemTicks (void);
 
 Bool readChargerStatePins (UInt8 *pPinsState);
+Bool readChargerState (ChargeState *pState, Bool *pFlashDetectPossible);
 Bool toggleOPwr (void);
 Bool readOPwr (Bool *pIsOn);
 Bool toggleORst (void);
@@ -76,3 +106,5 @@ Bool swapRioBattery (UInt32 systemTime, UInt16 remainingCapacity);
 Bool swapO1Battery (UInt32 systemTime, UInt16 remainingCapacity);
 Bool swapO2Battery (UInt32 systemTime, UInt16 remainingCapacity);
 Bool swapO3Battery (UInt32 systemTime, UInt16 remainingCapacity);
+Bool setAnalogueMuxInput (UInt8 input);
+Bool readAnalogueMux (UInt16 *pVoltage);

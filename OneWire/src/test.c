@@ -201,7 +201,7 @@ int main (int argc, char **argv)
                                 UInt8 bytesRead;
                                 
                                 printf (", IO O/P latch reg: 0x%.2x", pageBuffer[0]);
-                                bytesRead = channelAccessReadDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0]);                                    
+                                bytesRead = channelAccessReadDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0], DS2408_MAX_BYTES_TO_READ);                                    
                                 if (bytesRead > 0)
                                 {
                                     printf (", IO %d times: ", bytesRead);

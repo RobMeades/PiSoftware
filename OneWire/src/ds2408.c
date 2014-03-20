@@ -295,21 +295,24 @@ Bool readPIOLogicStateDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pD
 }
 
 /*
- * Read the PIO's up to 32 times on a DS2408 device.
+ * Read the PIO's up to 32 times on a DS2408 device.  With
+ * a OneWire comms speed of ~15kHz, the 32 reads would cover
+ * about a half second period.
  *
- * portNumber    the port number of the port being used for the
- *               1-Wire Network.
- * pSerialNumber the serial number for the part that the read is
- *               to be done on.
- * pData         a pointer to 32 bytes in which to store the result.
- *               If PNULL then the reading is performed but no
- *               data is copied (though the return value will still
- *               indicate the amount of data that could have been
- *               returned).
+ * portNumber     the port number of the port being used for the
+ *                1-Wire Network.
+ * pSerialNumber  the serial number for the part that the read is
+ *                to be done on.
+ * pData          a pointer to numBytesToRead bytes in which to store
+ *                the result. If PNULL then the reading is performed
+ *                but no data is copied (though the return value will
+ *                still indicate the amount of data that could have been
+ *                returned).
+ * numBytesToRead the number of bytes to read, up to 32.
  *
  * @return  the number of times the PIO has been read.
  */
-UInt8 channelAccessReadDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData)
+UInt8 channelAccessReadDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData, UInt8 numBytesToRead)
 {
     UInt8 buffer[DS2408_MAX_BYTES_TO_READ + DS2408_NUM_BYTES_IN_COMMAND + DS2408_NUM_BYTES_IN_CRC]; 
     UInt8 count=0;
@@ -319,6 +322,7 @@ UInt8 channelAccessReadDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *p
 
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
     ASSERT_PARAM (pSerialNumber[0] == PIO_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (numBytesToRead <= DS2408_MAX_BYTES_TO_READ, numBytesToRead);
     
     /* Select the device */
     owSerialNum (portNumber, pSerialNumber, FALSE);
@@ -347,9 +351,13 @@ UInt8 channelAccessReadDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *p
            if ((lastCrc16 ^ (buffer[count - 2] + (UInt16) (buffer[count - 1] << 8))) == 0xFFFF)
            {
                bytesRead = DS2408_MAX_BYTES_TO_READ;
+               if (bytesRead > numBytesToRead)
+               {
+                   bytesRead = numBytesToRead;
+               }
                if (pData != PNULL)
                {
-                   memcpy (pData, &(buffer[DS2408_NUM_BYTES_IN_COMMAND]), DS2408_MAX_BYTES_TO_READ);
+                   memcpy (pData, &(buffer[DS2408_NUM_BYTES_IN_COMMAND]), numBytesToRead);
                }
            }
         }

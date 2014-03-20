@@ -76,9 +76,9 @@ Command gCommandList[] = {{"?", &commandHelp, "display command help"},
                           {"S1", &swapO1BatteryCnf, "swap the battery connected to the O1"},
                           {"S2", &swapO2BatteryCnf, "swap the battery connected to the O2"},
                           {"S3", &swapO3BatteryCnf, "swap the battery connected to the O3"},
- 						  {"PR", &togglePiRst, "toggle reset to the Pi [not implemented]"},  /* Keep gIndexOfFirstSwitchCommand pointed at here and then we will give user feedback of the result */
- 						  {"HP", &toggleOPwr, "toggle power to the hindbrain (AKA Orangutan)"},
- 						  {"HR", &toggleORst, "toggle reset to the hindbrain (AKA Orangutan)"},
+ 						  {"P!", &togglePiRst, "toggle reset to the Pi [not yet implemented]"},  /* Keep gIndexOfFirstSwitchCommand pointed at here and then we will give user feedback of the result */
+ 						  {"H~", &toggleOPwr, "toggle power to the hindbrain (AKA Orangutan)"},
+ 						  {"H!", &toggleORst, "toggle reset to the hindbrain (AKA Orangutan)"},
  						  {"PB+", &setRioPwrBattOn, "switch RIO/Pi battery power on"},
  						  {"PB-", &setRioPwrBattOff, "switch RIO/Pi battery power off"},
  						  {"PM+", &setRioPwr12VOn, "switch RIO/Pi mains power on"},
