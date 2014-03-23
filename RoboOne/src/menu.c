@@ -17,7 +17,7 @@
 #define BACKSPACE_KEY '\x08'
 #define SCREEN_BACKSPACE "\x1b[1D" /* ANSI escape sequence for back one space: ESC [ 1 D */
 #define COMMAND_PROMPT "\nCommand (? for help) "
-#define GPIO_HEADING_STRING " HPTg  HRTg  Pi12V PiBat H12V HBat  PiChg H1Chg H2Chg H3Chg "
+#define GPIO_HEADING_STRING " HPTg  HRTg  Pi12V PiBat H12V  HBat  PiChg H1Chg H2Chg H3Chg "
 #define GPIO_ON_STRING "  ON  "
 #define GPIO_OFF_STRING " OFF  "
 #define GPIO_DONT_KNOW_STRING "  ??  "
@@ -98,7 +98,9 @@ Command gCommandList[] = {{"?", &commandHelp, "display command help"},
  						  {"C2+", &setO2BatteryChargerOn, "switch hindbrain charger 2 on"},
  						  {"C2-", &setO2BatteryChargerOff, "switch hindbrain charger 2 off"},
  						  {"C3+", &setO3BatteryChargerOn, "switch hindbrain charger 3 on"},
- 						  {"C3-", &setO3BatteryChargerOff, "switch hindbrain charger 3 off"}};
+ 						  {"C3-", &setO3BatteryChargerOff, "switch hindbrain charger 3 off"},
+                          {"RX+", &disableAllRelays, "enable power to all relays"},
+                          {"RX-", &enableAllRelays, "disable power to all relays"}};
 
 UInt8 gIndexOfExitCommand = 1;         /* Keep this pointed at the "X" command entry above */
 UInt8 gIndexOfFirstSwitchCommand = 13;
@@ -304,23 +306,38 @@ static Bool displayLifetimeChargesDischarges (void)
 /* Little helper function for the GPIO states
  * display function below
  * 
- * isKnown  whether the state of the GPIO is known
- *          or not.
- * isOn     whether the state of the GPIO is ON or OFF.
+ * isKnown   whether the state of the GPIO is known
+ *           or not.
+ * isEnabled whether there is power to the relay.
+ * isOn      whether the state of the GPIO is ON or OFF.
  * 
  * @return  none.
  */
-static void displayGpioStatesHelper (Bool isKnown, Bool isOn)
+static void displayGpioStatesHelper (Bool isKnown, Bool isEnabled, Bool isOn)
 {
     if (isKnown)
     {
         if (isOn)
         {
-            printf ("  ON  ");
+            if (isEnabled)
+            {
+                printf ("  ON  ");                
+            }
+            else
+            {
+                printf ("  on  ");
+            }
         }
         else
         {
-            printf (" OFF  ");
+            if (isEnabled)
+            {
+                printf (" OFF  ");
+            }
+            else
+            {
+                printf (" off  ");
+            }
         }
     }
     else
@@ -338,33 +355,42 @@ static Bool displayGpioStates (void)
 {
     Bool success;
     Bool isOn;
+    Bool relaysEnabled;
  
     printf ("%s\n", GPIO_HEADING_STRING);
     
-    success = readOPwr (&isOn);
-    displayGpioStatesHelper (success, isOn);
+    success = readRelaysEnabled (&relaysEnabled);
+    if (!relaysEnabled)
+    {
+        printf ("[");
+    }
+    displayGpioStatesHelper (success, relaysEnabled, isOn);
     success = readORst (&isOn);
-    displayGpioStatesHelper (success, isOn);
+    displayGpioStatesHelper (success, relaysEnabled, isOn);
     success = readRioPwr12V (&isOn);
-    displayGpioStatesHelper (success, isOn);
+    displayGpioStatesHelper (success, relaysEnabled, isOn);
     success = readRioPwrBatt (&isOn);
-    displayGpioStatesHelper (success, isOn);
+    displayGpioStatesHelper (success, relaysEnabled, isOn);
     success = readOPwr12V (&isOn);
-    displayGpioStatesHelper (success, isOn);
+    displayGpioStatesHelper (success, relaysEnabled, isOn);
     success = readOPwrBatt (&isOn);
-    displayGpioStatesHelper (success, isOn);
+    displayGpioStatesHelper (success, relaysEnabled, isOn);
     success = readRioBatteryCharger (&isOn);
-    displayGpioStatesHelper (success, isOn);
+    displayGpioStatesHelper (success, relaysEnabled, isOn);
     success = readO1BatteryCharger (&isOn);
-    displayGpioStatesHelper (success, isOn);
+    displayGpioStatesHelper (success, relaysEnabled, isOn);
     success = readO2BatteryCharger (&isOn);
-    displayGpioStatesHelper (success, isOn);
+    displayGpioStatesHelper (success, relaysEnabled, isOn);
     success = readO3BatteryCharger (&isOn);
-    displayGpioStatesHelper (success, isOn);
-
+    displayGpioStatesHelper (success, relaysEnabled, isOn);
+    if (!relaysEnabled)
+    {
+        printf ("]");
+    }
+    
     printf ("\n");
     
-    return success;
+    return true;
 }
 
 /*

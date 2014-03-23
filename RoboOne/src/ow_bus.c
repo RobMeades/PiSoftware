@@ -46,11 +46,12 @@
 #define RELAY_IO_CONFIG               DEFAULT_DS2408_CONFIG
 #define GENERAL_PURPOSE_IO_CONFIG     DEFAULT_DS2408_CONFIG
 
-/* All pins low to begin with apart from charger state which is allowed to float as an input
- * and the Darlington pins which are disabled anyway by setting DARLINGTON_ENABLE_BAR low */
+/* Pins generally low to begin with apart from charger state which is allowed to float as an input,
+ * and the Darlington pins which are disabled anyway by setting DARLINGTON_ENABLE_BAR low and
+ * the 12V detect pin on the Relay PIO set as an input */
 #define CHARGER_STATE_IO_PIN_CONFIG   0xFF
 #define DARLINGTON_IO_PIN_CONFIG      (UInt8) ~(DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE | DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON | DARLINGTON_ENABLE_BAR)
-#define RELAY_IO_PIN_CONFIG           0x00
+#define RELAY_IO_PIN_CONFIG           RELAY_12V_DETECT
 #define GENERAL_PURPOSE_IO_PIN_CONFIG 0x00
 
 /* Which pin positions should have their state tracked through
@@ -1438,6 +1439,89 @@ Bool setAllOChargersOff (void)
         if (success)
         {
             success = setO3BatteryChargerOff();
+        }
+    }
+    
+    return success;
+}
+
+/*
+ * Disable the power to all relays.  Note
+ * that this doesn't change their logical state,
+ * i.e. when power is enabled to them they will
+ * return to their previous state.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool disableAllRelays (void)
+{
+    Bool success;
+    
+    /* First disable the external relays */
+    success = setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_ENABLE, false);
+    
+    if (success)
+    {
+        /* Then disable the on-PCB relays */
+        success = setPinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_ENABLE_BAR, true);
+    }
+    
+    return success;
+}
+
+/*
+ * Enable the power to all relays, returning
+ * them to their previous state.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool enableAllRelays (void)
+{
+    Bool success;
+    
+    /* First enable the external relays */
+    success = setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_ENABLE, true);
+    
+    if (success)
+    {
+        /* Then enable the on-PCB relays */
+        success = setPinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_ENABLE_BAR, false);
+    }
+    
+    return success;
+}
+
+/*
+ * Read the state of power to the relays.
+ *
+ * pIsOn  a place to return the state, true
+ *        for On.  May be PNULL, in which case
+ *        the read is performed but no value
+ *        is returned.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readRelaysEnabled (Bool *pIsOn)
+{
+    Bool success;
+    UInt8 pinsStateRelay;
+    UInt8 pinsStateDarlington;
+    
+    /* First read the state of power to the external relays */
+    success = readPinsWithShadow (OW_NAME_RELAY_PIO, &pinsStateRelay);
+    
+    if (success)
+    {
+        /* Then read the state of power to the on-PCB relays */
+        success = readPinsWithShadow (OW_NAME_DARLINGTON_PIO, &pinsStateDarlington);
+        
+        if (success && (pIsOn != PNULL))
+        {
+            *pIsOn = false;
+            if ((pinsStateRelay & RELAY_ENABLE) && ~(pinsStateDarlington & DARLINGTON_ENABLE_BAR))
+            {
+                *pIsOn = true;
+            }        
         }
     }
     
