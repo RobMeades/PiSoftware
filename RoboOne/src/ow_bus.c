@@ -50,7 +50,11 @@
  * and the Darlington pins which are disabled anyway by setting DARLINGTON_ENABLE_BAR low and
  * the 12V detect pin on the Relay PIO set as an input */
 #define CHARGER_STATE_IO_PIN_CONFIG   0xFF
+#ifdef RUN_FROM_12V
+#define DARLINGTON_IO_PIN_CONFIG      (UInt8) ((DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON) & ~(DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE | DARLINGTON_ENABLE_BAR))
+#else
 #define DARLINGTON_IO_PIN_CONFIG      (UInt8) ~(DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE | DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON | DARLINGTON_ENABLE_BAR)
+#endif
 #define RELAY_IO_PIN_CONFIG           RELAY_12V_DETECT
 #define GENERAL_PURPOSE_IO_PIN_CONFIG 0x00
 
@@ -1763,7 +1767,6 @@ Bool performCalAllBatteryMonitors (void)
  */
 Bool performCalRioBatteryMonitor (void)
 {
-    printProgress ("WARNING: calibrating RIO battery monitors, make sure no RIO/PI current is flowing!\n");
     return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL);
 }
 
@@ -1776,7 +1779,6 @@ Bool performCalRioBatteryMonitor (void)
  */
 Bool performCalO1BatteryMonitor (void)
 {
-    printProgress ("WARNING: calibrating O1 battery monitors, make sure no current is flowing!\n");
     return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL);
 }
 
@@ -1789,7 +1791,6 @@ Bool performCalO1BatteryMonitor (void)
  */
 Bool performCalO2BatteryMonitor (void)
 {
-    printProgress ("WARNING: calibrating O2 battery monitors, make sure no current is flowing!\n");
     return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL);
 }
 
@@ -1802,7 +1803,6 @@ Bool performCalO2BatteryMonitor (void)
  */
 Bool performCalO3BatteryMonitor (void)
 {
-    printProgress ("WARNING: calibrating O3 battery monitors, make sure no current is flowing!\n");
     return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL);
 }
 

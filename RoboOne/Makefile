@@ -7,7 +7,7 @@ PROGRAM = a.out
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
-FLAGS = -DROBOONE_1_0
+FLAGS = -DROBOONE_1_0 -DRUN_FROM_12V
 
 SHARED_PRE = ../shared
 ONEWIRE_PRE = ../OneWire

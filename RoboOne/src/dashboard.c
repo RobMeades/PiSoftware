@@ -3,39 +3,48 @@
 #include <termios.h>
 #include <unistd.h>
 #include <rob_system.h>
+#include <curses.h> /* Has to be ahead of rob_system.h in the list as it fiddles with bool */
 #include <ow_bus.h>
 #include <menu.h>
-#include <curses.h> /* Has to be ahead of rob_system.h in the list as it fiddles with bool */
 
 /*
  * MANIFEST CONSTANTS
  */
 
 /* The shape of the windows */
+#define SCR_HEIGHT                55
+#define SCR_WIDTH                 80
 #define BORDER_WIDTH              1
-#define WIN_RIO_HEIGHT            9
-#define WIN_RIO_WIDTH             30
 #define WIN_RIO_START_ROW         3
 #define WIN_RIO_START_COL         2
-#define WIN_O_HEIGHT              8
-#define WIN_O_WIDTH               42
+#define WIN_RIO_HEIGHT            5
+#define WIN_RIO_WIDTH             30
 #define WIN_O_START_ROW           3
 #define WIN_O_START_COL           35
+#define WIN_O_HEIGHT              5
+#define WIN_O_WIDTH               42
+#define WIN_MUX_START_ROW         8
+#define WIN_MUX_START_COL         2
 #define WIN_MUX_HEIGHT            4
 #define WIN_MUX_WIDTH             70
-#define WIN_MUX_START_ROW         10
-#define WIN_MUX_START_COL         2
-#define WIN_CHG_HEIGHT           4
-#define WIN_CHG_WIDTH            70
-#define WIN_CHG_START_ROW        15
-#define WIN_CHG_START_COL        2
+#define WIN_CHG_START_ROW         11
+#define WIN_CHG_START_COL         2
+#define WIN_CHG_HEIGHT            3
+#define WIN_CHG_WIDTH             70
+#define WIN_INPUT_START_ROW       11
+#define WIN_INPUT_START_COL       28
+#define WIN_INPUT_HEIGHT          2
+#define WIN_INPUT_WIDTH           25
+#define WIN_OUTPUT_START_ROW      15
+#define WIN_OUTPUT_START_COL      2
+#define WIN_OUTPUT_HEIGHT         8
+#define WIN_OUTPUT_WIDTH          76
 
 /* The places that various things should appear on the background
  * screen, negative meaning to count up from the bottom of the
  * screen */
 #define ROW_HEADING                0
-#define COL_HEADING                1
-#define ROW_FOOTER                -2
+#define COL_HEADING                0
 
 /* Cursor manipulation macros */
 #define SET_ROW(rOW) ((rOW) >= 0 ? (topRow + rOW) : (botRow + rOW))    /* Only use this macro for things on the background screen, not in a window */
@@ -44,20 +53,27 @@
 
 /* The strings */
 #define STRING_MAIN_HEADING "RoboOne Dashboard"
-#define STRING_MAIN_FOOTER "Press any key to exit"
  
 /* Misc stuff */
-#define MAX_NUM_CHARS_IN_ROW      80
+#define MAX_NUM_CHARS_IN_ROW  SCR_WIDTH
 #define SLOW_UPDATE_BACKOFF   10
 #define SLOWER_UPDATE_BACKOFF 30
 
 /*
  * STATIC FUNCTION PROTOTYPES
  */
-static void updateRioWindow (WINDOW * pWin, UInt8 count);
-static void updateOWindow (WINDOW * pWin, UInt8 count);
-static void updateMuxWindow (WINDOW * pWin, UInt8 count);
-static void updateChgWindow (WINDOW * pWin, UInt8 count);
+static void initOutputWindow (WINDOW *pWin);
+static Bool updateOutputWindow (WINDOW *pWin, UInt8 count);
+static void initInputWindow (WINDOW *pWin);
+static Bool updateInputWindow (WINDOW *pWin, UInt8 count);
+static void initRioWindow (WINDOW *pWin);
+static Bool updateRioWindow (WINDOW *pWin, UInt8 count);
+static void initOWindow (WINDOW *pWin);
+static Bool updateOWindow (WINDOW *pWin, UInt8 count);
+static void initMuxWindow (WINDOW *pWin);
+static Bool updateMuxWindow (WINDOW *pWin, UInt8 count);
+static void initChgWindow (WINDOW *pWin);
+static Bool updateChgWindow (WINDOW *pWin, UInt8 count);
 
 /*
  * TYPES
@@ -75,9 +91,10 @@ typedef struct WindowDimensionsTag
 /* Struct to hold window information*/
 typedef struct WindowInfoTag
 {
-    UInt8 windowHeading[MAX_NUM_CHARS_IN_ROW];
+    Char windowHeading[MAX_NUM_CHARS_IN_ROW];
     WindowDimensions dimensions;
-    void (*winUpdatePtr) (WINDOW *, UInt8);
+    void (*winInitPtr) (WINDOW *);
+    Bool (*winUpdatePtr) (WINDOW *, UInt8);
     WINDOW *pWin;
     Bool enabled;
 } WindowInfo;
@@ -86,17 +103,30 @@ typedef struct WindowInfoTag
  * GLOBALS (prefixed with g)
  */
 
-/* Array of possible windows */
-WindowInfo gWindowList[] = {{"Pi/Rio", {WIN_RIO_HEIGHT, WIN_RIO_WIDTH, WIN_RIO_START_ROW, WIN_RIO_START_COL}, updateRioWindow, PNULL, true},
-                            {"Hindbrain", {WIN_O_HEIGHT, WIN_O_WIDTH, WIN_O_START_ROW, WIN_O_START_COL}, updateOWindow, PNULL, true},
-                            {"Analogue", {WIN_MUX_HEIGHT, WIN_MUX_WIDTH, WIN_MUX_START_ROW, WIN_MUX_START_COL}, updateMuxWindow, PNULL, false},
-                            {"Chargers", {WIN_CHG_HEIGHT, WIN_CHG_WIDTH, WIN_CHG_START_ROW, WIN_CHG_START_COL}, updateChgWindow, PNULL, true}};
+/* Array of windows that are always displayed */
+WindowInfo gWindowList[] = {{"Output", {WIN_OUTPUT_HEIGHT, WIN_OUTPUT_WIDTH, WIN_OUTPUT_START_ROW, WIN_OUTPUT_START_COL}, initOutputWindow, updateOutputWindow, PNULL, true}, /* MUST be first in the list for the global pointer just below */
+                            {"Pi/Rio", {WIN_RIO_HEIGHT, WIN_RIO_WIDTH, WIN_RIO_START_ROW, WIN_RIO_START_COL}, initRioWindow, updateRioWindow, PNULL, true},
+                            {"Hindbrain", {WIN_O_HEIGHT, WIN_O_WIDTH, WIN_O_START_ROW, WIN_O_START_COL}, initOWindow, updateOWindow, PNULL, true},
+                            {"Analogue", {WIN_MUX_HEIGHT, WIN_MUX_WIDTH, WIN_MUX_START_ROW, WIN_MUX_START_COL}, initMuxWindow, updateMuxWindow, PNULL, true},
+                            {"Chargers", {WIN_CHG_HEIGHT, WIN_CHG_WIDTH, WIN_CHG_START_ROW, WIN_CHG_START_COL}, initChgWindow, updateChgWindow, PNULL, true},
+                            {"", {WIN_INPUT_HEIGHT, WIN_INPUT_WIDTH, WIN_INPUT_START_ROW, WIN_INPUT_START_COL}, initInputWindow, updateInputWindow, PNULL, true} /* Should be last in the list so that display updates leave the cursor here */};
 /* Must be in the same order as the enum ChargeState */
 Char * gChargeStrings[] = {" Off ", " Grn ", "*Grn*", " Red ", "*Red*", "  5  ", " Nul ", " Bad "};
+WINDOW **gpOutputWindow = &(gWindowList[0].pWin);
 
 /*
  * STATIC FUNCTIONS
  */
+
+/*
+ * Init function for Rio window.
+ * 
+ * pWin    the window where the Rio stuff
+ *         is to be displayed.
+ */
+static void initRioWindow (WINDOW *pWin)
+{
+}
 
 /*
  * Display the status of the Rio related
@@ -109,9 +139,9 @@ Char * gChargeStrings[] = {" Off ", " Grn ", "*Grn*", " Red ", "*Red*", "  5  ",
  *         update some items more often than
  *         others.
  * 
- * @return  none.
+ * @return  always false, meaning "not finished".
  */
-static void updateRioWindow (WINDOW * pWin, UInt8 count)
+static Bool updateRioWindow (WINDOW *pWin, UInt8 count)
 {
     SInt16 current = 0;
     UInt16 voltage = 0;
@@ -119,7 +149,7 @@ static void updateRioWindow (WINDOW * pWin, UInt8 count)
     UInt32 lifetimeCharge = 0;
     UInt32 lifetimeDischarge = 0;
     UInt8 row = 1;
-    UInt8 col = 1;
+    UInt8 col = 0;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
 
@@ -149,6 +179,18 @@ static void updateRioWindow (WINDOW * pWin, UInt8 count)
     }
     
     wnoutrefresh (pWin);
+    
+    return false;
+}
+
+/*
+ * Init function for Orangutan window.
+ * 
+ * pWin    the window where the Orangutan
+ *         stuff is to be displayed.
+ */
+static void initOWindow (WINDOW *pWin)
+{
 }
 
 /*
@@ -162,9 +204,9 @@ static void updateRioWindow (WINDOW * pWin, UInt8 count)
  *         update some items more often than
  *         others.
  * 
- * @return  none.
+ * @return  always false, meaning "not finished".
  */
-static void updateOWindow (WINDOW * pWin, UInt8 count)
+static Bool updateOWindow (WINDOW *pWin, UInt8 count)
 {
     SInt16 current[3];
     UInt16 voltage[3];
@@ -172,7 +214,7 @@ static void updateOWindow (WINDOW * pWin, UInt8 count)
     UInt32 lifetimeCharge[3];
     UInt32 lifetimeDischarge[3];
     UInt8 row = 1;
-    UInt8 col = 1;
+    UInt8 col = 0;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
     
@@ -210,6 +252,18 @@ static void updateOWindow (WINDOW * pWin, UInt8 count)
     }
     
     wnoutrefresh (pWin);
+    
+    return false;
+}
+
+/*
+ * Init function for analogue mux window.
+ * 
+ * pWin    the window where the analogue
+ *         mux stuff is to be displayed.
+ */
+static void initMuxWindow (WINDOW *pWin)
+{
 }
 
 /*
@@ -223,13 +277,13 @@ static void updateOWindow (WINDOW * pWin, UInt8 count)
  *         update some items more often than
  *         others.
  * 
- * @return  none.
+ * @return  always false, meaning "not finished".
  */
-static void updateMuxWindow (WINDOW * pWin, UInt8 count)
+static Bool updateMuxWindow (WINDOW *pWin, UInt8 count)
 {
     UInt16 voltage = 0;
     UInt8 row = 1;
-    UInt8 col = 1;
+    UInt8 col = 0;
     UInt8 i;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
@@ -253,6 +307,18 @@ static void updateMuxWindow (WINDOW * pWin, UInt8 count)
     }
 
     wnoutrefresh (pWin);
+    
+    return false;
+}
+
+/*
+ * Init function for the charger window.
+ * 
+ * pWin    the window where the charger stuff
+ *         is to be displayed.
+ */
+static void initChgWindow (WINDOW *pWin)
+{
 }
 
 /*
@@ -268,15 +334,15 @@ static void updateMuxWindow (WINDOW * pWin, UInt8 count)
  *         update some items more often than
  *         others.
  * 
- * @return  none.
+ * @return  always false, meaning "not finished".
  */
-static void updateChgWindow (WINDOW * pWin, UInt8 count)
+static Bool updateChgWindow (WINDOW *pWin, UInt8 count)
 {
     Bool success;
     ChargeState state[NUM_CHARGERS];
     Bool flashDetectPossible;
     UInt8 row = 1;
-    UInt8 col = 1;
+    UInt8 col = 0;
     UInt8 i;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
@@ -298,6 +364,95 @@ static void updateChgWindow (WINDOW * pWin, UInt8 count)
     row++;
     
     wnoutrefresh (pWin);
+    
+    return false;
+}
+
+/*
+ * Init function for the input window.
+ * 
+ * pWin    the window where the input stuff
+ *         is to be displayed.
+ */
+static void initInputWindow (WINDOW *pWin)
+{
+    ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
+    
+    wmove (pWin, 0, 0);
+    wprintw (pWin, COMMAND_PROMPT);    
+    wnoutrefresh (pWin);
+}
+
+/*
+ * Display the input window.
+ * 
+ * pWin     the window where the command prompt
+ *          can be displayed.
+ * count    the number of times this function
+ *          has been called.  This is used to
+ *          update some items more often than
+ *          others.
+ * 
+ * @return  true if the exit key has been 
+ *          pressed, otherwise false.
+ */
+static Bool updateInputWindow (WINDOW *pWin, UInt8 count)
+{
+    Bool exitMenu = false;
+    Char matched[MAX_NUM_CHARS_IN_COMMAND];
+    UInt8 row = 0;  /* Start from row 0 as there's no heading to make room for in the case of this window */
+    UInt8 col = 0;
+    UInt8 key;
+    
+    ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
+    ASSERT_PARAM (*gpOutputWindow != PNULL, (unsigned long) *gpOutputWindow);
+    
+    /* Check for key presses */
+    key = getch();
+    handleUserInputMenu (*gpOutputWindow, key, &exitMenu, &matched[0]);
+    wnoutrefresh (*gpOutputWindow);
+    
+    wmove (pWin, row, col);
+    wclrtoeol (pWin);        
+    wprintw (pWin, "%s%s", COMMAND_PROMPT, &matched[0]);    
+    wnoutrefresh (pWin);
+    
+    return exitMenu;
+}
+
+/*
+ * Init function for the output window.
+ * 
+ * pWin    the window where the output stuff
+ *         is to be displayed.
+ */
+static void initOutputWindow (WINDOW *pWin)
+{
+    ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
+
+    scrollok (pWin, true);
+    wmove (pWin, 1, 0); /* skip past the heading */
+    wnoutrefresh (pWin);
+}
+
+/*
+ * Display the output window.  This is a
+ * dummy function as, for the output window,
+ * things are updated as necessary by the
+ * input window.
+ * 
+ * pWin     the window where the output from
+ *          the command prompt can be displayed.
+ * count    the number of times this function
+ *          has been called.  This is used to
+ *          update some items more often than
+ *          others.
+ * 
+ * @return  always false, meaning "not finished".
+ */
+static Bool updateOutputWindow (WINDOW *pWin, UInt8 count)
+{
+    return false;
 }
 
 /*
@@ -309,10 +464,10 @@ static void updateChgWindow (WINDOW * pWin, UInt8 count)
  *
  * @return  true if successful, otherwise false.
  */
-Bool displayDashboard (void)
+Bool runDashboard (void)
 {
     Bool success = true;
-    UInt8 key;
+    Bool exitDashboard = false;
     UInt8 leftCol;
     UInt8 rightCol;
     UInt8 topRow;
@@ -323,6 +478,10 @@ Bool displayDashboard (void)
     int savedCursor;
 
     /* Set up curses for unbuffered input with no delay */
+    if (resize_term (SCR_HEIGHT, SCR_WIDTH) == ERR)
+    {
+        printf ("resize_term returned error\n");
+    }
     initscr();
     cbreak();
     noecho();
@@ -340,9 +499,8 @@ Bool displayDashboard (void)
     rightCol -= BORDER_WIDTH;
     scrCols = rightCol - leftCol;
     
-    /* Print the headers and footers */
+    /* Bound the main screen */
     mvprintw (SET_ROW (ROW_HEADING), SET_COL (leftCol + NUM_SPACES_TO_CENTRE_STRING (STRING_MAIN_HEADING, scrCols)), STRING_MAIN_HEADING);
-    mvprintw (SET_ROW (ROW_FOOTER), SET_COL (leftCol + NUM_SPACES_TO_CENTRE_STRING (STRING_MAIN_FOOTER, scrCols)), STRING_MAIN_FOOTER);
     box (stdscr, 0, 0);
     refresh();
     
@@ -354,7 +512,11 @@ Bool displayDashboard (void)
             gWindowList[i].pWin = newwin (gWindowList[i].dimensions.height, gWindowList[i].dimensions.width, gWindowList[i].dimensions.startRow, gWindowList[i].dimensions.startCol);
             if (gWindowList[i].pWin)
             {
-                mvwprintw (gWindowList[i].pWin, ROW_HEADING, COL_HEADING, "%s:", gWindowList[i].windowHeading);            
+                if (strlen(gWindowList[i].windowHeading) > 0)
+                {
+                    mvwprintw (gWindowList[i].pWin, ROW_HEADING, COL_HEADING, "%s:", gWindowList[i].windowHeading);
+                }
+                gWindowList[i].winInitPtr(gWindowList[i].pWin);
             }
             else
             {
@@ -366,13 +528,13 @@ Bool displayDashboard (void)
     if (success)
     {
         /* Now show stuff in the sub-windows */
-        for (i = 0; success && ((key = getch()) == (UInt8) ERR); i++) /* i is not meant to be in the condition here */
+        for (i = 0; !exitDashboard; i++) /* i is not meant to be in the condition here */
         {
-            for (x = 0; x < (sizeof (gWindowList) / sizeof (gWindowList[0])); x++)
+            for (x = 0; (x < (sizeof (gWindowList) / sizeof (gWindowList[0])) && !exitDashboard); x++)
             {
                 if (gWindowList[x].enabled)
                 {
-                    gWindowList[x].winUpdatePtr (gWindowList[x].pWin, i);
+                    exitDashboard = gWindowList[x].winUpdatePtr (gWindowList[x].pWin, i);
                 }
             }
             doupdate();

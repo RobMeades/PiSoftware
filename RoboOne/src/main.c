@@ -6,7 +6,7 @@
 #include <string.h>
 #include <rob_system.h>
 #include <ow_bus.h>
-#include <menu.h>
+#include <dashboard.h>
 
 /*
  * Entry point
@@ -25,8 +25,8 @@ int main (int argc, char **argv)
         
         if (success)
         {
-            /* Run the interactive menu */
-            success = runMenu();
+            /* Display the dashboard */
+            success = runDashboard();
         }
         else
         {
