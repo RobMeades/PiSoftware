@@ -700,13 +700,19 @@ static UInt8 toUpper (UInt8 digit)
 
 /*
  * Act on a backspace character.
- * Outputs to the screen only if pWin
- * is PNULL (if curses is active
- * it will need to do its own screen
- * things)
+ *
+ * pWin        a window to send output to, may
+ *             be PNULL.
+ * pEntry      pointer to the current character
+ *             in the input buffer.
+ * pNumEntries pointer to the number of characters
+ *             in the input buffer.
  */
 static void actOnBackspace (WINDOW *pWin, UInt8 *pEntry, UInt8 *pNumEntries)
 {
+    UInt8 row = 0;
+    UInt8 col = 0;
+    
 	*pEntry = 0;
 	(*pNumEntries)--;
 	if (pWin == PNULL)
@@ -714,6 +720,13 @@ static void actOnBackspace (WINDOW *pWin, UInt8 *pEntry, UInt8 *pNumEntries)
 	    printf (SCREEN_BACKSPACE);
 	    putchar (' ');
 	    printf (SCREEN_BACKSPACE);
+	}
+	else
+	{
+	    getyx (pWin, row, col);
+	    wmove (pWin, row, col - 1);
+        wdelch (pWin);
+        wnoutrefresh (pWin); /* give user feedback immediately */
 	}
 }
 
@@ -726,8 +739,8 @@ static void actOnBackspace (WINDOW *pWin, UInt8 *pEntry, UInt8 *pNumEntries)
  * its own terminal settings stuff so that
  * it can be called from anywhere.
  * 
- * pWin     a window to send output to, may
- *          be PNULL.
+ * pWin     a window to get input from,
+ *          may be PNULL.
  * pPrompt  a string to print as a prompt,
  *          may be PNULL.
  *
@@ -752,6 +765,11 @@ Bool getYesInput (WINDOW *pWin, Char *pPrompt)
         if (pPrompt != PNULL)
         {
             printHelper (pWin, pPrompt);
+            if (pWin != PNULL)
+            {
+                wnoutrefresh (pWin);
+                doupdate ();
+            }
         }
         
         if (toUpper (getchar()) == 'Y')
@@ -767,32 +785,23 @@ Bool getYesInput (WINDOW *pWin, Char *pPrompt)
 }
 
 /*
- * Act on user input.  This function
- * outputs to the screen directly when
- * run as part of the menu outside the
- * dashboard.  When accessed from
- * inside the dashboard it instead
- * returns the characters matched so far
- * in pMatch.
+ * Act on user input.
  *
- * pWin      a window to send output
- *           to, may be PNULL.
- * key       the character entered.
- * pExitMenu pointer to a Bool that will
- *           be set to true if the user
- *           has chosen to exit the
- *           menu, or otherwise set to false.
- * pMatch    pointer to a place to store
- *           the matched charactters
- *           (MAX_NUM_CHARS_IN_COMMAND characters
- *           required).  A null terminator
- *           is included.  May be PNULL if
- *           pWin is PNULL.
+ * pCMdWin    the command window to
+ *            get user feedback from.
+ * key        the character entered.
+ * pOutputWin the window to send user
+ *            information to.
+ * pExitMenu  pointer to a location that
+ *            will be set to true if
+ *            the user chose to exit,
+ *            otherwise false.
  *
- * @return  true if a command has been executed
- *          otherwise false.
+ * @return    true if a command has
+ *            been executed, otherwise
+ *            false.
  */
-Bool handleUserInputMenu (WINDOW *pWin, UInt8 key, Bool *pExitMenu, Char *pMatch)
+Bool handleUserCmdMenu (WINDOW *pCmdWin, UInt8 key, WINDOW *pOutputWin, Bool *pExitMenu)
 {
     Bool success;
     Bool commandExecuted = false;
@@ -800,12 +809,11 @@ Bool handleUserInputMenu (WINDOW *pWin, UInt8 key, Bool *pExitMenu, Char *pMatch
     static UInt8 entry[MAX_NUM_CHARS_IN_COMMAND];
     UInt8 i;
 
+    ASSERT_PARAM (pCmdWin != PNULL, (unsigned long) pCmdWin);
+    ASSERT_PARAM (pOutputWin != PNULL, (unsigned long) pOutputWin);
     ASSERT_PARAM (pExitMenu != PNULL, (unsigned long) pExitMenu);
+    
     *pExitMenu = false;
-    if (pMatch != PNULL)
-    {
-        *pMatch = 0; /* Put a null terminator in to start with */
-    }
 
     switch (key)
     {
@@ -814,7 +822,7 @@ Bool handleUserInputMenu (WINDOW *pWin, UInt8 key, Bool *pExitMenu, Char *pMatch
             /* Reset the number of entries and go fully backwards on the screen */
             for (i = 0; i < numEntries; i++)
             {
-                actOnBackspace (pWin, &entry[i], &numEntries);
+                actOnBackspace (pCmdWin, &entry[i], &numEntries);
             }
         }
         break;
@@ -823,7 +831,7 @@ Bool handleUserInputMenu (WINDOW *pWin, UInt8 key, Bool *pExitMenu, Char *pMatch
             /* Set last entry to zero and go back one on the screen */
             if (numEntries > 0)
             {
-                actOnBackspace (pWin, &entry[numEntries], &numEntries);
+                actOnBackspace (pCmdWin, &entry[numEntries], &numEntries);
             }
         }
         break;
@@ -873,13 +881,11 @@ Bool handleUserInputMenu (WINDOW *pWin, UInt8 key, Bool *pExitMenu, Char *pMatch
             }
             else
             {
-                /* Found a possible command so display the new character (if not in curses
-                 * mode) */
-                if (pWin == PNULL)
-                {
-                    putchar (entry[numEntries - 1]);                    
-                }
-                
+                /* Found a possible command so display the new character straight away */
+                wprintw (pCmdWin, "%c", entry[numEntries - 1]);                    
+                wnoutrefresh (pCmdWin);
+                doupdate ();
+
                 /* If there is only one command then call the function */
                 if (numFound == 1)
                 {
@@ -887,15 +893,15 @@ Bool handleUserInputMenu (WINDOW *pWin, UInt8 key, Bool *pExitMenu, Char *pMatch
                     {
                         if (gCommandList[lastCommandMatching].function.displayPtr)
                         {
-                            printHelper (pWin, "Cmd: %s...\n", gCommandList[lastCommandMatching].pDescription);
-                            success = gCommandList[lastCommandMatching].function.displayPtr (pWin);                            
+                            wprintw (pOutputWin, "Cmd: %s...\n", gCommandList[lastCommandMatching].pDescription);
+                            success = gCommandList[lastCommandMatching].function.displayPtr (pOutputWin);                            
                         }
                     }
                     else
                     {
                         if (gCommandList[lastCommandMatching].function.commandPtr)
                         {
-                            printHelper (pWin, "Cmd: %s...\n", gCommandList[lastCommandMatching].pDescription);
+                            wprintw (pOutputWin, "Cmd: %s...\n", gCommandList[lastCommandMatching].pDescription);
                             success = gCommandList[lastCommandMatching].function.commandPtr ();                            
 
                             /* Check if we're exiting and give some feedback for these functions that
@@ -904,7 +910,7 @@ Bool handleUserInputMenu (WINDOW *pWin, UInt8 key, Bool *pExitMenu, Char *pMatch
                             {
                                 if (success)
                                 {
-                                    printHelper (pWin, "Done.\n");
+                                    wprintw (pOutputWin, "Done.\n");
                                 }
                             }
                             else
@@ -915,70 +921,12 @@ Bool handleUserInputMenu (WINDOW *pWin, UInt8 key, Bool *pExitMenu, Char *pMatch
                     }
 
                     commandExecuted = true;
+                    numEntries = 0;
                 }
             }
         }
         break;
     } /* end of switch() */
     
-    /* Copy the matches so far to the pMatch string (for curses mode) */                    
-    if (pMatch != PNULL)
-    {
-        memcpy (pMatch, &entry[0], numEntries);
-        *(pMatch + numEntries) = 0;
-    }
-
-    /* Reset for next time */
-    if (commandExecuted)
-    {
-        numEntries = 0;  
-    }
-    
     return commandExecuted;
-}
-
-/*
- * Run an interactive menu system.
- * This doesn't use curses or run the
- * state machine, if you want to do that
- * you need to run it from the dashboard.
-
- * @return  true if the menu ran OK, otherwiss
- *          false.
- */
-Bool runMenu (void)
-{
-    Bool success = false;
-    Bool exitMenu = false;
-    Bool commandExecuted = true;
-    UInt8 key;
-    struct termios savedSettings;
-    struct termios newSettings;
-
-    /* Check if this is a TTY device */
-    if (tcgetattr (STDIN_FILENO, &savedSettings) == 0)
-    {
-        success = true;
-        /* Save current settings and then set us up for no echo, non-canonical (i.e. no need for enter) */
-        memcpy (&newSettings, &savedSettings, sizeof (newSettings));
-        newSettings.c_lflag &= ~(ICANON | ECHO | ECHOK | ECHONL | ECHOKE | ICRNL);
-        tcsetattr (STDIN_FILENO, TCSANOW, &newSettings);
-
-        /* Run the interactive bit */
-        while (!exitMenu)
-        {
-            if (commandExecuted)
-            {
-                /* Prompt for (more) commands */
-                printf ("\n%s", COMMAND_PROMPT);                
-            }
-            key = getchar();
-            commandExecuted = handleUserInputMenu (PNULL, key, &exitMenu, PNULL);
-        }
-
-        /* Restore saved settings, hopefully */
-        tcsetattr (STDIN_FILENO, TCSANOW, &savedSettings);
-    }
-
-    return success;
 }
