@@ -3,7 +3,7 @@ ifneq (,)
 This makefile requires GNU Make.
 endif
 
-PROGRAM = a.out
+PROGRAM = roboone
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
