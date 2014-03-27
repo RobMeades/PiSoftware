@@ -12,7 +12,7 @@
 #include <netinet/in.h>
 #include <rob_system.h>
 #include <one_wire.h>
-#include <onewireserver.h>
+#include <onewire_server.h>
 
 /*
  * MANIFEST CONSTANTS
