@@ -37,7 +37,9 @@
  * serverPort   the port number to use.
  * pSendMsg     the message to send.
  * pReceivedMsg the response received from
- *              the server, may be PNULL
+ *              the server, may be PNULL, in
+ *              which case no response from
+ *              the server is expected.
  * 
  * @return      client return code.
  */

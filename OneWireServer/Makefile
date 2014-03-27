@@ -3,13 +3,14 @@ ifneq (,)
 This makefile requires GNU Make.
 endif
 
-PROGRAM = onewireserver
+PROGRAM = one_wire_server
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
 
 SHARED_PRE = ../shared
 ONEWIRE_PRE = ../OneWire
+SERVER_PRE = ../MessagingServer
 
 OW_LIBS_PRE = ../OneWireLibs
 OW_LIBS_FLAGS = -I $(OW_LIBS_PRE)/common -I $(OW_LIBS_PRE)/lib/userial/shared -I $(OW_LIBS_PRE)/lib/userial/link/Linux -DDEBUG
@@ -19,8 +20,8 @@ OW_LIBS = $(OW_LIBS_OBJ_PRE)/findtype.o $(OW_LIBS_OBJ_PRE)/owlinkobjs
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
 CC =  $(GCC_PREFIX)gcc.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) $(FLAGS) $(OW_LIBS_FLAGS)
-LDFLAGS = $(OW_LIBS) $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(ONEWIRE_PRE)/$(OBJ_DIR)/onewire.a
+CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) $(FLAGS) $(OW_LIBS_FLAGS)
+LDFLAGS = $(OW_LIBS) $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(ONEWIRE_PRE)/$(OBJ_DIR)/onewire.a  $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a
 
 all: $(PROGRAM)
 

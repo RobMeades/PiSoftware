@@ -84,7 +84,7 @@ int main (int argc, char **argv)
     UInt32 x;
 
     printProgress ("This will test that the messaging client and server libraries talk.\n");
-    printProgress ("Make sure that testserver is running (./testserver&) first.\n");
+    printProgress ("Make sure that testserver is running (./test_server&) first.\n");
     pSendMsg = malloc (sizeof(Msg));
     
     if (pSendMsg != PNULL)

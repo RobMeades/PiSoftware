@@ -3,20 +3,22 @@ ifneq (,)
 This makefile requires GNU Make.
 endif
 
-PROGRAM = onewiretestclient
+PROGRAM = one_wire_test_client
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
 
 SHARED_PRE = ../shared
 ONEWIRE_PRE = ../OneWire
+SERVER_PRE = ../MessagingServer
+CLIENT_PRE = ../MessagingClient
 ONEWIRESERVER_PRE = ../OneWireServer
 
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
 CC =  $(GCC_PREFIX)gcc.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(ONEWIRESERVER_PRE)/$(API_DIR)
-LDFLAGS = $(SHARED_PRE)/$(OBJ_DIR)/shared.a
+CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ONEWIRESERVER_PRE)/$(API_DIR)
+LDFLAGS = $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a
 
 all: $(PROGRAM)
 

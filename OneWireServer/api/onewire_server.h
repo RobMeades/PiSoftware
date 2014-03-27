@@ -1,5 +1,5 @@
 /*
- *  Public stuff from the OneWire server
+ *  Public stuff for the OneWire server
  */
 
 /*
@@ -8,24 +8,9 @@
 
 #define ONE_WIRE_SERVER_PORT      5234
 
-/* Things to size and find bits inside all messages */
-#define OFFSET_TO_MSG_LENGTH      0
-#define OFFSET_TO_MSG_TYPE        1
-#define OFFSET_TO_MSG_BODY        2
-#define MAX_MSG_LENGTH            64
-#define MAX_MSG_BODY_LENGTH       MAX_MSG_LENGTH - OFFSET_TO_MSG_BODY
-
-/* Things to size and find bits inside REQuest messages */
-#define OFFSET_TO_REQ_MSG_HEADER  OFFSET_TO_MSG_BODY
-#define MIN_REQ_MSG_LENGTH        OFFSET_TO_MSG_BODY + 4 + NUM_BYTES_IN_SERIAL_NUM
-
 /*
  * TYPES
  */
-
-/* These just to make things neater */
-typedef struct sockaddr_in SockAddrIn;
-typedef struct sockaddr SockAddr;
 
 #pragma pack(push, 1) /* Force GCC to pack everything from here on as tightly as possible */
 
@@ -33,7 +18,7 @@ typedef struct sockaddr SockAddr;
  * matching the list of function prototypes
  * in OneWire\one_wire.h.  ORDER IS IMPORTANT,
  * must match that of the function table in
- * onewireserver.c */
+ * onewire_server.c */
 typedef enum OneWireMsgTypeTag
 {
     /* DS2408 functions */
@@ -71,23 +56,11 @@ typedef enum OneWireMsgTypeTag
     MAX_NUM_ONE_WIRE_MSG
 } OneWireMsgType;
 
-/* The length of the body of a OneWire message
- * If you change this from a UInt8 you will need to change OFFSET_TO_MSG_TYPE above */
-typedef UInt8 OneWireMsgLength;
-
 /* All OneWire REQuest messages have this at the start of their msgBody */
 typedef struct OneWireReqMsgHeaderTag
 {
     SInt32 portNumber;
     UInt8 serialNumber[NUM_BYTES_IN_SERIAL_NUM];  
 } OneWireReqMsgHeader;
-
-/* The structure of a message to the OneWire server */
-typedef struct OneWireMsgTag
-{
-    OneWireMsgLength msgLength;
-    OneWireMsgType msgType;
-    UInt8 msgBody[MAX_MSG_BODY_LENGTH];
-} OneWireMsg;
 
 #pragma pack(pop) /* End of packing */ 

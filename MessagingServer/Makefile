@@ -3,7 +3,7 @@ ifneq (,)
 This makefile requires GNU Make.
 endif
 
-PROGRAM = testserver
+PROGRAM = test_server
 LIB = messaging_server.a
 SRC_DIR = src
 OBJ_DIR = obj
