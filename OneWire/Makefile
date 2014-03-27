@@ -3,8 +3,8 @@ ifneq (,)
 This makefile requires GNU Make.
 endif
 
-PROGRAM = a.out
-LIB = onewire.a
+PROGRAM = one_wire
+LIB = one_wire.a
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api

@@ -21,7 +21,7 @@ C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
 CC =  $(GCC_PREFIX)gcc.exe
 CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) $(FLAGS) $(OW_LIBS_FLAGS)
-LDFLAGS = $(OW_LIBS) $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(ONEWIRE_PRE)/$(OBJ_DIR)/onewire.a  $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a
+LDFLAGS = $(OW_LIBS) $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(ONEWIRE_PRE)/$(OBJ_DIR)/one_wire.a  $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a
 
 all: $(PROGRAM)
 

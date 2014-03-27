@@ -68,7 +68,7 @@ ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
     ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_ONE_WIRE_MSG, pReceivedMsg->msgType);
     
     /* Then get the header */
-    memcpy (&msgHeader, (pReceivedMsg + OFFSET_TO_MSG_BODY), sizeof (msgHeader));
+    memcpy (&msgHeader, pReceivedMsg->msgBody, sizeof (msgHeader));
     printProgress ("Header has port number 0x%x and serialNumber 0x%x%x%x%x%x%x%x%x.\n", msgHeader.portNumber, msgHeader.serialNumber[0], msgHeader.serialNumber[1], msgHeader.serialNumber[2], msgHeader.serialNumber[3], msgHeader.serialNumber[4], msgHeader.serialNumber[5], msgHeader.serialNumber[6], msgHeader.serialNumber[7]);
     
     /* TODO: now process the message and create the response */

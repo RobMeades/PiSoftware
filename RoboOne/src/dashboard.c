@@ -100,8 +100,8 @@ typedef struct WindowInfoTag
 {
     Char windowHeading[MAX_NUM_CHARS_IN_ROW];
     WindowDimensions dimensions;
-    void (*winInitPtr) (WINDOW *);
-    Bool (*winUpdatePtr) (WINDOW *, UInt8);
+    void (*pWinInit) (WINDOW *);
+    Bool (*pWinUpdate) (WINDOW *, UInt8);
     WINDOW *pWin;
     Bool enabled;
 } WindowInfo;
@@ -518,7 +518,7 @@ Bool runDashboard (void)
                 {
                     mvwprintw (stdscr, gWindowList[i].dimensions.startRow - HEADING_HEIGHT, gWindowList[i].dimensions.startCol, "%s:", gWindowList[i].windowHeading);
                 }
-                gWindowList[i].winInitPtr(gWindowList[i].pWin);
+                gWindowList[i].pWinInit(gWindowList[i].pWin);
             }
             else
             {
@@ -536,7 +536,7 @@ Bool runDashboard (void)
             {
                 if (gWindowList[x].enabled)
                 {
-                    exitDashboard = gWindowList[x].winUpdatePtr (gWindowList[x].pWin, i);
+                    exitDashboard = gWindowList[x].pWinUpdate (gWindowList[x].pWin, i);
                 }
             }
             doupdate();

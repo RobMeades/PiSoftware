@@ -46,8 +46,8 @@ static Bool performCalAllBatteryMonitorsCnf (WINDOW *pWin);
  */
 typedef union FunctionTag
 {
-    Bool    (*commandPtr) ();
-    Bool    (*displayPtr) (WINDOW *);   
+    Bool    (*pCommand) ();
+    Bool    (*pDisplay) (WINDOW *);   
 } Function;
 
 
@@ -891,18 +891,18 @@ Bool handleUserCmdMenu (WINDOW *pCmdWin, UInt8 key, WINDOW *pOutputWin, Bool *pE
                 {
                     if (gCommandList[lastCommandMatching].functionCanDisplay)
                     {
-                        if (gCommandList[lastCommandMatching].function.displayPtr)
+                        if (gCommandList[lastCommandMatching].function.pDisplay)
                         {
                             wprintw (pOutputWin, "Cmd: %s...\n", gCommandList[lastCommandMatching].pDescription);
-                            success = gCommandList[lastCommandMatching].function.displayPtr (pOutputWin);                            
+                            success = gCommandList[lastCommandMatching].function.pDisplay (pOutputWin);                            
                         }
                     }
                     else
                     {
-                        if (gCommandList[lastCommandMatching].function.commandPtr)
+                        if (gCommandList[lastCommandMatching].function.pCommand)
                         {
                             wprintw (pOutputWin, "Cmd: %s...\n", gCommandList[lastCommandMatching].pDescription);
-                            success = gCommandList[lastCommandMatching].function.commandPtr ();                            
+                            success = gCommandList[lastCommandMatching].function.pCommand ();                            
 
                             /* Check if we're exiting and give some feedback for these functions that
                              * otherwise don't give any */
