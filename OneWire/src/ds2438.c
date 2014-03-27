@@ -985,10 +985,11 @@ Bool readNVChargeDischargeDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt3
  *                1-Wire Network.
  * pSerialNumber  the serial number for the part that the read is
  *                to be done on.
- * pCharge        a pointer to a location to store the charge
- *                accumulated (in mA hours).
- * pDischarge     a pointer to a location to store the discharge
- *                accumulated (in mA hours).  May be PNULL.
+ * pCharge        a pointer to a location when the charge
+ *                accumulated can be found (in mA hours).
+ * pDischarge     a pointer to a location where the discharge
+ *                accumulated (in mA hours) can be found.  May
+ *                be PNULL.
  *
  * @return  true if the operation succeeded, otherwise false.
  */
