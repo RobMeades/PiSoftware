@@ -4,7 +4,7 @@ This makefile requires GNU Make.
 endif
 
 PROGRAM = testclient
-LIB = messagingclient.a
+LIB = messaging_client.a
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
