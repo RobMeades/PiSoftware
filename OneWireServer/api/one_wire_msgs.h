@@ -6,7 +6,7 @@
  * defines the message structures for the messages sent to
  * and from the server.  The items in the list are:
  * 
- * - the message enum,
+ * - the message type enum,
  * - the message typedef struct (without a Cnf or Req on the end),
  * - the message variable name for use in the message union
  *   (again, without a Cnf or Req on the end),

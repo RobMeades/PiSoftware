@@ -125,7 +125,7 @@ static UInt16 actionWriteControlRegisterDS2408 (OneWireReqMsgHeader *pMsgHeader,
  * 
  * @return          none.
  */
-static void doAction (MsgType receivedMsgType, UInt8 * pReceivedMsgBody, Msg *pSendMsg)
+static void doAction (OneWireMsgType receivedMsgType, UInt8 * pReceivedMsgBody, Msg *pSendMsg)
 {
     OneWireReqMsgHeader msgHeader;
         
@@ -136,7 +136,7 @@ static void doAction (MsgType receivedMsgType, UInt8 * pReceivedMsgBody, Msg *pS
     memcpy (&msgHeader, pReceivedMsgBody, sizeof (msgHeader));
 
     /* We always respond with the same message type */
-    pSendMsg->msgType = receivedMsgType;
+    pSendMsg->msgType = (MsgType) receivedMsgType;
     /* Fill in the length so far, will make it right for each message later */
     pSendMsg->msgLength = OFFSET_TO_MSG_BODY;
     
@@ -172,7 +172,10 @@ static void doAction (MsgType receivedMsgType, UInt8 * pReceivedMsgBody, Msg *pS
  */
 
 /*
- * Entry point
+ * Entry point - start the OneWire messaging server,
+ * listening on a socket.  Whoever calls this function
+ * needs to have made sure that the OneWire bus
+ * is properly initialised first.
  */
 int main (int argc, char **argv)
 {
@@ -207,7 +210,7 @@ ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
     ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_ONE_WIRE_MSG, pReceivedMsg->msgType);
     
     /* Do the thang */
-    doAction (pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
+    doAction ((OneWireMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
         
     return returnCode;
 }
