@@ -13,15 +13,15 @@ SHARED_PRE = ../shared
 ONEWIRE_PRE = ../OneWire
 
 OW_LIBS_PRE = ../OneWireLibs
-OW_LIBS_FLAGS = -I $(OW_LIBS_PRE)/common -I $(OW_LIBS_PRE)/lib/userial/shared -I $(OW_LIBS_PRE)/lib/userial/link/Linux -DDEBUG
+OW_LIBS_FLAGS = -I$(OW_LIBS_PRE)/common -I$(OW_LIBS_PRE)/lib/userial/shared -I$(OW_LIBS_PRE)/lib/userial/link/Linux -DDEBUG
 OW_LIBS_OBJ_PRE = $(OW_LIBS_PRE)/builds/uLinuxGNU/obj
-OW_LIBS = $(OW_LIBS_OBJ_PRE)/findtype.o $(OW_LIBS_OBJ_PRE)/owlinkobjs
+OW_LIBS = $(OW_LIBS_OBJ_PRE)/owlinkobjs
 
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
 CC = $(GCC_PREFIX)gcc.exe
 CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) $(FLAGS) $(OW_LIBS_FLAGS)
-LDFLAGS = -lncurses $(OW_LIBS) $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(ONEWIRE_PRE)/$(OBJ_DIR)/one_wire.a
+LDFLAGS = -lncurses $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(ONEWIRE_PRE)/$(OBJ_DIR)/one_wire.a $(OW_LIBS)
 
 all: $(PROGRAM)
 

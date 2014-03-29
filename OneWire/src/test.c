@@ -35,11 +35,11 @@ int main (int argc, char **argv)
 
     if (argc == 2)
     {
-        portNumber = owAcquireEx (argv[1]);
+        portNumber = robStartOneWireBus (argv[1]);
     }
     else
     {
-        portNumber = owAcquireEx (ONEWIRE_PORT);
+        portNumber = robStartOneWireBus (ONEWIRE_PORT);
     }
 
     if (portNumber < 0)
@@ -305,7 +305,7 @@ int main (int argc, char **argv)
             printf ("Either something returned false or at least one IO device and at least one Battery device were not found.\n");
         }
     
-        owRelease (portNumber);
+        robStopOneWireBus (portNumber);
         printf ("Port released.\n");    
     }
 

@@ -19,6 +19,32 @@
  */
 
 /*
+ * Initialise the OneWire bus port.
+ *
+ * pPort    the string that defines the port
+ *          to use, e.g. "/dev/USBSerial"
+ * 
+ * @return  the port number.
+ */
+SInt32 robStartOneWireBus (Char *pPort)
+{        
+    return owAcquireEx (pPort);
+}
+
+/*
+ * Shut stuff down, which is just releasing the serial port
+ * 
+ * portNumber the port number of the port being used for the
+ *            1-Wire Network.
+ *
+ * @return    none.
+ */
+void robStopOneWireBus (SInt32 portNumber)
+{
+    owRelease (portNumber);
+}
+
+/*
  * Find all devices on the OneWire bus.
  *
  * portNumber      the port number of the port being used for the
@@ -33,7 +59,7 @@
  * @return  the number of devices found (which can be larger than
  *          maxNumAddresses).
  */
-UInt8 owFindAllDevices (SInt32 portNumber, UInt8 *pAddress, UInt8 maxNumAddresses)
+UInt8 robFindAllDevices (SInt32 portNumber, UInt8 *pAddress, UInt8 maxNumAddresses)
 {
     Bool success;
     UInt8 count=0;

@@ -586,7 +586,7 @@ Bool startOneWireBus (void)
 
     printProgress ("Opening port %s...", ONEWIRE_PORT);
     /* Open the serial port */
-    gPortNumber = owAcquireEx (ONEWIRE_PORT);
+    gPortNumber = robStartOneWireBus (ONEWIRE_PORT);
     if (gPortNumber < 0)
     {
         success = false;
@@ -601,15 +601,14 @@ Bool startOneWireBus (void)
 }
 
 /*
- * Shut stuff down, which is just
- * releasing the serial port
+ * Shut stuff down.
  * 
  * @return  none.
  */
 void stopOneWireBus (void)
 {
     printProgress ("Closing port.\n");
-    owRelease (gPortNumber);
+    robStopOneWireBus (gPortNumber);
 }
 
 /*
@@ -633,7 +632,7 @@ UInt8 findAllDevices ()
     if (pAddresses != PNULL)
     {
         /* Find all the devices */
-        numDevicesFound = owFindAllDevices (gPortNumber, pAddresses, MAX_NUM_DEVICES);
+        numDevicesFound = robFindAllDevices (gPortNumber, pAddresses, MAX_NUM_DEVICES);
         
         /* The owFindAllDevices can return more than we ask for, so cap it */
         if (numDevicesToPrint > numDevicesFound)
