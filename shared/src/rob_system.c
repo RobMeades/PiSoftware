@@ -41,6 +41,20 @@ void printProgress (const Char * pFormat, ...)
 }
 
 /*
+ * Dump hex from memory
+ */
+void printHexDump (const UInt8 * pMemory, UInt16 size)
+{
+    UInt8 i;
+    
+    for (i = 0; i < size; i +=8)
+    {
+        printf ("0x%.8lx: 0x%.2x 0x%.2x 0x%.2x 0x%.2x : 0x%.2x 0x%.2x 0x%.2x 0x%.2x\n", (unsigned long) pMemory, *pMemory, *(pMemory + 1), *(pMemory + 2), *(pMemory + 3), *(pMemory + 4), *(pMemory + 5), *(pMemory + 6), *(pMemory + 7));
+        pMemory +=8;
+    }
+}
+
+/*
  * Get the system time in ticks and in a
  * UInt32.
  * 
