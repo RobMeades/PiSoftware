@@ -54,5 +54,4 @@ typedef union OneWireMsgUnionCnfTag
 #define MSG_DEF MAKE_UNION_MEMBER_CNF
 #include <one_wire_msgs.h>
 } OneWireMsgUnionCnf;
-
 #pragma pack(pop) /* End of packing */ 

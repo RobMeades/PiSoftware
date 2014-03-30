@@ -4,12 +4,8 @@
  */
 
 #include <stdio.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <netinet/in.h>
 #include <rob_system.h>
 #include <one_wire.h>
 #include <messaging_server.h>
@@ -29,6 +25,116 @@
  */
 
 /*
+ * Handle a message that calls oneWireStartBus().
+ * 
+ * pSerialPortString the string representation of the
+ *                   serial port, e.g. "/dev/USBSerial".
+ * pSendMsgBody      pointer to the relevant message
+ *                   type to fill in with a response,
+ *                   which will be overlaid over the
+ *                   body of the response message.
+ * 
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionOneWireStartBus (Char *pSerialPortString, OneWireStartBusCnf *pSendMsgBody)
+{
+    SInt32 port;
+    UInt16 sendMsgBodyLength = 0;
+    
+    port = oneWireStartBus (pSerialPortString);
+    pSendMsgBody->success = true;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    pSendMsgBody->port = port;
+    sendMsgBodyLength += sizeof (pSendMsgBody->port);
+    
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls oneWireStopBus().
+ * 
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ * 
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionOneWireStopBus (MsgHeader *pMsgHeader, OneWireStopBusCnf *pSendMsgBody)
+{
+    UInt16 sendMsgBodyLength = 0;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+    
+    oneWireStopBus (pMsgHeader->portNumber);
+    pSendMsgBody->success = true;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that will cause us to exit.
+ * 
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ * 
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionOneWireServerExit (OneWireServerExitCnf *pSendMsgBody)
+{
+    UInt16 sendMsgBodyLength = 0;
+
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+    
+    pSendMsgBody->success = true;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls oneWireFindAllDevices().
+ * 
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ * 
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionOneWireFindAllDevices (MsgHeader *pMsgHeader, OneWireFindAllDevicesCnf *pSendMsgBody)
+{
+    UInt8 numDevicesFound;
+    UInt16 sendMsgBodyLength = 0;
+    
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    numDevicesFound = oneWireFindAllDevices (pMsgHeader->portNumber, &pSendMsgBody->deviceList.address[0], MAX_DEVICES_TO_FIND);
+    pSendMsgBody->success = true;
+    pSendMsgBody->deviceList.numDevices = numDevicesFound; /* Yes, numDevicesFound can be bigger than MAX_DEVICES_TO_FIND */
+    sendMsgBodyLength += sizeof (pSendMsgBody->deviceList.numDevices);
+    if (numDevicesFound > MAX_DEVICES_TO_FIND)
+    {
+        numDevicesFound = MAX_DEVICES_TO_FIND;
+    }
+    sendMsgBodyLength += NUM_BYTES_IN_SERIAL_NUM * numDevicesFound;
+    
+    return sendMsgBodyLength;
+}
+
+/*
  * Handle a message that calls disableTestModeDS2408().
  * 
  * pMsgHeader    pointer to the message header.
@@ -40,7 +146,7 @@
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionDisableTestModeDS2408 (OneWireReqMsgHeader *pMsgHeader, DisableTestModeDS2408Cnf *pSendMsgBody)
+static UInt16 actionDisableTestModeDS2408 (MsgHeader *pMsgHeader, DisableTestModeDS2408Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -49,8 +155,8 @@ static UInt16 actionDisableTestModeDS2408 (OneWireReqMsgHeader *pMsgHeader, Disa
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
 
     success = disableTestModeDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]));
-    pSendMsgBody->oneWireResult.success = success;
-    sendMsgBodyLength += sizeof (OneWireResult);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
     
     return sendMsgBodyLength;
 }
@@ -67,7 +173,7 @@ static UInt16 actionDisableTestModeDS2408 (OneWireReqMsgHeader *pMsgHeader, Disa
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionReadControlRegisterDS2408 (OneWireReqMsgHeader *pMsgHeader, ReadControlRegisterDS2408Cnf *pSendMsgBody)
+static UInt16 actionReadControlRegisterDS2408 (MsgHeader *pMsgHeader, ReadControlRegisterDS2408Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -77,10 +183,10 @@ static UInt16 actionReadControlRegisterDS2408 (OneWireReqMsgHeader *pMsgHeader, 
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
 
     success = readControlRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &data);
-    pSendMsgBody->oneWireResult.success = success;
-    sendMsgBodyLength += sizeof (OneWireResult);
-    pSendMsgBody->oneWireReadByte.data = data;
-    sendMsgBodyLength += sizeof (OneWireReadByte);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    pSendMsgBody->data = data;
+    sendMsgBodyLength += sizeof (pSendMsgBody->data);
     
     return sendMsgBodyLength;
 }
@@ -89,16 +195,16 @@ static UInt16 actionReadControlRegisterDS2408 (OneWireReqMsgHeader *pMsgHeader, 
  * Handle a message that calls writeControlRegisterDS2408().
  * 
  * pMsgHeader    pointer to the message header.
+ * data          the byte to write.
  * pSendMsgBody  pointer to the relevant message
  *               type to fill in with a response,
  *               which will be overlaid over the
  *               body of the response message.
- * data          the data to write.
  * 
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionWriteControlRegisterDS2408 (OneWireReqMsgHeader *pMsgHeader, WriteControlRegisterDS2408Cnf *pSendMsgBody, UInt8 data)
+static UInt16 actionWriteControlRegisterDS2408 (MsgHeader *pMsgHeader, UInt8 data, WriteControlRegisterDS2408Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -107,8 +213,8 @@ static UInt16 actionWriteControlRegisterDS2408 (OneWireReqMsgHeader *pMsgHeader,
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
 
     success = writeControlRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), data);
-    pSendMsgBody->oneWireResult.success = success;
-    sendMsgBodyLength += sizeof (OneWireResult);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
     
     return sendMsgBodyLength;
 }
@@ -123,11 +229,13 @@ static UInt16 actionWriteControlRegisterDS2408 (OneWireReqMsgHeader *pMsgHeader,
  * pSendMsg         pointer to a message that we
  *                  can fill in with the response.
  * 
- * @return          none.
+ * @return          SERVER_SUCCESS_KEEP_RUNNING unless
+ *                  exitting in which case SERVER_EXIT_NORMALLY.
  */
-static void doAction (OneWireMsgType receivedMsgType, UInt8 * pReceivedMsgBody, Msg *pSendMsg)
+static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pReceivedMsgBody, Msg *pSendMsg)
 {
-    OneWireReqMsgHeader msgHeader;
+    MsgHeader msgHeader;
+    ServerReturnCode returnCode = SERVER_SUCCESS_KEEP_RUNNING;
         
     ASSERT_PARAM (pReceivedMsgBody != PNULL, (unsigned long) pReceivedMsgBody);
     ASSERT_PARAM (pSendMsg != PNULL, (unsigned long) pSendMsg);
@@ -143,6 +251,28 @@ static void doAction (OneWireMsgType receivedMsgType, UInt8 * pReceivedMsgBody, 
     /* Now handle each message specifically */
     switch (receivedMsgType)
     {
+        case ONE_WIRE_START_BUS:
+        {
+            Char * pSerialPortString= &((OneWireStartBusReq *) &pReceivedMsgBody)->serialPortString[0];
+            pSendMsg->msgLength += actionOneWireStartBus (pSerialPortString, (OneWireStartBusCnf *) &(pSendMsg->msgBody[0]));
+        }
+        break;
+        case ONE_WIRE_STOP_BUS:
+        {
+            pSendMsg->msgLength += actionOneWireStopBus (&msgHeader, (OneWireStopBusCnf *) &(pSendMsg->msgBody[0]));
+        }
+        break;
+        case ONE_WIRE_SERVER_EXIT:
+        {
+            pSendMsg->msgLength += actionOneWireServerExit ((OneWireServerExitCnf *) &(pSendMsg->msgBody[0]));
+            returnCode = SERVER_EXIT_NORMALLY;
+        }
+        break;
+        case ONE_WIRE_FIND_ALL_DEVICES:
+        {
+            pSendMsg->msgLength += actionOneWireFindAllDevices (&msgHeader, (OneWireFindAllDevicesCnf *) &(pSendMsg->msgBody[0]));
+        }
+        break;
         case DISABLE_TEST_MODE_DS2408:
         {
             pSendMsg->msgLength += actionDisableTestModeDS2408 (&msgHeader, (DisableTestModeDS2408Cnf *) &(pSendMsg->msgBody[0]));
@@ -155,8 +285,8 @@ static void doAction (OneWireMsgType receivedMsgType, UInt8 * pReceivedMsgBody, 
         break;
         case WRITE_CONTROL_REGISTER_DS2408:
         {
-            UInt8 data = ((WriteControlRegisterDS2408Req *) pReceivedMsgBody)->oneWireWriteByte.data;
-            pSendMsg->msgLength += actionWriteControlRegisterDS2408 (&msgHeader, (WriteControlRegisterDS2408Cnf *) &(pSendMsg->msgBody[0]), data);
+            UInt8 data = ((WriteControlRegisterDS2408Req *) pReceivedMsgBody)->data;
+            pSendMsg->msgLength += actionWriteControlRegisterDS2408 (&msgHeader, data, (WriteControlRegisterDS2408Cnf *) &(pSendMsg->msgBody[0]));
         }
         break;
         default:
@@ -165,26 +295,13 @@ static void doAction (OneWireMsgType receivedMsgType, UInt8 * pReceivedMsgBody, 
         }
         break;
     }
+    
+    return returnCode;
 }
 
 /*
  * PUBLIC FUNCTIONS
  */
-
-/*
- * Entry point - start the OneWire messaging server,
- * listening on a socket.  Whoever calls this function
- * needs to have made sure that the OneWire bus
- * is properly initialised first.
- */
-int main (int argc, char **argv)
-{
-    ServerReturnCode returnCode;
-
-    returnCode = runMessagingServer (ONE_WIRE_SERVER_PORT);
-        
-    return returnCode;
-}
 
 /*
  * Handle a whole message received from the client
@@ -196,21 +313,21 @@ int main (int argc, char **argv)
  *                the response into. Not touched if return
  *                code is a failure one.
  * 
- * @return        always SERVER_SUCCESS_KEEP_RUNNING.
+ * @return        whatever doAction() returns.
  */
 ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
 {
-    ServerReturnCode returnCode = SERVER_SUCCESS_KEEP_RUNNING;
+    ServerReturnCode returnCode;
     
     ASSERT_PARAM (pReceivedMsg != PNULL, (unsigned long) pReceivedMsg);
     ASSERT_PARAM (pSendMsg != PNULL, (unsigned long) pSendMsg);
 
     /* Check the type */
-    printProgress ("Server: received message of length %d and type %d.\n", pReceivedMsg->msgLength, pReceivedMsg->msgType);    
     ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_ONE_WIRE_MSG, pReceivedMsg->msgType);
+    printProgress ("Server received msgType %d\n", pReceivedMsg->msgType);
     
     /* Do the thang */
-    doAction ((OneWireMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
+    returnCode = doAction ((OneWireMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
         
     return returnCode;
 }

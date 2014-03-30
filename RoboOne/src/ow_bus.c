@@ -16,12 +16,16 @@
 #include <one_wire.h>
 #include <ow_bus.h>
 #include <hw_config.h>
+#include <messaging_server.h>
+#include <messaging_client.h>
+#include <one_wire_server.h>
+#include <one_wire_msg_auto.h>
 
 /*
  * MANIFEST CONSTANTS
  */
 
-#define ONEWIRE_PORT    "/dev/USBSerial"
+#define ONEWIRE_PORT_STRING    "/dev/USBSerial"
 #define MAX_NUM_DEVICES 8    /* This MUST be the same as the number of elements in the gDeviceStaticConfigList[] below */
 #define TOGGLE_DELAY_MS 500  /* How long to toggle a set of pins from current state to opposite and back again */
 
@@ -168,9 +172,124 @@ Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
                           "GENERAL_PURPOSE_PIO"};
 SInt32 gPortNumber = -1;
 
+/* A globally available send and receive message, saves error checking the mallocs/frees */
+Msg gSendMsg;
+Msg gReceiveMsg;
+
 /*
  * STATIC FUNCTIONS
  */
+
+#ifndef DONT_USE_ONE_WIRE_SERVER
+/*
+ * Send a message to the One Wire Server and
+ * get the response back.
+ * 
+ * msgType               the message type to send.
+ * pSendMsgSpecifics     pointer to the portion of the
+ *                       send REquest message beyond the
+ *                       generic msgHeader part.
+ * specificsLength       the length of the bit that
+ *                       pSendMsgSpecifics points to.
+ * pSerialNumber         pointer to the serial number of
+ *                       the One Wire device we are
+ *                       addressing.  PNULL makes sense
+ *                       in some limited cases.
+ * pReceivedMsgSpecifics pointer to the part of the
+ *                       received CNF message after the
+ *                       generic 'success' part.
+ * 
+ * @return           true if the message send/receive
+ *                   is successful and the response
+ *                   message indicates success,
+ *                   otherwise false.
+ */
+static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSendMsgSpecifics, UInt16 specificsLength, UInt8 *pSerialNumber, UInt8 *pReceivedMsgSpecifics)
+{
+    ClientReturnCode returnCode;
+    Bool success = true;
+    Msg *pSendMsg;
+    MsgHeader sendMsgHeader;
+    UInt16 sendMsgBodyLength = 0;
+    Msg *pReceivedMsg;
+    UInt16 receivedMsgBodyLength = 0;
+
+    ASSERT_PARAM (msgType < MAX_NUM_ONE_WIRE_MSG, (unsigned long) msgType);
+    ASSERT_PARAM (pSendMsgSpecifics != PNULL, (unsigned long) pSendMsgSpecifics);
+    ASSERT_PARAM (((pSerialNumber != PNULL) || ((msgType == ONE_WIRE_SERVER_EXIT) || (msgType == ONE_WIRE_START_BUS) || (msgType == ONE_WIRE_STOP_BUS) || (msgType == ONE_WIRE_FIND_ALL_DEVICES))), (unsigned long) pSerialNumber);
+    ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
+    ASSERT_PARAM (specificsLength <= MAX_MSG_BODY_LENGTH - sizeof (sendMsgHeader), specificsLength);
+    ASSERT_PARAM (pReceivedMsgSpecifics != PNULL, (unsigned long) pReceivedMsgSpecifics);
+
+    pSendMsg = malloc (sizeof (Msg));
+    
+    if (pSendMsg != PNULL)
+    {
+        pReceivedMsg = malloc (sizeof (Msg));
+        
+        if (pReceivedMsg != PNULL)
+        {
+            /* Put in the bit before the body */
+            pSendMsg->msgLength = 0;
+            pSendMsg->msgType = msgType;
+            pSendMsg->msgLength += sizeof (pSendMsg->msgType);
+            
+            /* Put in the generic header at the start of the body */
+            sendMsgHeader.portNumber = gPortNumber;
+            memcpy (&sendMsgHeader.serialNumber, pSerialNumber, sizeof (sendMsgHeader.serialNumber));
+            memcpy (&(pSendMsg->msgBody[0]), &sendMsgHeader, sizeof (sendMsgHeader));
+            sendMsgBodyLength += sizeof (sendMsgHeader);
+            
+            /* Put in the specifics */
+            memcpy (&pSendMsg->msgBody[0] + sendMsgBodyLength, pSendMsgSpecifics, specificsLength);
+            sendMsgBodyLength += specificsLength;
+            pSendMsg->msgLength += sendMsgBodyLength;
+            
+            pReceivedMsg->msgLength = 0;
+    
+            returnCode = runMessagingClient (gPortNumber, pSendMsg, pReceivedMsg);
+                    
+            /* This code makes assumptions about packing (i.e. that it's '1' and that the
+             * Bool 'success' is at the start of the body) so be careful */
+            if (returnCode == CLIENT_SUCCESS && (receivedMsgBodyLength > sizeof (pReceivedMsg->msgType)))
+            { 
+                /* Check the Bool 'success' at the start of the message body */
+                receivedMsgBodyLength = pReceivedMsg->msgLength - sizeof (pReceivedMsg->msgType);
+                if (receivedMsgBodyLength > sizeof (Bool))
+                {
+                    if ((Bool) pReceivedMsg->msgBody[0])
+                    {
+                        /* Copy out the bits beyond the suscess field for passing back */
+                        memcpy (pReceivedMsgSpecifics, &pReceivedMsg->msgBody[0] + sizeof (Bool), receivedMsgBodyLength - sizeof (Bool));
+                    }
+                    else
+                    {
+                        success = false;                
+                    }                    
+                }
+                else
+                {
+                    success = false;                
+                }
+            }
+            else
+            {
+                success = false;                
+            }
+        }
+        else
+        {
+            success = false;            
+        }
+    }
+    else
+    {
+        success = false;
+    }
+
+    return success;
+}
+#endif
 
 /*
  * Print out an address for debug purposes.
@@ -583,11 +702,19 @@ static ChargeState getChargeFlashingState (ChargeState existingState, UInt8 last
 Bool startOneWireBus (void)
 {
     Bool success = true;
-
-    printProgress ("Opening port %s...", ONEWIRE_PORT);
+#ifndef DONT_USE_ONE_WIRE_SERVER    
+    UInt8 oneWirePort[MAX_SERIAL_PORT_NAME_LENGTH];
+#endif
+    
+    printProgress ("Opening port %s...", ONEWIRE_PORT_STRING);
     /* Open the serial port */
-    gPortNumber = robStartOneWireBus (ONEWIRE_PORT);
-    if (gPortNumber < 0)
+#ifdef DONT_USE_ONE_WIRE_SERVER    
+    gPortNumber = oneWireStartBus (ONEWIRE_PORT_STRING);
+#else
+    memcpy (&oneWirePort[0], ONEWIRE_PORT_STRING, MAX_SERIAL_PORT_NAME_LENGTH);
+    success = oneWireServerSendReceive (ONE_WIRE_START_BUS, &oneWirePort[0], MAX_SERIAL_PORT_NAME_LENGTH, PNULL, (UInt8 *) &gPortNumber);    
+#endif
+    if (!success || (gPortNumber < 0))
     {
         success = false;
         printProgress (" failed!\n");
@@ -608,7 +735,7 @@ Bool startOneWireBus (void)
 void stopOneWireBus (void)
 {
     printProgress ("Closing port.\n");
-    robStopOneWireBus (gPortNumber);
+    oneWireStopBus (gPortNumber);
 }
 
 /*
@@ -632,7 +759,7 @@ UInt8 findAllDevices ()
     if (pAddresses != PNULL)
     {
         /* Find all the devices */
-        numDevicesFound = robFindAllDevices (gPortNumber, pAddresses, MAX_NUM_DEVICES);
+        numDevicesFound = oneWireFindAllDevices (gPortNumber, pAddresses, MAX_NUM_DEVICES);
         
         /* The owFindAllDevices can return more than we ask for, so cap it */
         if (numDevicesToPrint > numDevicesFound)

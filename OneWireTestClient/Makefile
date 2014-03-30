@@ -17,7 +17,7 @@ ONEWIRESERVER_PRE = ../OneWireServer
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
 CC =  $(GCC_PREFIX)gcc.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ONEWIRESERVER_PRE)/$(API_DIR)
+CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR)  -I$(ONEWIRESERVER_PRE)/$(API_DIR)
 LDFLAGS = $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a
 
 all: $(PROGRAM)

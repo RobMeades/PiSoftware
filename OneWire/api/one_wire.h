@@ -3,12 +3,13 @@
  * General definitions for OneWire functions
  */ 
 
-#define NUM_BYTES_IN_SERIAL_NUM 8
+/* The number of bytes in a OneWire device serial number (AKA address) */
+#define NUM_BYTES_IN_SERIAL_NUM     8
 
 /* Utility functions */
-UInt8 robFindAllDevices (SInt32 portNumber, UInt8 *pAddress, UInt8 maxNumAddresses);
-SInt32 robStartOneWireBus (Char *pPort);
-void robStopOneWireBus (SInt32 portNumber);
+UInt8 oneWireFindAllDevices (SInt32 portNumber, UInt8 *pAddress, UInt8 maxNumAddresses);
+SInt32 oneWireStartBus (Char *pSerialPortString);
+void oneWireStopBus (SInt32 portNumber);
 
 /* To protect against deadlocks when looping for HW responses */
 #define GUARD_COUNTER           255

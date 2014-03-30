@@ -26,7 +26,7 @@
  * 
  * @return  the port number.
  */
-SInt32 robStartOneWireBus (Char *pPort)
+SInt32 oneWireStartBus (Char *pPort)
 {        
     return owAcquireEx (pPort);
 }
@@ -39,7 +39,7 @@ SInt32 robStartOneWireBus (Char *pPort)
  *
  * @return    none.
  */
-void robStopOneWireBus (SInt32 portNumber)
+void oneWireStopBus (SInt32 portNumber)
 {
     owRelease (portNumber);
 }
@@ -59,7 +59,7 @@ void robStopOneWireBus (SInt32 portNumber)
  * @return  the number of devices found (which can be larger than
  *          maxNumAddresses).
  */
-UInt8 robFindAllDevices (SInt32 portNumber, UInt8 *pAddress, UInt8 maxNumAddresses)
+UInt8 oneWireFindAllDevices (SInt32 portNumber, UInt8 *pAddress, UInt8 maxNumAddresses)
 {
     Bool success;
     UInt8 count=0;
