@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <time.h>
 #include <rob_system.h>
 
@@ -15,14 +16,15 @@ Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 pa
 {
     if (pText)
     {
-	    printf ("%s#%u:%s %lu", pPlace, (int) line, pText, param1);
+	    printf ("\n!!! ASSERT: %s#%u:%s %lu!!!\n", pPlace, (int) line, pText, param1);
     }
     else
     {
-	    printf ("%s#%d: %lu", pPlace, (int) line, param1);
+	    printf ("\n!!! ASSERT: %s#%u: %lu!!!\n", pPlace, (int) line, param1);
     }
 
-    while (1);
+    fflush (stdout);
+    exit (127);
 
     return false;
 }
