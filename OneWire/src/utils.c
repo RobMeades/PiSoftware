@@ -21,14 +21,14 @@
 /*
  * Initialise the OneWire bus port.
  *
- * pPort    the string that defines the port
- *          to use, e.g. "/dev/USBSerial"
+ * pSerialPortString  the string that defines the port
+ *                    to use, e.g. "/dev/USBSerial"
  * 
- * @return  the port number.
+ * @return            the port number.
  */
-SInt32 oneWireStartBus (Char *pPort)
+SInt32 oneWireStartBus (Char *pSerialPortString)
 {        
-    return owAcquireEx (pPort);
+    return owAcquireEx (pSerialPortString);
 }
 
 /*
