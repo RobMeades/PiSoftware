@@ -64,6 +64,13 @@ typedef struct OneWireWriteChargeDischargeDS2438Tag
     UInt32 discharge;
 } OneWireWriteChargeDischargeDS2438;
 
+typedef struct OneWireWriteNVUserDataDS2438Tag
+{
+    UInt8 block;
+    UInt8 dataLength;
+    UInt8 data[DS4238_NUM_BYTES_IN_PAGE];
+} OneWireWriteNVUserDataDS2438;
+
 /*
  * TYPES FOR CNF MESSAGES
  */

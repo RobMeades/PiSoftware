@@ -18,6 +18,9 @@
 #define MAX_MSG_BODY_LENGTH       MAX_MSG_LENGTH - OFFSET_TO_MSG_BODY
 #define MIN_MSG_LENGTH            SIZE_OF_MSG_TYPE
 
+/* Suggested delay of 100 ms to allow the server to start on a Pi before accessing it */
+#define SERVER_START_DELAY_PI_US  100000L
+
 /*
  * TYPES
  */

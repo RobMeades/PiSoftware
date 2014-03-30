@@ -28,22 +28,30 @@
 extern int errno;
 
 /*
+ * GLOBALS (prefixed with g)
+ */
+
+SInt32 gOneWireServerPort = -1;
+
+/*
  * STATIC FUNCTIONS
  */
 
 /*
  * Send a message to stop the One Wire Server.
  * 
- * port     the port the server is listening on.
+ * oneWireServerPort the port the server is listening on.
  * 
- * @return  true if successful, otherwise false.
+ * @return           true if successful, otherwise false.
  */
-static Bool stopOneWireServer (UInt16 port)
+static Bool stopOneWireServer (SInt32 oneWireServerPort)
 {
     ClientReturnCode returnCode;
     Bool success = true;
     Msg *pSendMsg;
     Msg *pReceivedMsg;
+    
+    ASSERT_PARAM (oneWireServerPort >= 0, oneWireServerPort);
     
     pSendMsg = malloc (sizeof (Msg));
     
@@ -56,7 +64,7 @@ static Bool stopOneWireServer (UInt16 port)
         pReceivedMsg = malloc (sizeof (Msg));
         if (pReceivedMsg != PNULL)
         {
-            returnCode = runMessagingClient (port, pSendMsg, pReceivedMsg);
+            returnCode = runMessagingClient (oneWireServerPort, pSendMsg, pReceivedMsg);
             
             if ((returnCode != CLIENT_SUCCESS) || (pReceivedMsg->msgType != ONE_WIRE_SERVER_EXIT))
             {
@@ -92,6 +100,9 @@ int main (int argc, char **argv)
     Bool  success = true;
     pid_t serverPID;
     
+    /* Setup the global for everyone to use */
+    gOneWireServerPort = atoi (ONE_WIRE_SERVER_PORT_STRING);
+    
     /* Spawn a child that will become the One Wire server. */
     serverPID = fork();
     
@@ -107,6 +118,7 @@ int main (int argc, char **argv)
     else
     { /* Parent process */
       /* Setup what's necessary for OneWire bus stuff */
+        usleep (SERVER_START_DELAY_PI_US); /* Wait for the server to start */
         success = startOneWireBus();
         
         /* Find and setup the devices on the OneWire bus */
@@ -139,7 +151,7 @@ int main (int argc, char **argv)
         stopOneWireBus ();
         
         /* Stop the server */
-        stopOneWireServer (atoi (ONE_WIRE_SERVER_PORT_STRING));
+        stopOneWireServer (gOneWireServerPort);
         
         waitpid (serverPID, 0, 0); /* wait for server to exit */
     }

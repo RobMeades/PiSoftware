@@ -146,6 +146,13 @@ typedef struct OwDevicesStaticConfigTag
     OwDeviceSpecifics specifics;
 } OwDevicesStaticConfig;
 
+
+/*
+ * EXTERN
+ */
+
+extern SInt32 gOneWireServerPort;
+
 /*
  * GLOBALS (prefixed with g)
  */
@@ -204,7 +211,7 @@ Msg gReceiveMsg;
  *                   message indicates success,
  *                   otherwise false.
  */
-static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSendMsgSpecifics, UInt16 specificsLength, UInt8 *pSerialNumber, UInt8 *pReceivedMsgSpecifics)
+static Bool oneWireServerSendReceive (OneWireMsgType msgType, void *pSendMsgSpecifics, UInt16 specificsLength, UInt8 *pSerialNumber, UInt8 *pReceivedMsgSpecifics)
 {
     ClientReturnCode returnCode;
     Bool success = true;
@@ -214,10 +221,10 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSendMsgSpe
     Msg *pReceivedMsg;
     UInt16 receivedMsgBodyLength = 0;
 
+    ASSERT_PARAM (gOneWireServerPort >= 0, gOneWireServerPort);
     ASSERT_PARAM (msgType < MAX_NUM_ONE_WIRE_MSG, (unsigned long) msgType);
     ASSERT_PARAM (pSendMsgSpecifics != PNULL, (unsigned long) pSendMsgSpecifics);
     ASSERT_PARAM (((pSerialNumber != PNULL) || ((msgType == ONE_WIRE_SERVER_EXIT) || (msgType == ONE_WIRE_START_BUS) || (msgType == ONE_WIRE_STOP_BUS) || (msgType == ONE_WIRE_FIND_ALL_DEVICES))), (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
     ASSERT_PARAM (specificsLength <= MAX_MSG_BODY_LENGTH - sizeof (sendMsgHeader), specificsLength);
     ASSERT_PARAM (pReceivedMsgSpecifics != PNULL, (unsigned long) pReceivedMsgSpecifics);
 
@@ -233,10 +240,17 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSendMsgSpe
             pSendMsg->msgLength = 0;
             pSendMsg->msgType = msgType;
             pSendMsg->msgLength += sizeof (pSendMsg->msgType);
-            
+                        
             /* Put in the generic header at the start of the body */
-            sendMsgHeader.portNumber = gPortNumber;
-            memcpy (&sendMsgHeader.serialNumber, pSerialNumber, sizeof (sendMsgHeader.serialNumber));
+            memset (&sendMsgHeader, 0, sizeof (sendMsgHeader));
+            if (gPortNumber > 0)
+            {
+                sendMsgHeader.portNumber = gPortNumber;
+            }
+            if (pSerialNumber != PNULL)
+            {
+                memcpy (&sendMsgHeader.serialNumber, pSerialNumber, sizeof (sendMsgHeader.serialNumber));
+            }
             memcpy (&(pSendMsg->msgBody[0]), &sendMsgHeader, sizeof (sendMsgHeader));
             sendMsgBodyLength += sizeof (sendMsgHeader);
             
@@ -247,19 +261,24 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSendMsgSpe
             
             pReceivedMsg->msgLength = 0;
     
-            returnCode = runMessagingClient (gPortNumber, pSendMsg, pReceivedMsg);
+            printf ("\nClient: sending message of type %d, length %d, hex dump:\n", pSendMsg->msgType, pSendMsg->msgLength);
+            printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
+            returnCode = runMessagingClient (gOneWireServerPort, pSendMsg, pReceivedMsg);
                     
+            printProgress ("returnCode: %d\n", returnCode);
             /* This code makes assumptions about packing (i.e. that it's '1' and that the
              * Bool 'success' is at the start of the body) so be careful */
-            if (returnCode == CLIENT_SUCCESS && (receivedMsgBodyLength > sizeof (pReceivedMsg->msgType)))
+            if (returnCode == CLIENT_SUCCESS && (pReceivedMsg->msgLength > sizeof (pReceivedMsg->msgType)))
             { 
                 /* Check the Bool 'success' at the start of the message body */
                 receivedMsgBodyLength = pReceivedMsg->msgLength - sizeof (pReceivedMsg->msgType);
+                printProgress ("receivedMsgBodyLength: %d\n", receivedMsgBodyLength);
                 if (receivedMsgBodyLength > sizeof (Bool))
                 {
+                    printProgress ("Bool: %d\n", (Bool) pReceivedMsg->msgBody[0]);
                     if ((Bool) pReceivedMsg->msgBody[0])
                     {
-                        /* Copy out the bits beyond the suscess field for passing back */
+                        /* Copy out the bits beyond the success field for passing back */
                         memcpy (pReceivedMsgSpecifics, &pReceivedMsg->msgBody[0] + sizeof (Bool), receivedMsgBodyLength - sizeof (Bool));
                     }
                     else
@@ -702,17 +721,13 @@ static ChargeState getChargeFlashingState (ChargeState existingState, UInt8 last
 Bool startOneWireBus (void)
 {
     Bool success = true;
-#ifndef DONT_USE_ONE_WIRE_SERVER    
-    UInt8 oneWirePort[MAX_SERIAL_PORT_NAME_LENGTH];
-#endif
     
     printProgress ("Opening port %s...", ONEWIRE_PORT_STRING);
     /* Open the serial port */
 #ifdef DONT_USE_ONE_WIRE_SERVER    
     gPortNumber = oneWireStartBus (ONEWIRE_PORT_STRING);
 #else
-    memcpy (&oneWirePort[0], ONEWIRE_PORT_STRING, MAX_SERIAL_PORT_NAME_LENGTH);
-    success = oneWireServerSendReceive (ONE_WIRE_START_BUS, &oneWirePort[0], MAX_SERIAL_PORT_NAME_LENGTH, PNULL, (UInt8 *) &gPortNumber);    
+    success = oneWireServerSendReceive (ONE_WIRE_START_BUS, ONEWIRE_PORT_STRING, strlen (ONEWIRE_PORT_STRING), PNULL, (UInt8 *) &gPortNumber);    
 #endif
     if (!success || (gPortNumber < 0))
     {
@@ -723,7 +738,7 @@ Bool startOneWireBus (void)
     {
         printProgress (" done.\n");        
     }
-        
+    
     return success;
 }
 
@@ -807,15 +822,20 @@ Bool setupDevices (void)
     printProgress ("Setting up OneWire devices...\n");
     for (i = 0; (i < MAX_NUM_DEVICES); i++)
     {
+        printProgress ("GOT TO 0.\n");
         pAddress = &gDeviceStaticConfigList[i].address.value[0];
         
+        printProgress ("GOT TO 1.\n");
         /* Try to select the device */
         owSerialNum (gPortNumber, pAddress, false);
+        printProgress ("GOT TO 2, gPortNumber %d.\n", gPortNumber);
         found[i] = owAccess (gPortNumber);
+        printProgress ("GOT TO 3.\n");
         
         /* If it was found, set it up */
         if (found[i])
         {
+            printProgress ("GOT TO 4.\n");
             printProgress ("Found %d [%s]: ", i + 1, deviceNameList[i]);
             printAddress (pAddress, false);
             printProgress (", setting it up...");

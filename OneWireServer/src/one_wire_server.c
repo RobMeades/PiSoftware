@@ -39,14 +39,14 @@
  */
 static UInt16 actionOneWireStartBus (Char *pSerialPortString, OneWireStartBusCnf *pSendMsgBody)
 {
-    SInt32 port;
+    SInt32 serialPortNumber;
     UInt16 sendMsgBodyLength = 0;
     
-    port = oneWireStartBus (pSerialPortString);
+    serialPortNumber = oneWireStartBus (pSerialPortString);
     pSendMsgBody->success = true;
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
-    pSendMsgBody->port = port;
-    sendMsgBodyLength += sizeof (pSendMsgBody->port);
+    pSendMsgBody->serialPortNumber = serialPortNumber;
+    sendMsgBodyLength += sizeof (pSendMsgBody->serialPortNumber);
     
     return sendMsgBodyLength;
 }
@@ -240,20 +240,21 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
     ASSERT_PARAM (pReceivedMsgBody != PNULL, (unsigned long) pReceivedMsgBody);
     ASSERT_PARAM (pSendMsg != PNULL, (unsigned long) pSendMsg);
     
+    pSendMsg->msgLength = 0;
     /* Get the message header, which is at the start of the message body */
     memcpy (&msgHeader, pReceivedMsgBody, sizeof (msgHeader));
 
     /* We always respond with the same message type */
     pSendMsg->msgType = (MsgType) receivedMsgType;
     /* Fill in the length so far, will make it right for each message later */
-    pSendMsg->msgLength = OFFSET_TO_MSG_BODY;
+    pSendMsg->msgLength += sizeof (pSendMsg->msgType);
     
     /* Now handle each message specifically */
     switch (receivedMsgType)
     {
         case ONE_WIRE_START_BUS:
         {
-            Char * pSerialPortString= &((OneWireStartBusReq *) &pReceivedMsgBody)->serialPortString[0];
+            Char * pSerialPortString = &((OneWireStartBusReq *) pReceivedMsgBody)->serialPortString[0];
             pSendMsg->msgLength += actionOneWireStartBus (pSerialPortString, (OneWireStartBusCnf *) &(pSendMsg->msgBody[0]));
         }
         break;
@@ -324,7 +325,6 @@ ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
 
     /* Check the type */
     ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_ONE_WIRE_MSG, pReceivedMsg->msgType);
-    printProgress ("Server received msgType %d\n", pReceivedMsg->msgType);
     
     /* Do the thang */
     returnCode = doAction ((OneWireMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
