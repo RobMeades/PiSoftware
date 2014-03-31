@@ -314,7 +314,7 @@ Bool readPIOLogicStateDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pD
  */
 UInt8 channelAccessReadDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pData, UInt8 numBytesToRead)
 {
-    UInt8 buffer[DS2408_MAX_BYTES_TO_READ + DS2408_NUM_BYTES_IN_COMMAND + DS2408_NUM_BYTES_IN_CRC]; 
+    UInt8 buffer[DS2408_MAX_BYTES_IN_CHANNEL_ACCESS + DS2408_NUM_BYTES_IN_COMMAND + DS2408_NUM_BYTES_IN_CRC]; 
     UInt8 count=0;
     UInt8 i;
     UInt16 lastCrc16;
@@ -322,7 +322,7 @@ UInt8 channelAccessReadDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *p
 
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
     ASSERT_PARAM (pSerialNumber[0] == PIO_FAM, pSerialNumber[0]);
-    ASSERT_PARAM (numBytesToRead <= DS2408_MAX_BYTES_TO_READ, numBytesToRead);
+    ASSERT_PARAM (numBytesToRead <= DS2408_MAX_BYTES_IN_CHANNEL_ACCESS, numBytesToRead);
     
     /* Select the device */
     owSerialNum (portNumber, pSerialNumber, FALSE);
@@ -350,7 +350,7 @@ UInt8 channelAccessReadDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *p
            * with what we've calculated and we should get 0xFFFF */ 
            if ((lastCrc16 ^ (buffer[count - 2] + (UInt16) (buffer[count - 1] << 8))) == 0xFFFF)
            {
-               bytesRead = DS2408_MAX_BYTES_TO_READ;
+               bytesRead = DS2408_MAX_BYTES_IN_CHANNEL_ACCESS;
                if (bytesRead > numBytesToRead)
                {
                    bytesRead = numBytesToRead;
