@@ -822,20 +822,15 @@ Bool setupDevices (void)
     printProgress ("Setting up OneWire devices...\n");
     for (i = 0; (i < MAX_NUM_DEVICES); i++)
     {
-        printProgress ("GOT TO 0.\n");
         pAddress = &gDeviceStaticConfigList[i].address.value[0];
         
-        printProgress ("GOT TO 1.\n");
         /* Try to select the device */
         owSerialNum (gPortNumber, pAddress, false);
-        printProgress ("GOT TO 2, gPortNumber %d.\n", gPortNumber);
         found[i] = owAccess (gPortNumber);
-        printProgress ("GOT TO 3.\n");
         
         /* If it was found, set it up */
         if (found[i])
         {
-            printProgress ("GOT TO 4.\n");
             printProgress ("Found %d [%s]: ", i + 1, deviceNameList[i]);
             printAddress (pAddress, false);
             printProgress (", setting it up...");
