@@ -162,8 +162,11 @@ static UInt16 actionDisableTestModeDS2408 (MsgHeader *pMsgHeader, DisableTestMod
 }
 
 /*
- * Handle a message that calls readControlRegisterDS2408().
+ * Handle a message that calls any of the functions
+ * that read a byte-length register.
  * 
+ * msgType       the msgType, extracted from the
+ *               received mesage.
  * pMsgHeader    pointer to the message header.
  * pSendMsgBody  pointer to the relevant message
  *               type to fill in with a response,
@@ -173,7 +176,7 @@ static UInt16 actionDisableTestModeDS2408 (MsgHeader *pMsgHeader, DisableTestMod
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionReadControlRegisterDS2408 (MsgHeader *pMsgHeader, ReadControlRegisterDS2408Cnf *pSendMsgBody)
+static UInt16 actionReadByteRegister (OneWireMsgType msgType, MsgHeader *pMsgHeader, UInt8 *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -182,18 +185,69 @@ static UInt16 actionReadControlRegisterDS2408 (MsgHeader *pMsgHeader, ReadContro
     ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
 
-    success = readControlRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &data);
-    pSendMsgBody->success = success;
-    sendMsgBodyLength += sizeof (pSendMsgBody->success);
-    pSendMsgBody->data = data;
-    sendMsgBodyLength += sizeof (pSendMsgBody->data);
+    switch (msgType)
+    {
+    	case READ_CONTROL_REGISTER_DS2408:
+		{
+    	    success = readControlRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &data);
+    	    ((ReadControlRegisterDS2408Cnf *) pSendMsgBody)->success = success;
+    	    sendMsgBodyLength += sizeof (((ReadControlRegisterDS2408Cnf *) pSendMsgBody)->success);
+    	    ((ReadControlRegisterDS2408Cnf *) pSendMsgBody)->data = data;
+    	    sendMsgBodyLength += sizeof (((ReadControlRegisterDS2408Cnf *) pSendMsgBody)->data);
+		}
+    	break;
+        case READ_PIO_LOGIC_STATE_DS2408:
+		{
+    	    success = readPIOLogicStateDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &data);
+    	    ((ReadPIOLogicStateDS2408Cnf *) pSendMsgBody)->success = success;
+    	    sendMsgBodyLength += sizeof (((ReadPIOLogicStateDS2408Cnf *) pSendMsgBody)->success);
+    	    ((ReadPIOLogicStateDS2408Cnf *) pSendMsgBody)->data = data;
+    	    sendMsgBodyLength += sizeof (((ReadPIOLogicStateDS2408Cnf *) pSendMsgBody)->data);
+		}
+    	break;
+        case READ_PIO_OUTPUT_LATCH_STATE_REGISTER_DS2408:
+		{
+    	    success = readPIOOutputLatchStateRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &data);
+    	    ((ReadPIOOutputLatchStateRegisterDS2408Cnf *) pSendMsgBody)->success = success;
+    	    sendMsgBodyLength += sizeof (((ReadPIOOutputLatchStateRegisterDS2408Cnf *) pSendMsgBody)->success);
+    	    ((ReadPIOOutputLatchStateRegisterDS2408Cnf *) pSendMsgBody)->data = data;
+    	    sendMsgBodyLength += sizeof (((ReadPIOOutputLatchStateRegisterDS2408Cnf *) pSendMsgBody)->data);
+		}
+    	break;
+        case READ_CS_CHANNEL_SELECTION_MASK_REGISTER_DS2408:
+		{
+    	    success = readCSChannelSelectionMaskRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &data);
+    	    ((ReadCSChannelSelectionMaskRegisterDS2408Cnf *) pSendMsgBody)->success = success;
+    	    sendMsgBodyLength += sizeof (((ReadCSChannelSelectionMaskRegisterDS2408Cnf *) pSendMsgBody)->success);
+    	    ((ReadCSChannelSelectionMaskRegisterDS2408Cnf *) pSendMsgBody)->data = data;
+    	    sendMsgBodyLength += sizeof (((ReadCSChannelSelectionMaskRegisterDS2408Cnf *) pSendMsgBody)->data);
+		}
+    	break;
+        case READ_CS_CHANNEL_POLARITY_SELECTION_REGISTER_DS2408:
+		{
+    	    success = readCSChannelPolaritySelectionRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &data);
+    	    ((ReadCSChannelPolaritySelectionRegisterDS2408Cnf *) pSendMsgBody)->success = success;
+    	    sendMsgBodyLength += sizeof (((ReadCSChannelPolaritySelectionRegisterDS2408Cnf *) pSendMsgBody)->success);
+    	    ((ReadCSChannelPolaritySelectionRegisterDS2408Cnf *) pSendMsgBody)->data = data;
+    	    sendMsgBodyLength += sizeof (((ReadCSChannelPolaritySelectionRegisterDS2408Cnf *) pSendMsgBody)->data);
+		}
+    	break;
+        default:
+        {
+            ASSERT_ALWAYS_PARAM (msgType);
+        }
+        break;
+    }
     
     return sendMsgBodyLength;
 }
 
 /*
- * Handle a message that calls writeControlRegisterDS2408().
+ * Handle a message that writes any byte-length
+ * register.
  * 
+ * msgType       the msgType, extracted from the
+ *               received mesage.
  * pMsgHeader    pointer to the message header.
  * data          the byte to write.
  * pSendMsgBody  pointer to the relevant message
@@ -204,7 +258,7 @@ static UInt16 actionReadControlRegisterDS2408 (MsgHeader *pMsgHeader, ReadContro
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionWriteControlRegisterDS2408 (MsgHeader *pMsgHeader, UInt8 data, WriteControlRegisterDS2408Cnf *pSendMsgBody)
+static UInt16 actionWriteByteRegister (OneWireMsgType msgType, MsgHeader *pMsgHeader, UInt8 data, UInt8 *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -212,10 +266,676 @@ static UInt16 actionWriteControlRegisterDS2408 (MsgHeader *pMsgHeader, UInt8 dat
     ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
 
-    success = writeControlRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), data);
+    switch (msgType)
+    {
+    	case WRITE_CONTROL_REGISTER_DS2408:
+		{
+		    success = writeControlRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), data);
+    	    ((WriteControlRegisterDS2408Cnf *) pSendMsgBody)->success = success;
+    	    sendMsgBodyLength += sizeof (((WriteControlRegisterDS2408Cnf *) pSendMsgBody)->success);
+		}
+    	break;
+        case WRITE_CS_CHANNEL_SELECTION_MASK_REGISTER_DS2408:
+		{
+    	    success = writeCSChannelSelectionMaskRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), data);
+    	    ((WriteCSChannelSelectionMaskRegisterDS2408Cnf *) pSendMsgBody)->success = success;
+    	    sendMsgBodyLength += sizeof (((WriteCSChannelSelectionMaskRegisterDS2408Cnf *) pSendMsgBody)->success);
+		}
+    	break;
+        case WRITE_CS_CHANNEL_POLARITY_SELECTION_REGISTER_DS2408:
+		{
+    	    success = writeCSChannelPolaritySelectionRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), data);
+    	    ((WriteCSChannelPolaritySelectionRegisterDS2408Cnf *) pSendMsgBody)->success = success;
+    	    sendMsgBodyLength += sizeof (((WriteCSChannelPolaritySelectionRegisterDS2408Cnf *) pSendMsgBody)->success);
+		}
+    	break;
+        default:
+        {
+            ASSERT_ALWAYS_PARAM (msgType);
+        }
+        break;
+    }
+    
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls resetActivityLatchesDS2408().
+ *
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionResetActivityLatchesDS2408 (MsgHeader *pMsgHeader, ResetActivityLatchesDS2408Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    success = resetActivityLatchesDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]));
     pSendMsgBody->success = success;
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls channelAccessReadDS2408().
+ *
+ * pMsgHeader     pointer to the message header.
+ * numBytesToRead what it says it is.
+ * pSendMsgBody   pointer to the relevant message
+ *                type to fill in with a response,
+ *                which will be overlaid over the
+ *                body of the response message.
+ *
+ * @return        the length of the message body
+ *                to send back.
+ */
+static UInt16 actionChannelAccessReadDS2408 (MsgHeader *pMsgHeader, UInt8 numBytesToRead, ChannelAccessReadDS2408Cnf *pSendMsgBody)
+{
+    UInt16 sendMsgBodyLength = 0;
+    UInt8 data [DS2408_MAX_BYTES_IN_CHANNEL_ACCESS];
+    UInt8 numBytesRead;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+    ASSERT_PARAM (numBytesToRead <= DS2408_MAX_BYTES_IN_CHANNEL_ACCESS, numBytesToRead);
+
+    memset (&data, 0, sizeof (data));
+    numBytesRead = channelAccessReadDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &data[0], numBytesToRead);
+	pSendMsgBody->success = true;
+	sendMsgBodyLength += sizeof (pSendMsgBody->success);
+	if (numBytesRead > DS2408_MAX_BYTES_IN_CHANNEL_ACCESS)
+	{
+		numBytesRead = DS2408_MAX_BYTES_IN_CHANNEL_ACCESS;
+	}
+	pSendMsgBody->channelAccessReadDS2408.dataLength = numBytesRead;
+	sendMsgBodyLength += sizeof (pSendMsgBody->channelAccessReadDS2408);
+	memcpy (&(pSendMsgBody->channelAccessReadDS2408.data[0]), &data, numBytesRead);
+	sendMsgBodyLength += sizeof (pSendMsgBody->channelAccessReadDS2408);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls channelAccessWriteDS2408().
+ *
+ * pMsgHeader    pointer to the message header.
+ * pData         pointer to an array of bytes of size
+ *               DS2408_MAX_BYTES_IN_CHANNEL_ACCESS to write.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionChannelAccessWriteDS2408 (MsgHeader *pMsgHeader, UInt8 *pData, ChannelAccessWriteDS2408Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+    ASSERT_PARAM (pData != PNULL, (unsigned long) pData);
+
+	success = channelAccessWriteDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), pData);
+	pSendMsgBody->success = success;
+	sendMsgBodyLength += sizeof (pSendMsgBody->success);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls readNVPageDS2438().
+ *
+ * pMsgHeader     pointer to the message header.
+ * page           the page to read.
+ * pSendMsgBody   pointer to the relevant message
+ *                type to fill in with a response,
+ *                which will be overlaid over the
+ *                body of the response message.
+ *
+ * @return        the length of the message body
+ *                to send back.
+ */
+static UInt16 actionReadNVPageDS2438 (MsgHeader *pMsgHeader, UInt8 page, ReadNVPageDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    UInt8 mem [DS2438_NUM_BYTES_IN_PAGE];
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+    ASSERT_PARAM (page < DS2438_NUM_PAGES, page);
+
+    memset (&mem, 0, sizeof (mem));
+    success = readNVPageDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), page, &mem[0]);
+	pSendMsgBody->success = success;
+	sendMsgBodyLength += sizeof (pSendMsgBody->success);
+	memcpy (&pSendMsgBody->mem[0], &mem, DS2438_NUM_BYTES_IN_PAGE);
+	sendMsgBodyLength += DS2438_NUM_BYTES_IN_PAGE;
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls writeNVPageDS2438().
+ *
+ * pMsgHeader    pointer to the message header.
+ * page          the page to write to.
+ * pMem          pointer to an array of bytes of up to
+ *               DS2438_NUM_BYTES_IN_PAGE to write.
+ * size          the number of bytes to write.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionWriteNVPageDS2438 (MsgHeader *pMsgHeader, UInt8 page, UInt8 *pMem, UInt8 size, WriteNVPageDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+    ASSERT_PARAM (page < DS2438_NUM_PAGES, page);
+    ASSERT_PARAM (pMem != PNULL, (unsigned long) pMem);
+    ASSERT_PARAM (size <= DS2438_NUM_BYTES_IN_PAGE, size);
+
+	success = writeNVPageDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), page, pMem, size);
+	pSendMsgBody->success = success;
+	sendMsgBodyLength += sizeof (pSendMsgBody->success);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls readVddDS2438() or readVadDS2438().
+ *
+ * msgType       the msgType, extracted from the
+ *               received mesage.
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionReadVxdDS2438 (OneWireMsgType msgType, MsgHeader *pMsgHeader, UInt8 *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    UInt16 voltage = 0;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    switch (msgType)
+    {
+    	case READ_VDD_DS2438:
+		{
+			success = readVddDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &voltage);
+			((ReadVddDS2438Cnf *) pSendMsgBody)->success = success;
+			sendMsgBodyLength += sizeof (((ReadVddDS2438Cnf *) pSendMsgBody)->success);
+			((ReadVddDS2438Cnf *) pSendMsgBody)->voltage = voltage;
+			sendMsgBodyLength += sizeof (((ReadVddDS2438Cnf *) pSendMsgBody)->voltage);
+		}
+    	break;
+        case READ_VAD_DS2438:
+		{
+			success = readVadDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &voltage);
+			((ReadVadDS2438Cnf *) pSendMsgBody)->success = success;
+			sendMsgBodyLength += sizeof (((ReadVadDS2438Cnf *) pSendMsgBody)->success);
+			((ReadVadDS2438Cnf *) pSendMsgBody)->voltage = voltage;
+			sendMsgBodyLength += sizeof (((ReadVadDS2438Cnf *) pSendMsgBody)->voltage);
+		}
+    	break;
+        default:
+        {
+            ASSERT_ALWAYS_PARAM (msgType);
+        }
+        break;
+    }
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls readTemperatureDS2438()
+ *
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionReadTemperatureDS2438 (MsgHeader *pMsgHeader, ReadTemperatureDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    double temperature = 0;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    success = readTemperatureDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &temperature);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    pSendMsgBody->temperature = temperature;
+    sendMsgBodyLength += sizeof (pSendMsgBody->temperature);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls readCurrentDS2438()
+ *
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionReadCurrentDS2438 (MsgHeader *pMsgHeader, ReadCurrentDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    SInt16 current = 0;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    success = readCurrentDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &current);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    pSendMsgBody->current = current;
+    sendMsgBodyLength += sizeof (pSendMsgBody->current);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls readBatteryDS2438()
+ *
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionReadBatteryDS2438 (MsgHeader *pMsgHeader, ReadBatteryDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    UInt16 voltage = 0;
+    SInt16 current = 0;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    success = readBatteryDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &voltage, &current);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    pSendMsgBody->batteryDS2438.voltage = voltage;
+    pSendMsgBody->batteryDS2438.current = current;
+    sendMsgBodyLength += sizeof (pSendMsgBody->batteryDS2438);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls readNVConfigThresholdDS2438()
+ *
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionReadNVConfigThresholdDS2438 (MsgHeader *pMsgHeader, ReadNVConfigThresholdDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    UInt8 config = 0;
+    UInt8 threshold = 0;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    success = readNVConfigThresholdDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &config, &threshold);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    pSendMsgBody->readNVConfigThresholdDS2438.config = config;
+    pSendMsgBody->readNVConfigThresholdDS2438.threshold = threshold;
+    sendMsgBodyLength += sizeof (pSendMsgBody->readNVConfigThresholdDS2438);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls writeNVConfigThresholdDS2438().
+ *
+ * pMsgHeader       pointer to the message header.
+ * config           the config value to write.
+ * thresholdPresent whether threshold is present or not.
+ * threshold        what it says.
+ * pSendMsgBody     pointer to the relevant message
+ *                  type to fill in with a response,
+ *                  which will be overlaid over the
+ *                  body of the response message.
+ *
+ * @return          the length of the message body
+ *                  to send back.
+ */
+static UInt16 actionWriteNVConfigThresholdDS2438 (MsgHeader *pMsgHeader, UInt8 config, Bool thresholdPresent, UInt8 threshold, WriteNVConfigThresholdDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    UInt8 *pThreshold = PNULL;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    if (thresholdPresent)
+    {
+        pThreshold = &threshold;
+    }
+    success = writeNVConfigThresholdDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &config, pThreshold);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls readTimeCapacityCalDS2438()
+ *
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionReadTimeCapacityCalDS2438 (MsgHeader *pMsgHeader, ReadTimeCapacityCalDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    UInt32 elapsedTime = 0;
+    UInt16 remainingCapacity = 0;
+    SInt16 offsetCal = 0;
     
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    success = readTimeCapacityCalDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &elapsedTime, &remainingCapacity, &offsetCal);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    pSendMsgBody->readTimeCapacityCalDS2438.elapsedTime = elapsedTime;
+    pSendMsgBody->readTimeCapacityCalDS2438.remainingCapacity = remainingCapacity;
+    pSendMsgBody->readTimeCapacityCalDS2438.offsetCal = offsetCal;
+    sendMsgBodyLength += sizeof (pSendMsgBody->readTimeCapacityCalDS2438);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls writeTimeCapacityDS2438().
+ *
+ * pMsgHeader       pointer to the message header.
+ * config           the config value to write.
+ * thresholdPresent whether threshold is present or not.
+ * threshold        what it says.
+ * pSendMsgBody     pointer to the relevant message
+ *                  type to fill in with a response,
+ *                  which will be overlaid over the
+ *                  body of the response message.
+ *
+ * @return          the length of the message body
+ *                  to send back.
+ */
+static UInt16 actionWriteTimeCapacityDS2438 (MsgHeader *pMsgHeader, UInt32 elapsedTime, Bool remainingCapacityPresent, UInt16 remainingCapacity, WriteTimeCapacityDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    UInt16 *pRemainingCapacity = PNULL;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    if (remainingCapacityPresent)
+    {
+        pRemainingCapacity = &remainingCapacity;
+    }
+    success = writeTimeCapacityDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &elapsedTime, pRemainingCapacity);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls readTimePiOffChargingStoppedDS2438()
+ *
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionReadTimePiOffChargingStoppedDS2438 (MsgHeader *pMsgHeader, ReadTimePiOffChargingStoppedDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    UInt32 piOff = 0;
+    UInt32 chargingStopped = 0;
+    
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    success = readTimePiOffChargingStoppedDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &piOff, &chargingStopped);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    pSendMsgBody->readTimePiOffChargingStoppedDS2438.piOff = piOff;
+    pSendMsgBody->readTimePiOffChargingStoppedDS2438.chargingStopped = chargingStopped;
+    sendMsgBodyLength += sizeof (pSendMsgBody->readTimePiOffChargingStoppedDS2438);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls readNVChargeDischargeDS2438()
+ *
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionReadNVChargeDischargeDS2438 (MsgHeader *pMsgHeader, ReadNVChargeDischargeDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    UInt32 charge = 0;
+    UInt32 discharge = 0;
+    
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    success = readNVChargeDischargeDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &charge, &discharge);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    pSendMsgBody->readNVChargeDischargeDS2438.charge = charge;
+    pSendMsgBody->readNVChargeDischargeDS2438.discharge = discharge;
+    sendMsgBodyLength += sizeof (pSendMsgBody->readNVChargeDischargeDS2438);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls writeNVChargeDischargeDS2438().
+ *
+ * pMsgHeader       pointer to the message header.
+ * charge           the charge value to write.
+ * dischargePresent whether discharge is present or not.
+ * discharge        what it says.
+ * pSendMsgBody     pointer to the relevant message
+ *                  type to fill in with a response,
+ *                  which will be overlaid over the
+ *                  body of the response message.
+ *
+ * @return          the length of the message body
+ *                  to send back.
+ */
+static UInt16 actionWriteNVChargeDischargeDS2438 (MsgHeader *pMsgHeader, UInt32 charge, Bool dischargePresent, UInt32 discharge, WriteNVChargeDischargeDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    UInt32 *pDischarge = PNULL;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    if (dischargePresent)
+    {
+        pDischarge = &discharge;
+    }
+    success = writeNVChargeDischargeDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &charge, pDischarge);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls readNVUserDataDS2438().
+ *
+ * pMsgHeader     pointer to the message header.
+ * block          the block to read.
+ * pSendMsgBody   pointer to the relevant message
+ *                type to fill in with a response,
+ *                which will be overlaid over the
+ *                body of the response message.
+ *
+ * @return        the length of the message body
+ *                to send back.
+ */
+static UInt16 actionReadNVUserDataDS2438 (MsgHeader *pMsgHeader, UInt8 block, ReadNVUserDataDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    UInt8 mem [DS2438_NUM_BYTES_IN_PAGE];
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+    ASSERT_PARAM (block < DS2438_NUM_USER_DATA_PAGES, block);
+
+    memset (&mem, 0, sizeof (mem));
+    success = readNVUserDataDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), block, &mem[0]);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    memcpy (&pSendMsgBody->mem[0], &mem, DS2438_NUM_BYTES_IN_PAGE);
+    sendMsgBodyLength += DS2438_NUM_BYTES_IN_PAGE;
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls writeNVUserDataDS2438().
+ *
+ * pMsgHeader    pointer to the message header.
+ * block         the page to write to.
+ * pMem          pointer to an array of bytes of up to
+ *               DS2438_NUM_BYTES_IN_PAGE to write.
+ * size          the number of bytes to write.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionWriteNVUserDataDS2438 (MsgHeader *pMsgHeader, UInt8 block, UInt8 *pMem, UInt8 size, WriteNVUserDataDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+    ASSERT_PARAM (block < DS2438_NUM_USER_DATA_PAGES, block);
+    ASSERT_PARAM (pMem != PNULL, (unsigned long) pMem);
+    ASSERT_PARAM (size <= DS2438_NUM_BYTES_IN_PAGE, size);
+
+    success = writeNVUserDataDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), block, pMem, size);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls performCalDS2438()
+ *
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ *
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionPerformCalDS2438 (MsgHeader *pMsgHeader, PerformCalDS2438Cnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+    SInt16 offsetCal = 0;
+    
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    success = performCalDS2438 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &offsetCal);
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    pSendMsgBody->offsetCal = offsetCal;
+    sendMsgBodyLength += sizeof (pSendMsgBody->offsetCal);
+
     return sendMsgBodyLength;
 }
 
@@ -252,6 +972,9 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
     /* Now handle each message specifically */
     switch (receivedMsgType)
     {
+		/*
+		 * Messages to do with the One Wire bus itself
+		 */
         case ONE_WIRE_START_BUS:
         {
             Char * pSerialPortString = &((OneWireStartBusReq *) pReceivedMsgBody)->serialPortString[0];
@@ -274,22 +997,159 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
             pSendMsg->msgLength += actionOneWireFindAllDevices (&msgHeader, (OneWireFindAllDevicesCnf *) &(pSendMsg->msgBody[0]));
         }
         break;
+		/*
+		 * Messages to do with the DS2408 PIO chip
+		 */
         case DISABLE_TEST_MODE_DS2408:
         {
             pSendMsg->msgLength += actionDisableTestModeDS2408 (&msgHeader, (DisableTestModeDS2408Cnf *) &(pSendMsg->msgBody[0]));
         }
         break;
         case READ_CONTROL_REGISTER_DS2408:
+        case READ_PIO_LOGIC_STATE_DS2408:
+        case READ_PIO_OUTPUT_LATCH_STATE_REGISTER_DS2408:
+        case READ_CS_CHANNEL_SELECTION_MASK_REGISTER_DS2408:
+        case READ_CS_CHANNEL_POLARITY_SELECTION_REGISTER_DS2408:
         {
-            pSendMsg->msgLength += actionReadControlRegisterDS2408 (&msgHeader, (ReadControlRegisterDS2408Cnf *) &(pSendMsg->msgBody[0]));
+            pSendMsg->msgLength += actionReadByteRegister (receivedMsgType, &msgHeader, &pSendMsg->msgBody[0]);
         }
         break;
         case WRITE_CONTROL_REGISTER_DS2408:
         {
             UInt8 data = ((WriteControlRegisterDS2408Req *) pReceivedMsgBody)->data;
-            pSendMsg->msgLength += actionWriteControlRegisterDS2408 (&msgHeader, data, (WriteControlRegisterDS2408Cnf *) &(pSendMsg->msgBody[0]));
+            pSendMsg->msgLength += actionWriteByteRegister (receivedMsgType, &msgHeader, data, &pSendMsg->msgBody[0]);
         }
         break;
+        case WRITE_CS_CHANNEL_SELECTION_MASK_REGISTER_DS2408:
+        {
+            UInt8 data = ((WriteCSChannelSelectionMaskRegisterDS2408Req *) pReceivedMsgBody)->data;
+            pSendMsg->msgLength += actionWriteByteRegister (receivedMsgType, &msgHeader, data, &pSendMsg->msgBody[0]);
+        }
+        break;
+        case WRITE_CS_CHANNEL_POLARITY_SELECTION_REGISTER_DS2408:
+        {
+            UInt8 data = ((WriteCSChannelPolaritySelectionRegisterDS2408Req *) pReceivedMsgBody)->data;
+            pSendMsg->msgLength += actionWriteByteRegister (receivedMsgType, &msgHeader, data,  &pSendMsg->msgBody[0]);
+        }
+        break;
+        case RESET_ACTIVITY_LATCHES_DS2408:
+        {
+            pSendMsg->msgLength += actionResetActivityLatchesDS2408 (&msgHeader, (ResetActivityLatchesDS2408Cnf *) &(pSendMsg->msgBody[0]));
+        }
+        break;
+        case CHANNEL_ACCESS_READ_DS2408:
+        {
+            UInt8 numBytesToRead = ((ChannelAccessReadDS2408Req *) pReceivedMsgBody)->numBytesToRead;
+            pSendMsg->msgLength += actionChannelAccessReadDS2408 (&msgHeader, numBytesToRead, (ChannelAccessReadDS2408Cnf *) &pSendMsg->msgBody[0]);
+        }
+        break;
+        case CHANNEL_ACCESS_WRITE_DS2408:
+        {
+            UInt8 *pData = &((ChannelAccessWriteDS2408Req *) pReceivedMsgBody)->data[0];
+            pSendMsg->msgLength += actionChannelAccessWriteDS2408 (&msgHeader, pData, (ChannelAccessWriteDS2408Cnf *) &pSendMsg->msgBody[0]);
+        }
+        break;
+		/*
+		 * Messages to do with the DS2438 battery monitoring chip
+		 */
+        case READ_NV_PAGE_DS2438:
+        {
+            UInt8 page = ((ReadNVPageDS2438Req *) pReceivedMsgBody)->page;
+            pSendMsg->msgLength += actionReadNVPageDS2438 (&msgHeader, page, (ReadNVPageDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+        break;
+        case WRITE_NV_PAGE_DS2438:
+        {
+            UInt8 page = ((WriteNVPageDS2438Req *) pReceivedMsgBody)->writePageDS2438.page;
+            UInt8 *pMem = &(((WriteNVPageDS2438Req *) pReceivedMsgBody)->writePageDS2438.mem[0]);
+            UInt8 memLength = ((WriteNVPageDS2438Req *) pReceivedMsgBody)->writePageDS2438.memLength;
+            pSendMsg->msgLength += actionWriteNVPageDS2438 (&msgHeader, page, pMem, memLength, (WriteNVPageDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+        break;
+        case READ_VDD_DS2438:
+        case READ_VAD_DS2438:
+        {
+            pSendMsg->msgLength += actionReadVxdDS2438 (receivedMsgType, &msgHeader, &pSendMsg->msgBody[0]);
+        }
+        break;
+        case READ_TEMPERATURE_DS2438:
+        {
+            pSendMsg->msgLength += actionReadTemperatureDS2438 (&msgHeader, (ReadTemperatureDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
+        case READ_CURRENT_DS2438:
+        {
+            pSendMsg->msgLength += actionReadCurrentDS2438 (&msgHeader, (ReadCurrentDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
+        case READ_BATTERY_DS2438:
+        {
+            pSendMsg->msgLength += actionReadBatteryDS2438 (&msgHeader, (ReadBatteryDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
+        case READ_NV_CONFIG_THRESHOLD_DS2438:
+        {
+            pSendMsg->msgLength += actionReadNVConfigThresholdDS2438 (&msgHeader, (ReadNVConfigThresholdDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
+        case WRITE_NV_CONFIG_THRESHOLD_DS2438:
+        {
+            UInt8 config = ((WriteNVConfigThresholdDS2438Req *) pReceivedMsgBody)->writeNVConfigThresholdDS2438.config;
+            Bool thresholdPresent = ((WriteNVConfigThresholdDS2438Req *) pReceivedMsgBody)->writeNVConfigThresholdDS2438.thresholdPresent;
+            UInt8 threshold = ((WriteNVConfigThresholdDS2438Req *) pReceivedMsgBody)->writeNVConfigThresholdDS2438.threshold;
+            pSendMsg->msgLength += actionWriteNVConfigThresholdDS2438 (&msgHeader, config, thresholdPresent, threshold, (WriteNVConfigThresholdDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
+        case READ_TIME_CAPACITY_CAL_DS2438:
+        {
+            pSendMsg->msgLength += actionReadTimeCapacityCalDS2438 (&msgHeader, (ReadTimeCapacityCalDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
+        case WRITE_TIME_CAPACITY_DS2438:
+        {
+            UInt32 elapsedTime = ((WriteTimeCapacityDS2438Req *) pReceivedMsgBody)->writeTimeCapacityDS2438.elapsedTime;
+            Bool remainingCapacityPresent = ((WriteTimeCapacityDS2438Req *) pReceivedMsgBody)->writeTimeCapacityDS2438.remainingCapacityPresent;
+            UInt16 remainingCapacity = ((WriteTimeCapacityDS2438Req *) pReceivedMsgBody)->writeTimeCapacityDS2438.remainingCapacity;
+            pSendMsg->msgLength += actionWriteTimeCapacityDS2438 (&msgHeader, elapsedTime, remainingCapacityPresent, remainingCapacity, (WriteTimeCapacityDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
+        case READ_TIME_PI_OFF_CHARGING_STOPPED_DS2438:
+        {
+            pSendMsg->msgLength += actionReadTimePiOffChargingStoppedDS2438 (&msgHeader, (ReadTimePiOffChargingStoppedDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
+        case READ_NV_CHARGE_DISCHARGE_DS2438:
+        {
+            pSendMsg->msgLength += actionReadNVChargeDischargeDS2438 (&msgHeader, (ReadNVChargeDischargeDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
+        case WRITE_NV_CHARGE_DISCHARGE_DS2438:
+        {
+            UInt32 charge = ((WriteNVChargeDischargeDS2438Req *) pReceivedMsgBody)->writeNVChargeDischargeDS2438.charge;
+            Bool dischargePresent = ((WriteNVChargeDischargeDS2438Req *) pReceivedMsgBody)->writeNVChargeDischargeDS2438.dischargePresent;
+            UInt16 discharge = ((WriteNVChargeDischargeDS2438Req *) pReceivedMsgBody)->writeNVChargeDischargeDS2438.discharge;
+            pSendMsg->msgLength += actionWriteNVChargeDischargeDS2438 (&msgHeader, charge, dischargePresent, discharge, (WriteNVChargeDischargeDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
+        case READ_NV_USER_DATA_DS2438:
+        {
+            UInt8 block = ((ReadNVUserDataDS2438Req *) pReceivedMsgBody)->block;
+            pSendMsg->msgLength += actionReadNVUserDataDS2438 (&msgHeader, block, (ReadNVUserDataDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
+        case WRITE_NV_USER_DATA_DS2438:
+        {
+            UInt8 block = ((WriteNVUserDataDS2438Req *) pReceivedMsgBody)->writeNVUserDataDS2438.block;
+            UInt8 *pMem = &(((WriteNVUserDataDS2438Req *) pReceivedMsgBody)->writeNVUserDataDS2438.mem[0]);
+            UInt8 memLength = ((WriteNVUserDataDS2438Req *) pReceivedMsgBody)->writeNVUserDataDS2438.memLength;
+            pSendMsg->msgLength += actionWriteNVUserDataDS2438 (&msgHeader, block, pMem, memLength, (WriteNVUserDataDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
+        case PERFORM_CAL_DS2438:
+        {
+            pSendMsg->msgLength += actionPerformCalDS2438 (&msgHeader, (PerformCalDS2438Cnf *) &pSendMsg->msgBody[0]);
+        }
+		break;
         default:
         {
             ASSERT_ALWAYS_PARAM (receivedMsgType);   

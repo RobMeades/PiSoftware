@@ -9,7 +9,7 @@
 /* Maximum length of the string naming the serial port to use */
 #define MAX_SERIAL_PORT_NAME_LENGTH 80
 /* The maximum number of devices that oneWireFindAllDevices() can report */
-#define MAX_DEVICES_TO_FIND             10
+#define MAX_DEVICES_TO_FIND         10
 
 /*
  * TYPES
@@ -39,16 +39,17 @@ typedef struct DeviceListTag
 
 typedef struct OneWireWritePageDS2438Tag
 {
-    UInt8 dataLength;
-    UInt8 data[DS4238_NUM_BYTES_IN_PAGE];
+	UInt8 page;
+    UInt8 memLength;
+    UInt8 mem[DS2438_NUM_BYTES_IN_PAGE];
 } OneWireWritePageDS2438;
 
-typedef struct OneWireWriteConfigThresholdDS2438Tag
+typedef struct OneWireWriteNVConfigThresholdDS2438Tag
 {
     UInt8 config;
     Bool thresholdPresent;
     UInt8 threshold;
-} OneWireWriteConfigThresholdDS2438;
+} OneWireWriteNVConfigThresholdDS2438;
 
 typedef struct OneWireWriteTimeCapacityDS2438Tag
 {
@@ -57,18 +58,18 @@ typedef struct OneWireWriteTimeCapacityDS2438Tag
     UInt16 remainingCapacity;
 } OneWireWriteTimeCapacityDS2438;
 
-typedef struct OneWireWriteChargeDischargeDS2438Tag
+typedef struct OneWireWriteNVChargeDischargeDS2438Tag
 {
     UInt32 charge;
     Bool dischargePresent;
     UInt32 discharge;
-} OneWireWriteChargeDischargeDS2438;
+} OneWireWriteNVChargeDischargeDS2438;
 
 typedef struct OneWireWriteNVUserDataDS2438Tag
 {
     UInt8 block;
-    UInt8 dataLength;
-    UInt8 data[DS4238_NUM_BYTES_IN_PAGE];
+    UInt8 memLength;
+    UInt8 mem[DS2438_NUM_BYTES_IN_PAGE];
 } OneWireWriteNVUserDataDS2438;
 
 /*
@@ -78,13 +79,13 @@ typedef struct OneWireWriteNVUserDataDS2438Tag
 typedef struct OneWireChannelAccessReadDS2408Tag
 {
     UInt8 dataLength;
-    UInt8 data[DS2408_MAX_BYTES_TO_READ];
+    UInt8 data[DS2408_MAX_BYTES_IN_CHANNEL_ACCESS];
 } OneWireChannelAccessReadDS2408;
 
 typedef struct OneWireReadPageDS2438Tag
 {
-    UInt8 dataLength;
-    UInt8 data[DS4238_NUM_BYTES_IN_PAGE];
+    UInt8 memLength;
+    UInt8 mem[DS2438_NUM_BYTES_IN_PAGE];
 } OneWireReadPageDS2438;
 
 typedef double OneWireTemperatureDS2438;
@@ -99,7 +100,11 @@ typedef struct OneWireBatteryDS2438Tag
     SInt16 current;
 } OneWireBatteryDS2438;
 
-typedef OneWireWriteConfigThresholdDS2438 OneWireReadConfigThresholdDS2438;
+typedef struct OneWireReadNVConfigThresholdDS2438Tag
+{
+    UInt8 config;
+    UInt8 threshold;
+} OneWireReadNVConfigThresholdDS2438;
 
 typedef struct OneWireReadTimeCapacityCalDS2438Tag
 {
@@ -114,10 +119,10 @@ typedef struct OneWireReadTimePiOffChargingStoppedDS2438Tag
     UInt32 chargingStopped;
 } OneWireReadTimePiOffChargingStoppedDS2438;
 
-typedef struct OneWireReadChargeDischargeDS2438Tag
+typedef struct OneWireReadNVChargeDischargeDS2438Tag
 {
     UInt32 charge;
     UInt32 discharge;
-} OneWireReadChargeDischargeDS2438;
+} OneWireReadNVChargeDischargeDS2438;
 
 #pragma pack(pop) /* End of packing */ 
