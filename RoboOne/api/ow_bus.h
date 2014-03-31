@@ -6,7 +6,7 @@
  * MANIFEST CONSTANTS
  */
 
-#define PIO_MAX_BYTES_TO_READ        32   /* Should be the same as DS2408_MAX_BYTES_TO_READ */
+#define PIO_MAX_BYTES_TO_READ        32   /* Should be the same as DS2408_MAX_BYTES_IN_CHANNEL_ACCESS */
 
 /*
  * TYPES
