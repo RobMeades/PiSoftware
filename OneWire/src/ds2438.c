@@ -12,7 +12,6 @@
 #include <one_wire.h>
 
 #define DS2438_NUM_BYTES_IN_CRC         1
-#define DS4238_NUM_PAGES                8
 #define DS4238_COMMAND_RECALL_MEMORY    0xB8
 #define DS4238_COMMAND_READ_SCRATCHPAD  0xBE
 #define DS4238_COMMAND_WRITE_SCRATCHPAD 0x4E
@@ -91,7 +90,7 @@ static Bool readSPPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 pag
     UInt8 i;
     UInt16 lastCrc8;
 
-    ASSERT_PARAM (page <= DS4238_NUM_PAGES, page);
+    ASSERT_PARAM (page < DS2438_NUM_PAGES, page);
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
     ASSERT_PARAM (pSerialNumber[0] == SBATTERY_FAM, pSerialNumber[0]);
     
@@ -106,7 +105,7 @@ static Bool readSPPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 pag
         buffer[count++] = DS4238_COMMAND_READ_SCRATCHPAD;
         buffer[count++] = page;
 
-        for (i = 0; i < DS4238_NUM_BYTES_IN_PAGE + DS2438_NUM_BYTES_IN_CRC; i++)
+        for (i = 0; i < DS2438_NUM_BYTES_IN_PAGE + DS2438_NUM_BYTES_IN_CRC; i++)
         {
             buffer[count++] = 0xFF;
         }
@@ -129,7 +128,7 @@ static Bool readSPPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 pag
                /* Copy out the result */
                if (pMem != PNULL)
                {
-                   memcpy (pMem, &(buffer[2]), DS4238_NUM_BYTES_IN_PAGE);
+                   memcpy (pMem, &(buffer[2]), DS2438_NUM_BYTES_IN_PAGE);
                }
            }
         }
@@ -165,11 +164,11 @@ static Bool writeSPPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 pa
     UInt8 count = 0;
     UInt8 i;
 
-    ASSERT_PARAM (page <= DS4238_NUM_PAGES, page);
+    ASSERT_PARAM (page < DS2438_NUM_PAGES, page);
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
     ASSERT_PARAM (pSerialNumber[0] == SBATTERY_FAM, pSerialNumber[0]);
     ASSERT_PARAM (pMem != PNULL, (unsigned long) pMem);
-    ASSERT_PARAM (size <= DS4238_NUM_BYTES_IN_PAGE, size);
+    ASSERT_PARAM (size <= DS2438_NUM_BYTES_IN_PAGE, size);
     
     /* Select the device */
     owSerialNum (portNumber, pSerialNumber, FALSE);
@@ -392,7 +391,7 @@ Bool readNVPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt
     UInt8 buffer[20];
     UInt8 count=0;
 
-    ASSERT_PARAM (page <= DS4238_NUM_PAGES, page);
+    ASSERT_PARAM (page < DS2438_NUM_PAGES, page);
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
     ASSERT_PARAM (pSerialNumber[0] == SBATTERY_FAM, pSerialNumber[0]);
     
@@ -445,11 +444,11 @@ Bool writeNVPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 page, UIn
     UInt8 busyByte;
     UInt8 guardCounter = GUARD_COUNTER;
 
-    ASSERT_PARAM (page <= DS4238_NUM_PAGES, page);
+    ASSERT_PARAM (page < DS2438_NUM_PAGES, page);
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
     ASSERT_PARAM (pSerialNumber[0] == SBATTERY_FAM, pSerialNumber[0]);
     ASSERT_PARAM (pMem != PNULL, (unsigned long) pMem);
-    ASSERT_PARAM (size <= DS4238_NUM_BYTES_IN_PAGE, size);
+    ASSERT_PARAM (size <= DS2438_NUM_BYTES_IN_PAGE, size);
 
     /* Write the page into the scratchpad */
     success = writeSPPageDS2438 (portNumber, pSerialNumber, page, pMem, size);
@@ -833,7 +832,7 @@ Bool writeNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt
 Bool readTimeCapacityCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity, SInt16 *pOffsetCal)
 {
     Bool success;
-    UInt8 buffer[DS4238_NUM_BYTES_IN_PAGE];
+    UInt8 buffer[DS2438_NUM_BYTES_IN_PAGE];
     
     success = readNVPageDS2438 (portNumber, pSerialNumber, DS2438_ETM_ICA_OFFSET_PAGE, &buffer[0]);
     
@@ -919,7 +918,7 @@ Bool writeTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *p
 Bool readTimePiOffChargingStoppedDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pPiOff, UInt32 *pChargingStopped)
 {
     Bool success;
-    UInt8 buffer[DS4238_NUM_BYTES_IN_PAGE];
+    UInt8 buffer[DS2438_NUM_BYTES_IN_PAGE];
     
     success = readNVPageDS2438 (portNumber, pSerialNumber, DS2438_DISC_EOC_PAGE, &buffer[0]);
     
@@ -956,7 +955,7 @@ Bool readTimePiOffChargingStoppedDS2438 (SInt32 portNumber, UInt8 *pSerialNumber
 Bool readNVChargeDischargeDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pCharge, UInt32 *pDischarge)
 {
     Bool success;
-    UInt8 buffer[DS4238_NUM_BYTES_IN_PAGE];
+    UInt8 buffer[DS2438_NUM_BYTES_IN_PAGE];
     
     success = readNVPageDS2438 (portNumber, pSerialNumber, DS2438_CCA_DCA_PAGE, &buffer[0]);
     
@@ -1027,13 +1026,13 @@ Bool writeNVChargeDischargeDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt
 
 /*
  * Read user data from a given page on the device. The user data
- * is in three eight byte blocks, number 0, 1 and 2.
+ * is in four eight byte blocks, numbered 0, 1, 2 and 3.
  *
  * portNumber     the port number of the port being used for the
  *                1-Wire Network.
  * pSerialNumber  the serial number for the part that the read is
  *                to be done on.
- * block          the number of the block to read from (0 to 2).
+ * block          the number of the block to read from (0 to 3).
  * pMem           a pointer to a place to put the data.
  *
  * @return  true if the operation succeeded, otherwise false.
@@ -1068,7 +1067,7 @@ Bool writeNVUserDataDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 block
 {
     ASSERT_PARAM (pMem != PNULL, (unsigned long) pMem);
     ASSERT_PARAM (block < DS2438_NUM_USER_DATA_PAGES, block);
-    ASSERT_PARAM (size <= DS4238_NUM_BYTES_IN_PAGE, size);
+    ASSERT_PARAM (size <= DS2438_NUM_BYTES_IN_PAGE, size);
 
     return writeNVPageDS2438 (portNumber, pSerialNumber, DS2438_FIRST_USER_DATA_PAGE + block, pMem, size);
 }

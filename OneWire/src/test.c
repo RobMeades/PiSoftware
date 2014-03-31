@@ -27,7 +27,7 @@ int main (int argc, char **argv)
     UInt8 numIODevices;
     UInt8 batteryDeviceArray[MAX_BATTERY_DEVICES][NUM_BYTES_IN_SERIAL_NUM];
     UInt8 ioDeviceArray[MAX_IO_DEVICES][NUM_BYTES_IN_SERIAL_NUM];
-    UInt8 pageBuffer[DS2408_MAX_BYTES_TO_READ];
+    UInt8 pageBuffer[DS2408_MAX_BYTES_IN_CHANNEL_ACCESS];
     SInt16 current;
     double temperature;
     UInt16 voltage;
@@ -80,7 +80,7 @@ int main (int argc, char **argv)
                     pageBuffer[6] = 0xFF;
                     pageBuffer[7] = 0xFF;
         
-                    success = writeNVPageDS2438 (portNumber, &batteryDeviceArray[i][0], 2, &pageBuffer[0], DS4238_NUM_BYTES_IN_PAGE);
+                    success = writeNVPageDS2438 (portNumber, &batteryDeviceArray[i][0], 2, &pageBuffer[0], DS2438_NUM_BYTES_IN_PAGE);
                     if (success)
                     {
                         printf ("Writing something to CCA and DCA registers.\n");
@@ -201,7 +201,7 @@ int main (int argc, char **argv)
                                 UInt8 bytesRead;
                                 
                                 printf (", IO O/P latch reg: 0x%.2x", pageBuffer[0]);
-                                bytesRead = channelAccessReadDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0], DS2408_MAX_BYTES_TO_READ);                                    
+                                bytesRead = channelAccessReadDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0], DS2408_MAX_BYTES_IN_CHANNEL_ACCESS);                                    
                                 if (bytesRead > 0)
                                 {
                                     printf (", IO %d times: ", bytesRead);
