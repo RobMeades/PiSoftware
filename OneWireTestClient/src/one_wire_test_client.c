@@ -19,6 +19,7 @@
 /*
  * MANIFEST CONSTANTS
  */
+#define ONE_WIRE_SERVER_PORT 5000
 
 /*
  * TYPES
