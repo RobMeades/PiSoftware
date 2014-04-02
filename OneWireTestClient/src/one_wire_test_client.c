@@ -19,7 +19,8 @@
 /*
  * MANIFEST CONSTANTS
  */
-#define ONE_WIRE_SERVER_PORT 5000
+#define ONEWIRE_PORT_STRING    "/dev/USBSerial"
+#define ONE_WIRE_SERVER_PORT   5000
 
 /*
  * TYPES
@@ -42,9 +43,9 @@ int main (int argc, char **argv)
     
     if (pSendMsg != PNULL)
     {
-        /* Setup a test message */
+        /* Setup a test message (which will just cause the server to exit) */
         pSendMsg->msgLength = 1;
-        pSendMsg->msgType = 0;
+        pSendMsg->msgType = ONE_WIRE_SERVER_EXIT;
         
         pReceivedMsg = malloc (sizeof (Msg));
         if (pReceivedMsg != PNULL)
