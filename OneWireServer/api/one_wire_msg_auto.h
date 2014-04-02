@@ -18,7 +18,7 @@ typedef enum OneWireMsgTypeTag
 #undef MSG_DEF
 #define MSG_DEF MSG_DEF_TYPE
 #include <one_wire_msgs.h>
-MAX_NUM_ONE_WIRE_MSG
+MAX_NUM_ONE_WIRE_MSGS
 } OneWireMsgType;
 
 /*

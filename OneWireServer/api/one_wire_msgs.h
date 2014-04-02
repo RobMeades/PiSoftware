@@ -22,6 +22,7 @@ MSG_DEF (ONE_WIRE_SERVER_EXIT, OneWireServerExit, oneWireServerExit, ONE_WIRE_EM
 MSG_DEF (ONE_WIRE_START_BUS, OneWireStartBus, oneWireStartBus, Char serialPortString[MAX_SERIAL_PORT_NAME_LENGTH], SInt32 serialPortNumber)
 MSG_DEF (ONE_WIRE_STOP_BUS, OneWireStopBus, oneWireStopBus, SInt32 portNumber, ONE_WIRE_EMPTY)
 MSG_DEF (ONE_WIRE_FIND_ALL_DEVICES, OneWireFindAllDevices, oneWireFindAllDevices, ONE_WIRE_EMPTY, DeviceList deviceList)
+MSG_DEF (ONE_WIRE_ACCESS_DEVICE, OneWireAccessDevice, oneWireAccessDevice, ONE_WIRE_EMPTY, ONE_WIRE_EMPTY)
 
 /*
  * Definitions specific to DS2408 PIO chip
@@ -44,7 +45,7 @@ MSG_DEF (WRITE_CS_CHANNEL_POLARITY_SELECTION_REGISTER_DS2408, WriteCSChannelPola
  * Definitions specific to DS2438 battery monitoring chip
  */
 MSG_DEF (READ_NV_PAGE_DS2438, ReadNVPageDS2438, readNVPageDS2438, UInt8 page, UInt8 mem[DS2438_NUM_BYTES_IN_PAGE])
-MSG_DEF (WRITE_NV_PAGE_DS2438, WriteNVPageDS2438, writeNVPageDS2438, OneWireWritePageDS2438 writePageDS2438, ONE_WIRE_EMPTY)  /* Don't use this unless you know what you're doing (read the DS2438 data sheet first) */
+MSG_DEF (WRITE_NV_PAGE_DS2438, WriteNVPageDS2438, writeNVPageDS2438, OneWireWriteNVPageDS2438 writeNVPageDS2438, ONE_WIRE_EMPTY)  /* Don't use this unless you know what you're doing (read the DS2438 data sheet first) */
 MSG_DEF (READ_VDD_DS2438, ReadVddDS2438, readVddDS2438, ONE_WIRE_EMPTY, UInt16 voltage)
 MSG_DEF (READ_VAD_DS2438, ReadVadDS2438, readVadDS2438, ONE_WIRE_EMPTY, UInt16 voltage)
 MSG_DEF (READ_TEMPERATURE_DS2438, ReadTemperatureDS2438, readTemperatureDS2438, ONE_WIRE_EMPTY, double temperature)

@@ -83,3 +83,22 @@ UInt8 oneWireFindAllDevices (SInt32 portNumber, UInt8 *pAddress, UInt8 maxNumAdd
 
     return count;
 }
+
+/*
+ * Access a device on the One Wire bus.
+ *
+ * portNumber      the port number of the port being used for the
+ *                 1-Wire Network.
+ * pAddress        pointer to the 8-byte address of the device.
+ * 
+ * @return         true if the device is there, otherwise false.
+ */
+Bool oneWireAccessDevice (SInt32 portNumber, UInt8 *pAddress)
+{   
+    Bool found;
+    
+    owSerialNum (portNumber, pAddress, false);
+    found = owAccess (portNumber);
+    
+    return found;
+}

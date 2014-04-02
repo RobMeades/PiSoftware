@@ -18,8 +18,12 @@
 #include <one_wire_server.h>
 #include <one_wire_msg_auto.h>
 
-#define ONE_WIRE_SERVER_EXE "./one_wire_server"
-#define ONE_WIRE_SERVER_PORT_STRING "5234"
+/*
+ * MANIFEST CONSTANTS
+ */
+
+#define SERVER_EXE "./one_wire_server"
+#define SERVER_PORT_STRING "5234"
 
 /*
  * EXTERN
@@ -101,7 +105,7 @@ int main (int argc, char **argv)
     pid_t serverPID;
     
     /* Setup the global for everyone to use */
-    gOneWireServerPort = atoi (ONE_WIRE_SERVER_PORT_STRING);
+    gOneWireServerPort = atoi (SERVER_PORT_STRING);
     
     /* Spawn a child that will become the One Wire server. */
     serverPID = fork();
@@ -109,10 +113,10 @@ int main (int argc, char **argv)
     if (serverPID == 0)
     {
         /* Start OneWire server process on port 5000 */
-        static char *argv[]={ONE_WIRE_SERVER_EXE, ONE_WIRE_SERVER_PORT_STRING, PNULL};
+        static char *argv[]={SERVER_EXE, SERVER_PORT_STRING, PNULL};
         
-        execv (ONE_WIRE_SERVER_EXE, argv);
-        printProgress ("Couldn't launch %s, err: %s\n", ONE_WIRE_SERVER_EXE, strerror (errno));
+        execv (SERVER_EXE, argv);
+        printProgress ("Couldn't launch %s, err: %s\n", SERVER_EXE, strerror (errno));
         success = false;
     }
     else

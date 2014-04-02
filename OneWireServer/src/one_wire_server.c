@@ -123,6 +123,7 @@ static UInt16 actionOneWireFindAllDevices (MsgHeader *pMsgHeader, OneWireFindAll
 
     numDevicesFound = oneWireFindAllDevices (pMsgHeader->portNumber, &pSendMsgBody->deviceList.address[0], MAX_DEVICES_TO_FIND);
     pSendMsgBody->success = true;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
     pSendMsgBody->deviceList.numDevices = numDevicesFound; /* Yes, numDevicesFound can be bigger than MAX_DEVICES_TO_FIND */
     sendMsgBodyLength += sizeof (pSendMsgBody->deviceList.numDevices);
     if (numDevicesFound > MAX_DEVICES_TO_FIND)
@@ -130,6 +131,31 @@ static UInt16 actionOneWireFindAllDevices (MsgHeader *pMsgHeader, OneWireFindAll
         numDevicesFound = MAX_DEVICES_TO_FIND;
     }
     sendMsgBodyLength += NUM_BYTES_IN_SERIAL_NUM * numDevicesFound;
+    
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that calls oneWireAccessDevice().
+ * 
+ * pMsgHeader    pointer to the message header.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ * 
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionOneWireAccessDevice (MsgHeader *pMsgHeader, OneWireAccessDeviceCnf *pSendMsgBody)
+{
+    UInt16 sendMsgBodyLength = 0;
+    
+    ASSERT_PARAM (pMsgHeader != PNULL, (unsigned long) pMsgHeader);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    pSendMsgBody->success = oneWireAccessDevice (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]));
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
     
     return sendMsgBodyLength;
 }
@@ -243,7 +269,7 @@ static UInt16 actionReadByteRegister (OneWireMsgType msgType, MsgHeader *pMsgHea
 }
 
 /*
- * Handle a message that writes any byte-length
+ * Handle a message that writes to any byte-length
  * register.
  * 
  * msgType       the msgType, extracted from the
@@ -711,14 +737,15 @@ static UInt16 actionReadTimeCapacityCalDS2438 (MsgHeader *pMsgHeader, ReadTimeCa
 /*
  * Handle a message that calls writeTimeCapacityDS2438().
  *
- * pMsgHeader       pointer to the message header.
- * config           the config value to write.
- * thresholdPresent whether threshold is present or not.
- * threshold        what it says.
- * pSendMsgBody     pointer to the relevant message
- *                  type to fill in with a response,
- *                  which will be overlaid over the
- *                  body of the response message.
+ * pMsgHeader               pointer to the message header.
+ * elapsedTime              the elapsed time value to write.
+ * remainingCapacityPresent whether remainingCapacity is
+ *                          present or not.
+ * remainingCapacity        what it says.
+ * pSendMsgBody             pointer to the relevant message
+ *                          type to fill in with a response,
+ *                          which will be overlaid over the
+ *                          body of the response message.
  *
  * @return          the length of the message body
  *                  to send back.
@@ -846,7 +873,7 @@ static UInt16 actionWriteNVChargeDischargeDS2438 (MsgHeader *pMsgHeader, UInt32 
  * Handle a message that calls readNVUserDataDS2438().
  *
  * pMsgHeader     pointer to the message header.
- * block          the block to read.
+ * block          the user data block to read.
  * pSendMsgBody   pointer to the relevant message
  *                type to fill in with a response,
  *                which will be overlaid over the
@@ -997,6 +1024,11 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
             pSendMsg->msgLength += actionOneWireFindAllDevices (&msgHeader, (OneWireFindAllDevicesCnf *) &(pSendMsg->msgBody[0]));
         }
         break;
+        case ONE_WIRE_ACCESS_DEVICE:
+        {
+            pSendMsg->msgLength += actionOneWireAccessDevice (&msgHeader, (OneWireAccessDeviceCnf *) &(pSendMsg->msgBody[0]));
+        }
+        break;
 		/*
 		 * Messages to do with the DS2408 PIO chip
 		 */
@@ -1060,9 +1092,9 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
         break;
         case WRITE_NV_PAGE_DS2438:
         {
-            UInt8 page = ((WriteNVPageDS2438Req *) pReceivedMsgBody)->writePageDS2438.page;
-            UInt8 *pMem = &(((WriteNVPageDS2438Req *) pReceivedMsgBody)->writePageDS2438.mem[0]);
-            UInt8 memLength = ((WriteNVPageDS2438Req *) pReceivedMsgBody)->writePageDS2438.memLength;
+            UInt8 page = ((WriteNVPageDS2438Req *) pReceivedMsgBody)->writeNVPageDS2438.page;
+            UInt8 *pMem = &(((WriteNVPageDS2438Req *) pReceivedMsgBody)->writeNVPageDS2438.mem[0]);
+            UInt8 memLength = ((WriteNVPageDS2438Req *) pReceivedMsgBody)->writeNVPageDS2438.memLength;
             pSendMsg->msgLength += actionWriteNVPageDS2438 (&msgHeader, page, pMem, memLength, (WriteNVPageDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
         break;
@@ -1184,7 +1216,7 @@ ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
     ASSERT_PARAM (pSendMsg != PNULL, (unsigned long) pSendMsg);
 
     /* Check the type */
-    ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_ONE_WIRE_MSG, pReceivedMsg->msgType);
+    ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_ONE_WIRE_MSGS, pReceivedMsg->msgType);
     
     /* Do the thang */
     returnCode = doAction ((OneWireMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);

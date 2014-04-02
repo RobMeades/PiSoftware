@@ -37,12 +37,12 @@ typedef struct DeviceListTag
     UInt8 address [NUM_BYTES_IN_SERIAL_NUM * MAX_DEVICES_TO_FIND];
 } DeviceList;
 
-typedef struct OneWireWritePageDS2438Tag
+typedef struct OneWireWriteNVPageDS2438Tag
 {
 	UInt8 page;
     UInt8 memLength;
     UInt8 mem[DS2438_NUM_BYTES_IN_PAGE];
-} OneWireWritePageDS2438;
+} OneWireWriteNVPageDS2438;
 
 typedef struct OneWireWriteNVConfigThresholdDS2438Tag
 {

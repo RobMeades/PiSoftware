@@ -10,6 +10,7 @@
 UInt8 oneWireFindAllDevices (SInt32 portNumber, UInt8 *pAddress, UInt8 maxNumAddresses);
 SInt32 oneWireStartBus (Char *pSerialPortString);
 void oneWireStopBus (SInt32 portNumber);
+Bool oneWireAccessDevice (SInt32 portNumber, UInt8 *pAddress);
 
 /* To protect against deadlocks when looping for HW responses */
 #define GUARD_COUNTER           255

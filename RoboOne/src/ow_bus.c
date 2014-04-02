@@ -193,25 +193,27 @@ Msg gReceiveMsg;
  * get the response back.
  * 
  * msgType               the message type to send.
- * pSendMsgSpecifics     pointer to the portion of the
- *                       send REquest message beyond the
- *                       generic msgHeader part.
- * specificsLength       the length of the bit that
- *                       pSendMsgSpecifics points to.
  * pSerialNumber         pointer to the serial number of
  *                       the One Wire device we are
  *                       addressing.  PNULL makes sense
  *                       in some limited cases.
+ * pSendMsgSpecifics     pointer to the portion of the
+ *                       send REquest message beyond the
+ *                       generic msgHeader part.  May be
+ *                       PNULL.
+ * specificsLength       the length of the bit that
+ *                       pSendMsgSpecifics points to.
  * pReceivedMsgSpecifics pointer to the part of the
  *                       received CNF message after the
- *                       generic 'success' part.
+ *                       generic 'success' part.  May be
+ *                       PNULL.
  * 
  * @return           true if the message send/receive
  *                   is successful and the response
  *                   message indicates success,
  *                   otherwise false.
  */
-static Bool oneWireServerSendReceive (OneWireMsgType msgType, void *pSendMsgSpecifics, UInt16 specificsLength, UInt8 *pSerialNumber, UInt8 *pReceivedMsgSpecifics)
+static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSerialNumber, void *pSendMsgSpecifics, UInt16 specificsLength, void *pReceivedMsgSpecifics)
 {
     ClientReturnCode returnCode;
     Bool success = true;
@@ -222,11 +224,9 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, void *pSendMsgSpec
     UInt16 receivedMsgBodyLength = 0;
 
     ASSERT_PARAM (gOneWireServerPort >= 0, gOneWireServerPort);
-    ASSERT_PARAM (msgType < MAX_NUM_ONE_WIRE_MSG, (unsigned long) msgType);
-    ASSERT_PARAM (pSendMsgSpecifics != PNULL, (unsigned long) pSendMsgSpecifics);
+    ASSERT_PARAM (msgType < MAX_NUM_ONE_WIRE_MSGS, (unsigned long) msgType);
     ASSERT_PARAM (((pSerialNumber != PNULL) || ((msgType == ONE_WIRE_SERVER_EXIT) || (msgType == ONE_WIRE_START_BUS) || (msgType == ONE_WIRE_STOP_BUS) || (msgType == ONE_WIRE_FIND_ALL_DEVICES))), (unsigned long) pSerialNumber);
     ASSERT_PARAM (specificsLength <= MAX_MSG_BODY_LENGTH - sizeof (sendMsgHeader), specificsLength);
-    ASSERT_PARAM (pReceivedMsgSpecifics != PNULL, (unsigned long) pReceivedMsgSpecifics);
 
     pSendMsg = malloc (sizeof (Msg));
     
@@ -255,8 +255,11 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, void *pSendMsgSpec
             sendMsgBodyLength += sizeof (sendMsgHeader);
             
             /* Put in the specifics */
-            memcpy (&pSendMsg->msgBody[0] + sendMsgBodyLength, pSendMsgSpecifics, specificsLength);
-            sendMsgBodyLength += specificsLength;
+            if (pSendMsgSpecifics != PNULL)
+            {
+                memcpy (&pSendMsg->msgBody[0] + sendMsgBodyLength, pSendMsgSpecifics, specificsLength);
+                sendMsgBodyLength += specificsLength;
+            }
             pSendMsg->msgLength += sendMsgBodyLength;
             
             pReceivedMsg->msgLength = 0;
@@ -265,21 +268,27 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, void *pSendMsgSpec
             printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
             returnCode = runMessagingClient (gOneWireServerPort, pSendMsg, pReceivedMsg);
                     
-            printProgress ("returnCode: %d\n", returnCode);
+            printProgress ("Client: message system returnCode: %d\n", returnCode);
             /* This code makes assumptions about packing (i.e. that it's '1' and that the
              * Bool 'success' is at the start of the body) so be careful */
             if (returnCode == CLIENT_SUCCESS && (pReceivedMsg->msgLength > sizeof (pReceivedMsg->msgType)))
             { 
                 /* Check the Bool 'success' at the start of the message body */
                 receivedMsgBodyLength = pReceivedMsg->msgLength - sizeof (pReceivedMsg->msgType);
-                printProgress ("receivedMsgBodyLength: %d\n", receivedMsgBodyLength);
-                if (receivedMsgBodyLength > sizeof (Bool))
+                printProgress ("Client: receivedMsgBodyLength: %d\n", receivedMsgBodyLength);
+                if (receivedMsgBodyLength >= sizeof (Bool))
                 {
-                    printProgress ("Bool: %d\n", (Bool) pReceivedMsg->msgBody[0]);
+                    printProgress ("Client: success field: %d\n", (Bool) pReceivedMsg->msgBody[0]);
                     if ((Bool) pReceivedMsg->msgBody[0])
                     {
-                        /* Copy out the bits beyond the success field for passing back */
-                        memcpy (pReceivedMsgSpecifics, &pReceivedMsg->msgBody[0] + sizeof (Bool), receivedMsgBodyLength - sizeof (Bool));
+                        printProgress ("Client: received message type %d, hex dump:\n", pReceivedMsg->msgType);
+                        printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);
+
+                        if (pReceivedMsgSpecifics != PNULL)
+                        {
+                            /* Copy out the bits beyond the success field for passing back */
+                            memcpy (pReceivedMsgSpecifics, &pReceivedMsg->msgBody[0] + sizeof (Bool), receivedMsgBodyLength - sizeof (Bool));
+                        }
                     }
                     else
                     {
@@ -727,7 +736,7 @@ Bool startOneWireBus (void)
 #ifdef DONT_USE_ONE_WIRE_SERVER    
     gPortNumber = oneWireStartBus (ONEWIRE_PORT_STRING);
 #else
-    success = oneWireServerSendReceive (ONE_WIRE_START_BUS, ONEWIRE_PORT_STRING, strlen (ONEWIRE_PORT_STRING), PNULL, (UInt8 *) &gPortNumber);    
+    success = oneWireServerSendReceive (ONE_WIRE_START_BUS, PNULL, ONEWIRE_PORT_STRING, strlen (ONEWIRE_PORT_STRING), &gPortNumber);    
 #endif
     if (!success || (gPortNumber < 0))
     {
@@ -750,7 +759,11 @@ Bool startOneWireBus (void)
 void stopOneWireBus (void)
 {
     printProgress ("Closing port.\n");
+#ifdef DONT_USE_ONE_WIRE_SERVER
     oneWireStopBus (gPortNumber);
+#else
+    oneWireServerSendReceive (ONE_WIRE_STOP_BUS, PNULL, &gPortNumber, sizeof (gPortNumber), PNULL);
+#endif
 }
 
 /*
@@ -762,44 +775,53 @@ void stopOneWireBus (void)
  */
 UInt8 findAllDevices ()
 {
+    Bool success = true;
     UInt8 numDevicesFound = 0;
     UInt8 numDevicesToPrint = MAX_NUM_DEVICES;
-    UInt8 *pAddresses;
+    DeviceList *pDeviceList;
     UInt8 i;
     UInt8 *pPos;
     
     /* Grab work space for enough addresses */
-    pAddresses = malloc (NUM_BYTES_IN_SERIAL_NUM * MAX_NUM_DEVICES);
-
-    if (pAddresses != PNULL)
+    pDeviceList = malloc (sizeof (DeviceList));
+    
+    if (pDeviceList != PNULL)
     {
+#ifdef DONT_USE_ONE_WIRE_SERVER
         /* Find all the devices */
-        numDevicesFound = oneWireFindAllDevices (gPortNumber, pAddresses, MAX_NUM_DEVICES);
-        
-        /* The owFindAllDevices can return more than we ask for, so cap it */
-        if (numDevicesToPrint > numDevicesFound)
+        pDeviceList->numDevices = oneWireFindAllDevices (gPortNumber, &(pDeviceList->address[0]), MAX_NUM_DEVICES);
+#else
+        success = oneWireServerSendReceive (ONE_WIRE_FIND_ALL_DEVICES, PNULL, PNULL, 0, pDeviceList);
+#endif
+        if (success)
         {
-            numDevicesToPrint = numDevicesFound;
-        }        
-        
-        printProgress ("%d devices found on the OneWire bus", numDevicesFound);
-        if (numDevicesFound > numDevicesToPrint)
-        {
-            printProgress (", the first %d of them are", numDevicesToPrint);
+            numDevicesFound = pDeviceList->numDevices;
+            
+            /* The owFindAllDevices can return more than we ask for, so cap it */
+            if (numDevicesToPrint > numDevicesFound)
+            {
+                numDevicesToPrint = numDevicesFound;
+            }        
+            
+            printProgress ("%d devices found on the OneWire bus", numDevicesFound);
+            if (numDevicesFound > numDevicesToPrint)
+            {
+                printProgress (", the first %d of them are", numDevicesToPrint);
+            }
+            printProgress (":\n");
+            
+            /* Print them out */
+            pPos = &(pDeviceList->address[0]);
+            for (i = 0; i < numDevicesToPrint; i++)
+            {
+                printAddress (pPos, true);
+                pPos += NUM_BYTES_IN_SERIAL_NUM;
+            }
         }
-        printProgress (":\n");
-        
-        /* Print them out */
-        pPos = pAddresses;
-        for (i = 0; i < numDevicesToPrint; i++)
-        {
-            printAddress (pPos, true);
-            pPos += NUM_BYTES_IN_SERIAL_NUM;
-        }        
     }
     
     /* Free the workspace */
-    free (pAddresses);
+    free (pDeviceList);
     
     return numDevicesFound;
 }
@@ -825,8 +847,11 @@ Bool setupDevices (void)
         pAddress = &gDeviceStaticConfigList[i].address.value[0];
         
         /* Try to select the device */
-        owSerialNum (gPortNumber, pAddress, false);
-        found[i] = owAccess (gPortNumber);
+#ifdef DONT_USE_ONE_WIRE_SERVER         
+        found[i] = oneWireAccessDevice (gPortNumber, pAddress);
+#else
+        found[i] = oneWireServerSendReceive (ONE_WIRE_ACCESS_DEVICE, pAddress, PNULL, 0, PNULL);;
+#endif        
         
         /* If it was found, set it up */
         if (found[i])
@@ -838,16 +863,29 @@ Bool setupDevices (void)
             {
                 case OW_TYPE_DS2438_BATTERY_MONITOR:
                 {
-                    UInt8 threshold = DEFAULT_DS2438_THRESHOLD;
-                    UInt32 timeTicks;
+                    OneWireWriteNVConfigThresholdDS2438 configThreshold;
+                    OneWireWriteTimeCapacityDS2438 timeCapacity;
 
+                    configThreshold.config = gDeviceStaticConfigList[i].specifics.ds2438.config;
+                    configThreshold.thresholdPresent = true;
+                    configThreshold.threshold = DEFAULT_DS2438_THRESHOLD;
+                    
                     /* Write the config register and the threshold register */
-                    success = writeNVConfigThresholdDS2438 (gPortNumber, pAddress, &gDeviceStaticConfigList[i].specifics.ds2438.config, &threshold);
+#ifdef DONT_USE_ONE_WIRE_SERVER                    
+                    success = writeNVConfigThresholdDS2438 (gPortNumber, pAddress, &(configThreshold.config), &(configThreshold.threshold));
+#else
+                    success = oneWireServerSendReceive (WRITE_NV_CONFIG_THRESHOLD_DS2438, pAddress, &configThreshold, sizeof (configThreshold), PNULL);
+#endif                    
                     if (success)
                     {
                         /* Set the time */
-                        timeTicks = getSystemTicks ();
-                        success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[i].address.value[0], &timeTicks, PNULL);
+                        timeCapacity.elapsedTime = getSystemTicks ();
+                        timeCapacity.remainingCapacityPresent = false;
+#ifdef DONT_USE_ONE_WIRE_SERVER
+                        success = writeTimeCapacityDS2438 (gPortNumber, pAddress, &(timeCapacity.elapsedTime), PNULL);
+#else
+                        success = oneWireServerSendReceive (WRITE_TIME_CAPACITY_DS2438, pAddress, &timeCapacity, sizeof (timeCapacity), PNULL);
+#endif                    
                     }
                 }
                 break;
@@ -857,14 +895,27 @@ Bool setupDevices (void)
                      * the pin configuration, using an intermediate variable for the latter
                      * as the write function also reads the result back and I'd rather avoid
                      * my global data structure being modified */
+#ifdef DONT_USE_ONE_WIRE_SERVER
                     success = disableTestModeDS2408 (gPortNumber, pAddress);
+#else
+                    success = oneWireServerSendReceive (DISABLE_TEST_MODE_DS2408, pAddress, PNULL, 0, PNULL);
+#endif
                     if (success)
                     {
+#ifdef DONT_USE_ONE_WIRE_SERVER
                         success = writeControlRegisterDS2408 (gPortNumber, pAddress, gDeviceStaticConfigList[i].specifics.ds2408.config);
+#else
+                        success = oneWireServerSendReceive (WRITE_CONTROL_REGISTER_DS2408, pAddress, &(gDeviceStaticConfigList[i].specifics.ds2408.config),
+                                                            sizeof (gDeviceStaticConfigList[i].specifics.ds2408.config), PNULL);
+#endif
                         if (success)
                         {
                             pinsState = gDeviceStaticConfigList[i].specifics.ds2408.pinsState;                     
+#ifdef DONT_USE_ONE_WIRE_SERVER
                             success = channelAccessWriteDS2408 (gPortNumber, pAddress, &pinsState);
+#else
+                            success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, pAddress, &pinsState, sizeof (pinsState), PNULL);
+#endif
                         }
                     }
                 }
