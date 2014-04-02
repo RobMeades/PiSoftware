@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <rob_system.h>
@@ -15,12 +16,10 @@
 #include <messaging_client.h>
 
 /*
- * MANIFEST CONSTANTS
+ * EXTERN
  */
 
-/*
- * TYPES
- */
+extern int errno;
 
 /*
  * STATIC FUNCTIONS
@@ -92,20 +91,20 @@ ClientReturnCode runMessagingClient (UInt16 serverPort, Msg *pSendMsg, Msg *pRec
                         if (rawReceivedLength != *pReceivedMsgLength + SIZE_OF_MSG_LENGTH)
                         {
                             returnCode = CLIENT_ERR_MESSAGE_FROM_SERVER_INCOMPLETE_OR_TOO_LONG;
-                            fprintf (stderr, "Message from server incomplete or too long (%d bytes received, %d bytes needed).\n", rawReceivedLength, *pReceivedMsgLength + SIZE_OF_MSG_LENGTH);
+                            fprintf (stderr, "Message from server incomplete or too long (%d bytes received, %d bytes needed), error: %s.\n", rawReceivedLength, *pReceivedMsgLength + SIZE_OF_MSG_LENGTH, strerror (errno));
                         }
                     }
                 }
                 else
                 {
                     returnCode = CLIENT_ERR_COULDNT_SEND_WHOLE_MESSAGE_TO_SERVER;
-                    fprintf (stderr, "Couldn't send whole %d byte message to server.\n", rawSendLength);
+                    fprintf (stderr, "Couldn't send whole %d byte message to server, error: %s.\n", rawSendLength, strerror (errno));
                 }
             }
             else
             {
                 returnCode = CLIENT_ERR_FAILED_TO_CONNECT_TO_SERVER;
-                fprintf (stderr, "Failed to connect to server on port %d.\n", serverPort);                           
+                fprintf (stderr, "Failed to connect to server on port %d, error: %s.\n", serverPort, strerror (errno));                           
             }
             
             close (serverSocket);
@@ -113,7 +112,7 @@ ClientReturnCode runMessagingClient (UInt16 serverPort, Msg *pSendMsg, Msg *pRec
         else
         {
             returnCode = CLIENT_ERR_FAILED_TO_CREATE_SOCKET;
-            fprintf (stderr, "Failed to create socket %ld on port %d.\n", serverSocket, serverPort);        
+            fprintf (stderr, "Failed to create socket %ld on port %d, error: %s.\n", serverSocket, serverPort, strerror (errno));        
         }
     }
     else

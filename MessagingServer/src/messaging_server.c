@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <rob_system.h>
@@ -19,6 +20,13 @@
 
 /* Max connection requests */
 #define MAXPENDING  5
+
+
+/*
+ * EXTERN
+ */
+
+extern int errno;
 
 /*
  * STATIC FUNCTIONS
@@ -83,7 +91,7 @@ static ServerReturnCode handleSendReceive (UInt32 clientSocket)
                     if (send (clientSocket, pSendMsg, rawSendLength, 0) != rawSendLength)
                     {
                         returnCode = SERVER_ERR_FAILED_TO_SEND_RESPONSE_TO_CLIENT;
-                        fprintf (stderr, "Failed to send response to client (%d bytes).\n", rawSendLength);
+                        fprintf (stderr, "Failed to send response to client (%d bytes), error: %s.\n", rawSendLength, strerror (errno));
                     }
                 }
                 
@@ -131,6 +139,7 @@ static ServerReturnCode handleSendReceive (UInt32 clientSocket)
 ServerReturnCode runMessagingServer (UInt16 serverPort)
 {
     ServerReturnCode returnCode = SERVER_SUCCESS_KEEP_RUNNING;
+    UInt32 serverSocketOptionValue = 1;
     UInt32 serverSocket;
     UInt32 clientSocket;
     SockAddrIn messagingServer;
@@ -146,51 +155,62 @@ ServerReturnCode runMessagingServer (UInt16 serverPort)
         messagingServer.sin_addr.s_addr = htonl (INADDR_ANY);     /* Incoming addr */
         messagingServer.sin_port = htons (serverPort);            /* server port */
         
-        /* Bind the server socket */
-        if (bind (serverSocket, (SockAddr *) &messagingServer, sizeof (messagingServer)) >= 0)
+        /* Set SO_REUSEADDR on the  socket to true (1) so that if we take
+         * the server up and down there is no issue with it being in state
+         * TIME_WAIT */
+        if (setsockopt (serverSocket, SOL_SOCKET, SO_REUSEADDR, &serverSocketOptionValue, sizeof (serverSocketOptionValue)) >= 0)
         {
-            /* Listen on the server socket */
-            if (listen (serverSocket, MAXPENDING) >= 0)
+            /* Bind the server socket */
+            if (bind (serverSocket, (SockAddr *) &messagingServer, sizeof (messagingServer)) >= 0)
             {
-                /* Run until error or exit */
-                while (returnCode == SERVER_SUCCESS_KEEP_RUNNING)
+                /* Listen on the server socket */
+                if (listen (serverSocket, MAXPENDING) >= 0)
                 {
-                    socklen_t clientLength = sizeof (messagingClient);
-                      
-                    /* Wait for a client to connect */
-                    if ((clientSocket = accept (serverSocket, (SockAddr *) &messagingClient, &clientLength)) >= 0)
+                    /* Run until error or exit */
+                    while (returnCode == SERVER_SUCCESS_KEEP_RUNNING)
                     {
-                        /* fprintf (stdout, "Client connected: %s\n", inet_ntoa (messagingClient.sin_addr)); */
-                        
-                        /* Exchange messages */
-                        returnCode = handleSendReceive (clientSocket);
-                        
-                        /* Close the socket again */
-                        close (clientSocket);                    
+                        socklen_t clientLength = sizeof (messagingClient);
+                          
+                        /* Wait for a client to connect */
+                        if ((clientSocket = accept (serverSocket, (SockAddr *) &messagingClient, &clientLength)) >= 0)
+                        {
+                            /* fprintf (stdout, "Client connected: %s\n", inet_ntoa (messagingClient.sin_addr)); */
+                            
+                            /* Exchange messages */
+                            returnCode = handleSendReceive (clientSocket);
+                            
+                            /* Close the socket again */
+                            close (clientSocket);                    
+                        }
+                        else
+                        {
+                            returnCode = SERVER_ERR_FAILED_TO_ACCEPT_CLIENT_CONNECTION;
+                            fprintf (stderr, "Failed to accept client connection on socket %ld, port %d, error: %s.\n", serverSocket, serverPort, strerror (errno));
+                        }
                     }
-                    else
-                    {
-                        returnCode = SERVER_ERR_FAILED_TO_ACCEPT_CLIENT_CONNECTION;
-                        fprintf (stderr, "Failed to accept client connection on socket %ld, port %d.\n", serverSocket, serverPort);                        
-                    }
+                }
+                else
+                {
+                    returnCode = SERVER_ERR_FAILED_TO_LISTEN_ON_SOCKET;
+                    fprintf (stderr, "Failed to listen on socket %ld, port %d, error: %s.\n", serverSocket, serverPort, strerror (errno));               
                 }
             }
             else
             {
-                returnCode = SERVER_ERR_FAILED_TO_LISTEN_ON_SOCKET;
-                fprintf (stderr, "Failed to listen on socket %ld, port %d.\n", serverSocket, serverPort);               
+                returnCode = SERVER_ERR_FAILED_TO_BIND_SOCKET;
+                fprintf (stderr, "Failed to bind to socket %ld on port %d, error: %s.\n", serverSocket, serverPort, strerror (errno));            
             }
         }
         else
         {
-            returnCode = SERVER_ERR_FAILED_TO_BIND_SOCKET;
-            fprintf (stderr, "Failed to bind to socket %ld on port %d.\n", serverSocket, serverPort);            
+            returnCode = SERVER_ERR_FAILED_TO_SET_SOCKET_OPTIONS;
+            fprintf (stderr, "Failed to set socket %ld options, error: %s.\n", serverSocket, strerror (errno));            
         }
     }
     else
     {
         returnCode = SERVER_ERR_FAILED_TO_CREATE_SOCKET;
-        fprintf (stderr, "Failed to create socket on port %d.\n", serverPort);
+        fprintf (stderr, "Failed to create socket on port %d, error: %s.\n", serverPort, strerror (errno));
     }
     
     return returnCode;

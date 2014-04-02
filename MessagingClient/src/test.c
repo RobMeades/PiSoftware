@@ -8,11 +8,28 @@
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <unistd.h> /* for fork */
+#include <sys/types.h> /* for pid_t */
+#include <sys/wait.h> /* for wait */
 #include <unistd.h>
 #include <netinet/in.h>
 #include <rob_system.h>
 #include <messaging_server.h>
 #include <messaging_client.h>
+
+/*
+ * MANIFEST CONSTANTS
+ */
+
+#define SERVER_EXE "./test_server"
+#define SERVER_PORT_STRING "5000"
+
+/*
+ * EXTERN
+ */
+
+extern int errno;
 
 /*
  * STATIC FUNCTIONS
@@ -77,81 +94,132 @@ static Bool checkReceivedMsgContents (Msg *pSendMsg, Msg *pReceivedMsg)
  */
 int main (int argc, char **argv)
 {
-    ClientReturnCode returnCode;
-    Msg *pSendMsg;
-    Msg *pReceivedMsg;
-    SInt32 i; /* Deliberately signed */
-    UInt32 x;
-
-    printProgress ("This will test that the messaging client and server libraries talk.\n");
-    printProgress ("Make sure that testserver is running (./test_server&) first.\n");
-    pSendMsg = malloc (sizeof(Msg));
+    Bool success = true;
+    pid_t serverPID;
+    SInt32 oneWireServerPort = -1;
     
-    if (pSendMsg != PNULL)
+    printProgress ("This will test that the messaging client and server libraries talk.\n");
+    printProgress ("Make sure that %s is present 'cos we'll be running it.\n", SERVER_EXE);
+
+    oneWireServerPort = atoi (SERVER_PORT_STRING);
+    
+    /* Spawn a child that will become the One Wire server. */
+    serverPID = fork();
+    
+    if (serverPID == 0)
     {
-        /* Send all the possible message lengths,
-         * ending with a zero length message which
-         * will cause the test server to exit */
-        for (i = MAX_MSG_LENGTH; i >= 0; i--)
+        /* Start OneWire server process on port oneWireServerPort */
+        static char *argv[]={SERVER_EXE, SERVER_PORT_STRING, PNULL};
+        
+        execv (SERVER_EXE, argv);
+        printProgress ("Couldn't launch %s, err: %s\n", SERVER_EXE, strerror (errno));
+    }
+    else
+    { /* Parent process */
+      /* Setup what's necessary for OneWire bus stuff */
+        int serverStatus;
+        Bool returnCode;
+        Msg *pSendMsg;
+        Msg *pReceivedMsg;
+        SInt32 i; /* Deliberately signed */
+        UInt32 x;
+
+        /* Wait for the server to start */
+        usleep (SERVER_START_DELAY_PI_US);
+        
+        /* Check that it is running (looks strange but it is the standard method apparently) */
+        if (kill (serverPID, 0) == 0)
         {
-            printProgress ("+%d", i);
-            pSendMsg->msgLength = (MsgLength) i;            
-            pSendMsg->msgType = (MsgType) (i - 1);
+            pSendMsg = malloc (sizeof (Msg));
             
-            for (x = 0; x < i; x++)
+            if (pSendMsg != PNULL)
             {
-                pSendMsg->msgBody[x] = x;
-            }
-            
-            pReceivedMsg = malloc (sizeof(Msg));
-            
-            if (pReceivedMsg != PNULL)
-            {
-                /* Send the message and get a response */
-                if (i > 0)
+                /* Send all the possible message lengths,
+                 * ending with a zero length message which
+                 * will cause the test server to exit */
+                for (i = MAX_MSG_LENGTH; i >= 0; i--)
                 {
-                    returnCode = runMessagingClient (5000, pSendMsg, pReceivedMsg);
-                }
-                else
-                {
-                    returnCode = runMessagingClient (5000, pSendMsg, PNULL); /* No echo will result for a zero length message */                    
-                }
-                
-                if (returnCode == CLIENT_SUCCESS)
-                {
-                    if (i > 0)
+                    printProgress ("+%d", i);
+                    pSendMsg->msgLength = (MsgLength) i;            
+                    pSendMsg->msgType = (MsgType) (i - 1);
+                    
+                    for (x = 0; x < i; x++)
                     {
-                        Bool success;
-                        
-                        printProgress ("-%d", i);
-                        success = checkReceivedMsgContents (pSendMsg, pReceivedMsg);
-                        if (!success)
-                        {
-                            returnCode = CLIENT_ERR_GENERAL_FAILURE;                    
-                        }
+                        pSendMsg->msgBody[x] = x;
                     }
+                    
+                    pReceivedMsg = malloc (sizeof(Msg));
+                    
+                    if (pReceivedMsg != PNULL)
+                    {
+                        /* Send the message and get a response */
+                        if (i > 0)
+                        {
+                            returnCode = runMessagingClient (oneWireServerPort, pSendMsg, pReceivedMsg);
+                        }
+                        else
+                        {
+                            returnCode = runMessagingClient (oneWireServerPort, pSendMsg, PNULL); /* No echo will result for a zero length message */                    
+                        }
+                        
+                        if (returnCode == CLIENT_SUCCESS)
+                        {
+                            if (i > 0)
+                            {                            
+                                printProgress ("-%d", i);
+                                if (!checkReceivedMsgContents (pSendMsg, pReceivedMsg))
+                                {
+                                    success = false;;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            success = false;;
+                        }
+                        
+                        free (pReceivedMsg);
+                    }        
                     else
                     {
-                        printProgress ("\nTests passed, messaging server will now exit.\n");
-                    }
+                        success = false;;
+                        printProgress ("Failed to get memory to receive test message.\n");            
+                    }            
                 }
                 
-                free (pReceivedMsg);
-            }        
+                free (pSendMsg);
+            }
             else
             {
-                returnCode = CLIENT_ERR_GENERAL_FAILURE;
-                printProgress ("Failed to get memory to receive test message.\n");            
-            }            
+                success = false;
+                printProgress ("Failed to get memory to send test message.\n");
+            }
+            
+            /* Wait for server to exit */
+            if (waitpid (serverPID, &serverStatus, 0) >= 0)
+            {
+                printProgress ("\nServer process exited, status = 0x%x.\n", serverStatus);
+            }
+            else
+            {
+                printProgress ("\nFailed to wait for server to exit, error %s.\n", strerror (errno));            
+            }
         }
-        
-        free (pSendMsg);
+        else
+        {
+            success = false;
+            printProgress ("Server process failed to start.\n");            
+        }
+    }
+    
+    if (success)
+    {
+        printProgress ("\nTests PASSED, messaging server will now exit.\n");        
     }
     else
     {
-        returnCode = CLIENT_ERR_GENERAL_FAILURE;
-        printProgress ("Failed to get memory to send test message.\n");
+        printProgress ("\nTests FAILED, messaging server will now exit.\n");
     }
-    
-    return returnCode;
+        
+    return success;
 }

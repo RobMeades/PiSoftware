@@ -25,13 +25,34 @@
  */
 
 /*
- * Entry point
+ * Entry point - start the messaging server,
+ * listening on a socket.
  */
 int main (int argc, char **argv)
 {
-    ServerReturnCode returnCode;
+    ServerReturnCode returnCode = SERVER_ERR_GENERAL_FAILURE;
+    UInt16 serverPort;
 
-    returnCode = runMessagingServer (5000);
+    if (argc == 2)
+    {
+        serverPort = atoi (argv[1]);
+        printProgress ("Messaging server listening on port %d.\n", serverPort);
+
+        returnCode = runMessagingServer (serverPort);
+        
+        if (returnCode == SERVER_EXIT_NORMALLY)
+        {
+            printProgress ("Messaging server exiting normally.\n");            
+        }
+        else
+        {
+            printProgress ("Messaging server exiting with returnCode %d.\n", returnCode);                        
+        }            
+    }    
+    else
+    {
+        printProgress ("Usage: %s portnumber\ne.g. %s 5000\n", argv[0], argv[0]);
+    }
     
     return returnCode;
 }
