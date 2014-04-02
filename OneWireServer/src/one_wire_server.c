@@ -240,6 +240,15 @@ static UInt16 actionReadByteRegister (OneWireMsgType msgType, MsgHeader *pMsgHea
     	    sendMsgBodyLength += sizeof (((ReadPIOOutputLatchStateRegisterDS2408Cnf *) pSendMsgBody)->data);
 		}
     	break;
+        case READ_PIO_ACTIVITY_LATCH_STATE_REGISTER_DS2408:
+        {
+            success = readPIOActivityLatchStateRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &data);
+            ((ReadPIOActivityLatchStateRegisterDS2408Cnf *) pSendMsgBody)->success = success;
+            sendMsgBodyLength += sizeof (((ReadPIOActivityLatchStateRegisterDS2408Cnf *) pSendMsgBody)->success);
+            ((ReadPIOActivityLatchStateRegisterDS2408Cnf *) pSendMsgBody)->data = data;
+            sendMsgBodyLength += sizeof (((ReadPIOActivityLatchStateRegisterDS2408Cnf *) pSendMsgBody)->data);
+        }
+        break;
         case READ_CS_CHANNEL_SELECTION_MASK_REGISTER_DS2408:
 		{
     	    success = readCSChannelSelectionMaskRegisterDS2408 (pMsgHeader->portNumber, &(pMsgHeader->serialNumber[0]), &data);
@@ -1040,6 +1049,7 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
         case READ_CONTROL_REGISTER_DS2408:
         case READ_PIO_LOGIC_STATE_DS2408:
         case READ_PIO_OUTPUT_LATCH_STATE_REGISTER_DS2408:
+        case READ_PIO_ACTIVITY_LATCH_STATE_REGISTER_DS2408:
         case READ_CS_CHANNEL_SELECTION_MASK_REGISTER_DS2408:
         case READ_CS_CHANNEL_POLARITY_SELECTION_REGISTER_DS2408:
         {

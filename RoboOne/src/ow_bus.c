@@ -264,25 +264,35 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSerialNumb
             
             pReceivedMsg->msgLength = 0;
     
+#if 0
             printf ("\nClient: sending message of type %d, length %d, hex dump:\n", pSendMsg->msgType, pSendMsg->msgLength);
             printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
+#endif            
             returnCode = runMessagingClient (gOneWireServerPort, pSendMsg, pReceivedMsg);
                     
+#if 0
             printProgress ("Client: message system returnCode: %d\n", returnCode);
+#endif            
             /* This code makes assumptions about packing (i.e. that it's '1' and that the
              * Bool 'success' is at the start of the body) so be careful */
             if (returnCode == CLIENT_SUCCESS && (pReceivedMsg->msgLength > sizeof (pReceivedMsg->msgType)))
             { 
                 /* Check the Bool 'success' at the start of the message body */
                 receivedMsgBodyLength = pReceivedMsg->msgLength - sizeof (pReceivedMsg->msgType);
+#if 0
                 printProgress ("Client: receivedMsgBodyLength: %d\n", receivedMsgBodyLength);
+#endif                
                 if (receivedMsgBodyLength >= sizeof (Bool))
                 {
+#if 0                    
                     printProgress ("Client: success field: %d\n", (Bool) pReceivedMsg->msgBody[0]);
+#endif                    
                     if ((Bool) pReceivedMsg->msgBody[0])
                     {
+#if 0                        
                         printProgress ("Client: received message type %d, hex dump:\n", pReceivedMsg->msgType);
                         printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);
+#endif                        
 
                         if (pReceivedMsgSpecifics != PNULL)
                         {
@@ -373,83 +383,6 @@ static OwDeviceType getDeviceType (const UInt8 *pAddress)
     
     return type;
 }    
-      
-#if 0
-/* These non-shadowing functions kept just in case we can do without 
- * shadowing in the future */
-
-/*
- * Set a pin or pins to on (i.e. 5 Volts) or off (i.e. ground). 
- * 
- * deviceName       the PIO device that the pins belong to.
- * pinsMask         the pins to be set to 5 Volts or ground. 
- * setPinsTo5Volts  whether the masked pins are to be set to
- *                  5V (== true) or ground.
- *
- * @return  true if successful, otherwise false.
- */
-static Bool setPins (OwDeviceName deviceName, UInt8 pinsMask, Bool setPinsTo5Volts)
-{
-    Bool  success = true;
-    UInt8 pinsState;
-    
-    /* Read the last state of the pins */
-    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
-    
-    /* Set or reset the ones masked in */
-    if (setPinsTo5Volts)
-    {
-        pinsState |= pinsMask;
-    }
-    else
-    {
-        pinsState &=~ pinsMask;
-    }
-    
-    success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
-    
-    return success;
-}
-
-/*
- * Toggle a pin or pins from their current state to the
- * reverse and back again. 
- * 
- * deviceName  the PIO device that the pins belong to.
- * pinsMask    the pins to be toggled (a bit set to 1 is
- *             to be toggled a bit set to 0 is left alone). 
- *
- * @return  true if successful, otherwise false.
- */
-static Bool togglePins (OwDeviceName deviceName, UInt8 pinsMask)
-{
-    Bool  success = true;
-    UInt8 pinsState;
-    UInt8 i;
-
-    /* Read the last state of the pins */
-    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
-    
-    /* Toggle the ones masked in */
-    for (i = 0; (i < 2) && success; i++)
-    {
-        if (pinsState & pinsMask)
-        {
-            pinsState &=~ pinsMask;
-        }
-        else
-        {
-            pinsState |= pinsMask;
-        }
-        
-        success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsState);
-        msDelay (TOGGLE_DELAY_MS);
-    }
-    
-    return success;
-}
-
-#endif
 
 /*
  * Read a set of pins. 
@@ -464,7 +397,11 @@ static Bool readPins (OwDeviceName deviceName, UInt8 *pPinsState)
     Bool  success = true;
     
     /* Read the last state of the pins */
+#ifdef DONT_USE_ONE_WIRE_SERVER
     success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], pPinsState);
+#else
+    success = oneWireServerSendReceive (READ_PIO_LOGIC_STATE_DS2408, &gDeviceStaticConfigList[deviceName].address.value[0], PNULL, 0, pPinsState);
+#endif
     
     return success;
 }
@@ -482,10 +419,19 @@ static Bool readAndResetRisingEdgePins (OwDeviceName deviceName, UInt8 *pPinsSta
     Bool  success = true;
     
     /* Read the activity state of the pins and then reset it for the next time */
+#ifdef DONT_USE_ONE_WIRE_SERVER
     success = readPIOActivityLatchStateRegisterDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], pPinsState);
+#else
+    success = oneWireServerSendReceive (READ_PIO_ACTIVITY_LATCH_STATE_REGISTER_DS2408, &gDeviceStaticConfigList[deviceName].address.value[0], PNULL, 0, pPinsState);
+#endif
+
     if (success)
     {
+#ifdef DONT_USE_ONE_WIRE_SERVER
         success = resetActivityLatchesDS2408  (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0]);
+#else
+        success = oneWireServerSendReceive (RESET_ACTIVITY_LATCHES_DS2408, &gDeviceStaticConfigList[deviceName].address.value[0], PNULL, 0, PNULL);
+#endif
     }
     
     return success;
@@ -540,7 +486,11 @@ static Bool readPinsWithShadow (OwDeviceName deviceName, UInt8 *pPinsState)
     Bool success = true;
     
     /* Read the last state of the pins */
+#ifdef DONT_USE_ONE_WIRE_SERVER
     success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], pPinsState);
+#else
+    success = oneWireServerSendReceive (READ_PIO_LOGIC_STATE_DS2408, &gDeviceStaticConfigList[deviceName].address.value[0], PNULL, 0, pPinsState);
+#endif
     if (success)
     {
         /* Now check against the shadow mask and for those pins use pinsState instead of the read-back state */
@@ -584,7 +534,11 @@ static Bool setPinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask, Bool set
     /* Take a copy of the new intended state 'cos channelAccessWriteDS2408 will read back the written
      * state which might not be what we want since we may be shadowing some pins */
     pinsStateToWrite = pinsState;
+#ifdef DONT_USE_ONE_WIRE_SERVER
     success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsStateToWrite);
+#else
+    success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsStateToWrite, sizeof (pinsStateToWrite), PNULL);
+#endif
     
     /* If it worked, setup the shadow to match the result */
     if (success)
@@ -631,7 +585,11 @@ static Bool togglePinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask)
         /* Take a copy of the new intended state 'cos channelAccessWriteDS2408 will read back the written
          * state which might not be what we want since we may be shadowing some pins */
         pinsStateToWrite = pinsState;
+#ifdef DONT_USE_ONE_WIRE_SERVER
         success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsStateToWrite);
+#else
+        success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsStateToWrite, sizeof (pinsStateToWrite), PNULL);
+#endif
 
         /* If it worked, setup the shadow to match the result */
         if (success)
@@ -1733,7 +1691,11 @@ Bool readRelaysEnabled (Bool *pIsOn)
  */
 Bool readRioBattCurrent (SInt16 *pCurrent)
 {
+#ifdef DONT_USE_ONE_WIRE_SERVER
     return readCurrentDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], pCurrent);
+#else
+    return oneWireServerSendReceive (READ_VDD_DS2438, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL, 0, pCurrent);
+#endif
 }
 
 /*
@@ -1745,7 +1707,11 @@ Bool readRioBattCurrent (SInt16 *pCurrent)
  */
 Bool readO1BattCurrent (SInt16 *pCurrent)
 {
+#ifdef DONT_USE_ONE_WIRE_SERVER
     return readCurrentDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], pCurrent);
+#else
+    return oneWireServerSendReceive (READ_VDD_DS2438, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL, 0, pCurrent);
+#endif
 }
 
 /*
@@ -1757,7 +1723,11 @@ Bool readO1BattCurrent (SInt16 *pCurrent)
  */
 Bool readO2BattCurrent (SInt16 *pCurrent)
 {
+#ifdef DONT_USE_ONE_WIRE_SERVER
     return readCurrentDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], pCurrent);
+#else
+    return oneWireServerSendReceive (READ_VDD_DS2438, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL, 0, pCurrent);
+#endif
 }
 
 /*
@@ -1769,7 +1739,11 @@ Bool readO2BattCurrent (SInt16 *pCurrent)
  */
 Bool readO3BattCurrent (SInt16 *pCurrent)
 {
+#ifdef DONT_USE_ONE_WIRE_SERVER
     return readCurrentDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], pCurrent);
+#else
+    return oneWireServerSendReceive (READ_VDD_DS2438, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL, 0, pCurrent);
+#endif
 }
 
 /*
@@ -1781,7 +1755,11 @@ Bool readO3BattCurrent (SInt16 *pCurrent)
  */
 Bool readRioBattVoltage (UInt16 *pVoltage)
 {
+#ifdef DONT_USE_ONE_WIRE_SERVER
     return readVddDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], pVoltage);
+#else
+    return oneWireServerSendReceive (READ_VDD_DS2438, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL, 0, pVoltage);
+#endif
 }
 
 /*
@@ -1793,7 +1771,11 @@ Bool readRioBattVoltage (UInt16 *pVoltage)
  */
 Bool readO1BattVoltage (UInt16 *pVoltage)
 {
+#ifdef DONT_USE_ONE_WIRE_SERVER
     return readVddDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], pVoltage);
+#else
+    return oneWireServerSendReceive (READ_VDD_DS2438, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL, 0, pVoltage);
+#endif
 }
 
 /*
@@ -1805,7 +1787,11 @@ Bool readO1BattVoltage (UInt16 *pVoltage)
  */
 Bool readO2BattVoltage (UInt16 *pVoltage)
 {
+#ifdef DONT_USE_ONE_WIRE_SERVER
     return readVddDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], pVoltage);
+#else
+    return oneWireServerSendReceive (READ_VDD_DS2438, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL, 0, pVoltage);
+#endif
 }
 
 /*
@@ -1817,7 +1803,11 @@ Bool readO2BattVoltage (UInt16 *pVoltage)
  */
 Bool readO3BattVoltage (UInt16 *pVoltage)
 {
+#ifdef DONT_USE_ONE_WIRE_SERVER
     return readVddDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], pVoltage);
+#else
+    return oneWireServerSendReceive (READ_VDD_DS2438, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL, 0, pVoltage);
+#endif
 }
 
 /*
@@ -1829,7 +1819,21 @@ Bool readO3BattVoltage (UInt16 *pVoltage)
  */
 Bool readRioRemainingCapacity (UInt16 *pRemainingCapacity)
 {
-    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL);
+    Bool success;
+    OneWireReadTimeCapacityCalDS2438 timeCapacityCal;
+    
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    success = readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL, &(timeCapacityCal.remainingCapacity), PNULL);
+#else
+    success = oneWireServerSendReceive (READ_TIME_CAPACITY_CAL_DS2438, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL, 0, &timeCapacityCal);
+#endif
+    
+    if (success)
+    {
+        *pRemainingCapacity = timeCapacityCal.remainingCapacity;
+    }
+    
+    return success;
 }
 
 /*
@@ -1841,7 +1845,21 @@ Bool readRioRemainingCapacity (UInt16 *pRemainingCapacity)
  */
 Bool readO1RemainingCapacity (UInt16 *pRemainingCapacity)
 {
-    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL);
+    Bool success;
+    OneWireReadTimeCapacityCalDS2438 timeCapacityCal;
+    
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    success = readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL, &(timeCapacityCal.remainingCapacity), PNULL);
+#else
+    success = oneWireServerSendReceive (READ_TIME_CAPACITY_CAL_DS2438, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL, 0, &timeCapacityCal);
+#endif
+    
+    if (success)
+    {
+        *pRemainingCapacity = timeCapacityCal.remainingCapacity;
+    }
+    
+    return success;
 }
 
 /*
@@ -1853,7 +1871,21 @@ Bool readO1RemainingCapacity (UInt16 *pRemainingCapacity)
  */
 Bool readO2RemainingCapacity (UInt16 *pRemainingCapacity)
 {
-    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL);
+    Bool success;
+    OneWireReadTimeCapacityCalDS2438 timeCapacityCal;
+    
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    success = readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL, &(timeCapacityCal.remainingCapacity), PNULL);
+#else
+    success = oneWireServerSendReceive (READ_TIME_CAPACITY_CAL_DS2438, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL, 0, &timeCapacityCal);
+#endif
+    
+    if (success)
+    {
+        *pRemainingCapacity = timeCapacityCal.remainingCapacity;
+    }
+    
+    return success;
 }
 
 /*
@@ -1865,7 +1897,21 @@ Bool readO2RemainingCapacity (UInt16 *pRemainingCapacity)
  */
 Bool readO3RemainingCapacity (UInt16 *pRemainingCapacity)
 {
-    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL);
+    Bool success;
+    OneWireReadTimeCapacityCalDS2438 timeCapacityCal;
+    
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    success = readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL, &(timeCapacityCal.remainingCapacity), PNULL);
+#else
+    success = oneWireServerSendReceive (READ_TIME_CAPACITY_CAL_DS2438, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL, 0, &timeCapacityCal);
+#endif
+    
+    if (success)
+    {
+        *pRemainingCapacity = timeCapacityCal.remainingCapacity;
+    }
+    
+    return success;
 }
 
 /*
@@ -1878,7 +1924,22 @@ Bool readO3RemainingCapacity (UInt16 *pRemainingCapacity)
  */
 Bool readRioBattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
 {
-    return readNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], pCharge, pDischarge);
+    Bool success;
+    OneWireReadNVChargeDischargeDS2438 chargeDischarge;
+    
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    success = readNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &(chargeDischarge.charge), &(chargeDischarge.discharge));
+#else
+    success = oneWireServerSendReceive (READ_NV_CHARGE_DISCHARGE_DS2438, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL, 0, &chargeDischarge);
+#endif
+    
+    if (success)
+    {
+        *pCharge = chargeDischarge.charge;
+        *pDischarge = chargeDischarge.discharge;
+    }
+    
+    return success;
 }
 
 /*
@@ -1891,7 +1952,22 @@ Bool readRioBattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
  */
 Bool readO1BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
 {
-    return readNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], pCharge, pDischarge);
+    Bool success;
+    OneWireReadNVChargeDischargeDS2438 chargeDischarge;
+    
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    success = readNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &(chargeDischarge.charge), &(chargeDischarge.discharge));
+#else
+    success = oneWireServerSendReceive (READ_NV_CHARGE_DISCHARGE_DS2438, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL, 0, &chargeDischarge);
+#endif
+    
+    if (success)
+    {
+        *pCharge = chargeDischarge.charge;
+        *pDischarge = chargeDischarge.discharge;
+    }
+    
+    return success;
 }
 
 /*
@@ -1904,7 +1980,22 @@ Bool readO1BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
  */
 Bool readO2BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
 {
-    return readNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], pCharge, pDischarge);
+    Bool success;
+    OneWireReadNVChargeDischargeDS2438 chargeDischarge;
+    
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    success = readNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &(chargeDischarge.charge), &(chargeDischarge.discharge));
+#else
+    success = oneWireServerSendReceive (READ_NV_CHARGE_DISCHARGE_DS2438, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL, 0, &chargeDischarge);
+#endif
+    
+    if (success)
+    {
+        *pCharge = chargeDischarge.charge;
+        *pDischarge = chargeDischarge.discharge;
+    }
+    
+    return success;
 }
 
 /*
@@ -1917,7 +2008,86 @@ Bool readO2BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
  */
 Bool readO3BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge)
 {
-    return readNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], pCharge, pDischarge);
+    Bool success;
+    OneWireReadNVChargeDischargeDS2438 chargeDischarge;
+    
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    success = readNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &(chargeDischarge.charge), &(chargeDischarge.discharge));
+#else
+    success = oneWireServerSendReceive (READ_NV_CHARGE_DISCHARGE_DS2438, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL, 0, &chargeDischarge);
+#endif
+    
+    if (success)
+    {
+        *pCharge = chargeDischarge.charge;
+        *pDischarge = chargeDischarge.discharge;
+    }
+    
+    return success;
+}
+
+/*
+ * Calibrate the Rio/Pi/5V battery monitor.
+ * This shold ONLY be called when the there is no
+ * current being drawn from the battery.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool performCalRioBatteryMonitor (void)
+{
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL);
+#else
+    return oneWireServerSendReceive (READ_VAD_DS2438, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL, 0, PNULL);
+#endif
+}
+
+/*
+ * Calibrate the O1 battery monitor.
+ * This shold ONLY be called when the there is no
+ * current being drawn from the battery.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool performCalO1BatteryMonitor (void)
+{
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL);
+#else
+    return oneWireServerSendReceive (READ_VAD_DS2438, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL, 0, PNULL);
+#endif
+}
+
+/*
+ * Calibrate the O2 battery monitor.
+ * This shold ONLY be called when the there is no
+ * current being drawn from the battery.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool performCalO2BatteryMonitor (void)
+{
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL);
+#else
+    return oneWireServerSendReceive (READ_VAD_DS2438, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL, 0, PNULL);
+#endif
+}
+
+/*
+ * Calibrate the O3 battery monitor.
+ * This shold ONLY be called when the there is no
+ * current being drawn from the battery.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool performCalO3BatteryMonitor (void)
+{
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL);
+#else
+    return oneWireServerSendReceive (READ_VAD_DS2438, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL, 0, PNULL);
+#endif
 }
 
 /*
@@ -1933,69 +2103,21 @@ Bool performCalAllBatteryMonitors (void)
     Bool success;
     
     printProgress ("\nWARNING: calibrating all battery monitors, make sure no current is flowing!\n");
-    success = performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL);
+    success = performCalRioBatteryMonitor();
     if (success)
     {
-        success = performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL);
+        success = performCalO1BatteryMonitor();
         if (success)
         {
-            success = performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL);
+            success = performCalO2BatteryMonitor();
             if (success)
             {
-                success = performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL);
+                success = performCalO3BatteryMonitor();
             }
         }
     }
     
     return success;
-}
-
-/*
- * Calibrate the Rio/Pi/5V battery monitor.
- * This shold ONLY be called when the there is no
- * current being drawn from the battery.
- * 
- * @return  true if successful, otherwise false.
- */
-Bool performCalRioBatteryMonitor (void)
-{
-    return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL);
-}
-
-/*
- * Calibrate the O1 battery monitor.
- * This shold ONLY be called when the there is no
- * current being drawn from the battery.
- * 
- * @return  true if successful, otherwise false.
- */
-Bool performCalO1BatteryMonitor (void)
-{
-    return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL);
-}
-
-/*
- * Calibrate the O2 battery monitor.
- * This shold ONLY be called when the there is no
- * current being drawn from the battery.
- * 
- * @return  true if successful, otherwise false.
- */
-Bool performCalO2BatteryMonitor (void)
-{
-    return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL);
-}
-
-/*
- * Calibrate the O3 battery monitor.
- * This shold ONLY be called when the there is no
- * current being drawn from the battery.
- * 
- * @return  true if successful, otherwise false.
- */
-Bool performCalO3BatteryMonitor (void)
-{
-    return performCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL);
 }
 
 /*
@@ -2011,13 +2133,27 @@ Bool performCalO3BatteryMonitor (void)
 Bool swapRioBattery (UInt32 systemTime, UInt16 remainingCapacity)
 {
     Bool success;
-    UInt32 zero = 0;
+    OneWireReadTimeCapacityCalDS2438 timeCapacity;
+    OneWireReadNVChargeDischargeDS2438 zero;
     
-    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity);
+    timeCapacity.elapsedTime = systemTime;
+    timeCapacity.remainingCapacity = remainingCapacity;
+    zero.charge = 0;
+    zero.discharge = 0;
+
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &(timeCapacity.elapsedTime), &(timeCapacity.remainingCapacity));
+#else
+    success = oneWireServerSendReceive (WRITE_TIME_CAPACITY_DS2438, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &timeCapacity, sizeof (timeCapacity), PNULL);
+#endif
     
     if (success)
     {
-        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &zero, &zero);;
+#ifdef DONT_USE_ONE_WIRE_SERVER
+        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &(zero.charge), &(zero.discharge));
+#else
+        success = oneWireServerSendReceive (WRITE_NV_CHARGE_DISCHARGE_DS2438, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &zero, sizeof (zero), PNULL);
+#endif
     }
     
     return success;
@@ -2036,13 +2172,27 @@ Bool swapRioBattery (UInt32 systemTime, UInt16 remainingCapacity)
 Bool swapO1Battery (UInt32 systemTime, UInt16 remainingCapacity)
 {
     Bool success;
-    UInt32 zero = 0;
+    OneWireReadTimeCapacityCalDS2438 timeCapacity;
+    OneWireReadNVChargeDischargeDS2438 zero;
     
-    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity);
+    timeCapacity.elapsedTime = systemTime;
+    timeCapacity.remainingCapacity = remainingCapacity;
+    zero.charge = 0;
+    zero.discharge = 0;
+
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &(timeCapacity.elapsedTime), &(timeCapacity.remainingCapacity));
+#else
+    success = oneWireServerSendReceive (WRITE_TIME_CAPACITY_DS2438, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &timeCapacity, sizeof (timeCapacity), PNULL);
+#endif
     
     if (success)
     {
-        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &zero, &zero);;
+#ifdef DONT_USE_ONE_WIRE_SERVER
+        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &(zero.charge), &(zero.discharge));
+#else
+        success = oneWireServerSendReceive (WRITE_NV_CHARGE_DISCHARGE_DS2438, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &zero, sizeof (zero), PNULL);
+#endif
     }
     
     return success;
@@ -2061,15 +2211,29 @@ Bool swapO1Battery (UInt32 systemTime, UInt16 remainingCapacity)
 Bool swapO2Battery (UInt32 systemTime, UInt16 remainingCapacity)
 {
     Bool success;
-    UInt32 zero = 0;
-    
-    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity);
+    OneWireReadTimeCapacityCalDS2438 timeCapacity;
+    OneWireReadNVChargeDischargeDS2438 zero;
+
+    timeCapacity.elapsedTime = systemTime;
+    timeCapacity.remainingCapacity = remainingCapacity;
+    zero.charge = 0;
+    zero.discharge = 0;
+
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &(timeCapacity.elapsedTime), &(timeCapacity.remainingCapacity));
+#else
+    success = oneWireServerSendReceive (WRITE_TIME_CAPACITY_DS2438, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &timeCapacity, sizeof (timeCapacity), PNULL);
+#endif
     
     if (success)
     {
-        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &zero, &zero);;
+#ifdef DONT_USE_ONE_WIRE_SERVER
+        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &(zero.charge), &(zero.discharge));
+#else
+        success = oneWireServerSendReceive (WRITE_NV_CHARGE_DISCHARGE_DS2438, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &zero, sizeof (zero), PNULL);
+#endif
     }
-    
+        
     return success;
 }
 
@@ -2086,13 +2250,27 @@ Bool swapO2Battery (UInt32 systemTime, UInt16 remainingCapacity)
 Bool swapO3Battery (UInt32 systemTime, UInt16 remainingCapacity)
 {
     Bool success;
-    UInt32 zero = 0;
-    
-    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity);
+    OneWireReadTimeCapacityCalDS2438 timeCapacity;
+    OneWireReadNVChargeDischargeDS2438 zero;
+
+    timeCapacity.elapsedTime = systemTime;
+    timeCapacity.remainingCapacity = remainingCapacity;
+    zero.charge = 0;
+    zero.discharge = 0;
+
+#ifdef DONT_USE_ONE_WIRE_SERVER
+    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &(timeCapacity.elapsedTime), &(timeCapacity.remainingCapacity));
+#else
+    success = oneWireServerSendReceive (WRITE_TIME_CAPACITY_DS2438, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &timeCapacity, sizeof (timeCapacity), PNULL);
+#endif
     
     if (success)
     {
-        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &zero, &zero);;
+#ifdef DONT_USE_ONE_WIRE_SERVER
+        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &(zero.charge), &(zero.discharge));
+#else
+        success = oneWireServerSendReceive (WRITE_NV_CHARGE_DISCHARGE_DS2438, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &zero, sizeof (zero), PNULL);
+#endif
     }
     
     return success;
@@ -2135,7 +2313,11 @@ Bool setAnalogueMuxInput (UInt8 input)
         /* First, disable the device while we change things */
         extraPinsState |= DARLINGTON_MUX_ENABLE_BAR;
         pinsStateToWrite = extraPinsState;
+#ifdef DONT_USE_ONE_WIRE_SERVER
         success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_DARLINGTON_PIO].address.value[0], &pinsStateToWrite);
+#else
+        success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, &gDeviceStaticConfigList[OW_NAME_DARLINGTON_PIO].address.value[0], &pinsStateToWrite, sizeof (pinsStateToWrite), PNULL);
+#endif
 
         if (success)
         {
@@ -2144,7 +2326,11 @@ Bool setAnalogueMuxInput (UInt8 input)
 #else
             pinsState |= GENERAL_PURPOSE_IO_MUX_ENABLE_BAR;
             pinsStateToWrite = pinsState;
+#ifdef DONT_USE_ONE_WIRE_SERVER
             success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite);
+#else
+            success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite, sizeof (pinsStateToWrite), PNULL);
+#endif
             if (success)
             {
                 /* Setup the shadow to match the result */
@@ -2154,7 +2340,11 @@ Bool setAnalogueMuxInput (UInt8 input)
             pinsStateToWrite = pinsState;
             pinsStateToWrite &= ~(GENERAL_PURPOSE_IO_MUX_A0 | GENERAL_PURPOSE_IO_MUX_A1 | GENERAL_PURPOSE_IO_MUX_A2);
             pinsStateToWrite |= (input << GENERAL_PURPOSE_IO_MUX_SHIFT) & (GENERAL_PURPOSE_IO_MUX_A0 | GENERAL_PURPOSE_IO_MUX_A1 | GENERAL_PURPOSE_IO_MUX_A2); 
+#ifdef DONT_USE_ONE_WIRE_SERVER
             success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite);
+#else
+            success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite, sizeof (pinsStateToWrite), PNULL);
+#endif
             
             if (success)
             {
@@ -2165,7 +2355,11 @@ Bool setAnalogueMuxInput (UInt8 input)
 #ifdef ROBOONE_1_0
                 extraPinsState &= ~DARLINGTON_MUX_ENABLE_BAR;
                 pinsStateToWrite = extraPinsState;
+#ifdef DONT_USE_ONE_WIRE_SERVER
                 success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_DARLINGTON_PIO].address.value[0], &pinsStateToWrite);
+#else
+                success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite, sizeof (pinsStateToWrite), PNULL);
+#endif
                 /* If it worked, setup the shadow to match the result */
                 if (success)
                 {
@@ -2174,7 +2368,11 @@ Bool setAnalogueMuxInput (UInt8 input)
 #else
                 pinsState &= ~GENERAL_PURPOSE_IO_MUX_ENABLE_BAR;
                 pinsStateToWrite = pinsState;
+#ifdef DONT_USE_ONE_WIRE_SERVER
                 success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite);
+#else
+                success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite, sizeof (pinsStateToWrite), PNULL);
+#endif
                 if (success)
                 {
                     /* Setup the shadow to match the result */
@@ -2197,5 +2395,9 @@ Bool setAnalogueMuxInput (UInt8 input)
  */
 Bool readAnalogueMux (UInt16 *pVoltage)
 {
+#ifdef DONT_USE_ONE_WIRE_SERVER
     return readVadDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], pVoltage);
+#else
+    return oneWireServerSendReceive (READ_VAD_DS2438, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL, 0, pVoltage);
+#endif
 }
