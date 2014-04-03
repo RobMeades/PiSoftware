@@ -1,5 +1,5 @@
 /*
- * Public stuff to do with the menus.
+ * Stuff to do with the menus.
  */ 
 
 /*

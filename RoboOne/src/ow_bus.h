@@ -1,5 +1,5 @@
 /*
- * Public stuff to do with the One Wire bus.
+ * Stuff to do with the One Wire bus.
  */ 
 
 /*
