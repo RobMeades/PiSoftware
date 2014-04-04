@@ -6,7 +6,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <rob_system.h>
-#include <state_machine.h>
+#include <state_machine_interface.h>
+#include <state_machine_public.h>
 #include <init_state.h>
 
 /*
@@ -16,10 +17,6 @@
 /*
  * TYPES
  */
-typedef struct RoboOneContextTag
-{
-  RoboOneState state;
-} RoboOneContext;
 
 /*
  * PUBLIC FUNCTIONS

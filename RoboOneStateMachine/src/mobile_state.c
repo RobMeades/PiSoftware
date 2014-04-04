@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <rob_system.h>
-#include <state_machine.h>
+#include <state_machine_interface.h>
 #include <mobile_state.h>
 
 /*

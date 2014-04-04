@@ -264,35 +264,25 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSerialNumb
             
             pReceivedMsg->msgLength = 0;
     
-#if 0
-            printf ("\nClient: sending message of type %d, length %d, hex dump:\n", pSendMsg->msgType, pSendMsg->msgLength);
+            printDebug ("\nClient: sending message of type %d, length %d, hex dump:\n", pSendMsg->msgType, pSendMsg->msgLength);
             printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
-#endif            
             returnCode = runMessagingClient (gOneWireServerPort, pSendMsg, pReceivedMsg);
                     
-#if 0
-            printProgress ("Client: message system returnCode: %d\n", returnCode);
-#endif            
+            printDebug ("Client: message system returnCode: %d\n", returnCode);
             /* This code makes assumptions about packing (i.e. that it's '1' and that the
              * Bool 'success' is at the start of the body) so be careful */
             if (returnCode == CLIENT_SUCCESS && (pReceivedMsg->msgLength > sizeof (pReceivedMsg->msgType)))
             { 
                 /* Check the Bool 'success' at the start of the message body */
                 receivedMsgBodyLength = pReceivedMsg->msgLength - sizeof (pReceivedMsg->msgType);
-#if 0
-                printProgress ("Client: receivedMsgBodyLength: %d\n", receivedMsgBodyLength);
-#endif                
+                printDebug ("Client: receivedMsgBodyLength: %d\n", receivedMsgBodyLength);
                 if (receivedMsgBodyLength >= sizeof (Bool))
                 {
-#if 0                    
-                    printProgress ("Client: success field: %d\n", (Bool) pReceivedMsg->msgBody[0]);
-#endif                    
+                    printDebug ("Client: success field: %d\n", (Bool) pReceivedMsg->msgBody[0]);
                     if ((Bool) pReceivedMsg->msgBody[0])
                     {
-#if 0                        
-                        printProgress ("Client: received message type %d, hex dump:\n", pReceivedMsg->msgType);
+                        printDebug ("Client: received message type %d, hex dump:\n", pReceivedMsg->msgType);
                         printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);
-#endif                        
 
                         if (pReceivedMsgSpecifics != PNULL)
                         {
@@ -345,13 +335,13 @@ static void printAddress (const UInt8 *pAddress, Bool newline)
 
     for (i = 0; i < NUM_BYTES_IN_SERIAL_NUM; i++)
     {
-        printProgress ("%.2x", *pAddress);
+        printDebug ("%.2x", *pAddress);
         pAddress++;                
     }
     
     if (newline)
     {
-        printProgress ("\n");
+        printDebug ("\n");
     }
 }
 

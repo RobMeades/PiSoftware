@@ -20,6 +20,11 @@ typedef unsigned long UInt32;
 #define ASSERT_PARAM(cONDITION,pARAM1) ((cONDITION) ? true : (assertFunc (__FUNCTION__, __LINE__, PNULL, (pARAM1))))
 
 bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 param1);
+void setProgressPrintsOn (void);
+void setProgressPrintsOff (void);
+void setDebugPrintsOn (void);
+void setDebugPrintsOff (void);
 void printProgress (const Char * pFormat, ...);
+void printDebug (const Char * pFormat, ...);
 void printHexDump (const UInt8 * pMemory, UInt16 size);
 UInt32 getSystemTicks (void);

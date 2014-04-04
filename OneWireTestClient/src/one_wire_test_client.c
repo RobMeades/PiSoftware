@@ -39,13 +39,16 @@ int main (int argc, char **argv)
     Msg *pSendMsg;
     Msg *pReceivedMsg;
     
+    setDebugPrintsOn();
+    setProgressPrintsOn();
+
     pSendMsg = malloc (sizeof (Msg));
     
     if (pSendMsg != PNULL)
     {
         /* Setup a test message (which will just cause the server to exit) */
         pSendMsg->msgLength = 1;
-        pSendMsg->msgType = ONE_WIRE_SERVER_EXIT;
+        pSendMsg->msgType = 0;
         
         pReceivedMsg = malloc (sizeof (Msg));
         if (pReceivedMsg != PNULL)
@@ -54,7 +57,7 @@ int main (int argc, char **argv)
             
             if ((returnCode == CLIENT_SUCCESS) && (pReceivedMsg->msgLength > 0))
             {
-                printProgress ("Client: received message of length %d and type %d.\n", pReceivedMsg->msgLength, pReceivedMsg->msgType);    
+                printDebug ("Client: received message of length %d and type %d.\n", pReceivedMsg->msgLength, pReceivedMsg->msgType);    
             }
 
             free (pReceivedMsg);
@@ -62,7 +65,7 @@ int main (int argc, char **argv)
         else
         {
             returnCode = CLIENT_ERR_GENERAL_FAILURE;
-            printProgress ("Failed to get memory for receiving.\n");               
+            printDebug ("Failed to get memory for receiving.\n");               
         }        
         
         free (pSendMsg);
@@ -70,7 +73,7 @@ int main (int argc, char **argv)
     else
     {
         returnCode = CLIENT_ERR_GENERAL_FAILURE;
-        printProgress ("Failed to get memory for sending.\n");   
+        printDebug ("Failed to get memory for sending.\n");   
     }
 
     return returnCode;

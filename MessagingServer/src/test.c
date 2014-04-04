@@ -33,6 +33,9 @@ int main (int argc, char **argv)
     ServerReturnCode returnCode = SERVER_ERR_GENERAL_FAILURE;
     UInt16 serverPort;
 
+    setDebugPrintsOn();
+    setProgressPrintsOn();
+
     if (argc == 2)
     {
         serverPort = atoi (argv[1]);

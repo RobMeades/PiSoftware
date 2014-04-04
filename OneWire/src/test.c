@@ -33,6 +33,9 @@ int main (int argc, char **argv)
     UInt16 voltage;
     SInt16 offsetCalibration;
 
+    setDebugPrintsOn();
+    setProgressPrintsOn();
+
     if (argc == 2)
     {
         portNumber = oneWireStartBus (argv[1]);
@@ -44,7 +47,7 @@ int main (int argc, char **argv)
 
     if (portNumber < 0)
     {
-        printf ("Failed to acquire port.\n");
+        printDebug ("Failed to acquire port.\n");
         success = false;
     }
     else
@@ -59,18 +62,18 @@ int main (int argc, char **argv)
         }
         else
         {
-            printf ("Found %d battery monitoring devices.\n", numBatteryDevices);
+            printProgress ("Found %d battery monitoring devices.\n", numBatteryDevices);
             for (i = 0; (i < numBatteryDevices) && success; i++)
             {
                 UInt32 longOne1 = 0xFFFFFF01;
                 UInt32 longOne2 = 0xFFFFFF02;
                 UInt16 capacity = 1000;                
                 
-                printf ("Writing time %lu and capacity %d.\n", longOne1, capacity);
+                printProgress ("Writing time %lu and capacity %d.\n", longOne1, capacity);
                 success = writeTimeCapacityDS2438 (portNumber, &batteryDeviceArray[i][0], &longOne1, &capacity);
                 if (success)
                 {
-                    printf ("Writing something to DISC/EOC page.\n");
+                    printProgress ("Writing something to DISC/EOC page.\n");
                     pageBuffer[0] = 0xFF;
                     pageBuffer[1] = 0xFF;
                     pageBuffer[2] = 0xFF;
@@ -83,12 +86,12 @@ int main (int argc, char **argv)
                     success = writeNVPageDS2438 (portNumber, &batteryDeviceArray[i][0], 2, &pageBuffer[0], DS2438_NUM_BYTES_IN_PAGE);
                     if (success)
                     {
-                        printf ("Writing something to CCA and DCA registers.\n");
+                        printProgress ("Writing something to CCA and DCA registers.\n");
                         success = writeNVChargeDischargeDS2438 (portNumber, &batteryDeviceArray[i][0], &longOne1, &longOne2);
                         
                         if (success)
                         {
-                            printf ("Writing something to user data pages.\n");
+                            printProgress ("Writing something to user data pages.\n");
                             for (x = 0; (x < DS2438_NUM_USER_DATA_PAGES) && success; x++)
                             {
                                 pageBuffer[0] = x + 1;
@@ -105,9 +108,9 @@ int main (int argc, char **argv)
                             if (success)
                             {
 #if 0
-                                printf ("Calibrating: MAKE SURE NO CURRENT GOING THROUGH RSENS!\n");
+                                printProgress ("Calibrating: MAKE SURE NO CURRENT GOING THROUGH RSENS!\n");
                                 success = performCalDS2438 (portNumber, &batteryDeviceArray[i][0], &offsetCalibration);
-                                printf ("New offset %d.\n", offsetCalibration);
+                                printProgress ("New offset %d.\n", offsetCalibration);
 #endif                                
                             }
                         }
@@ -140,36 +143,36 @@ int main (int argc, char **argv)
         }
         else
         {
-            printf ("Found %d IO devices.\n", numIODevices);
+            printProgress ("Found %d IO devices.\n", numIODevices);
             for (i = 0; (i < numIODevices) && success; i++)
             {              
                 UInt8 controlByte = 0;
                 
-                printf ("Disable test mode.\n");
+                printProgress ("Disable test mode.\n");
                 success = disableTestModeDS2408 (portNumber, &ioDeviceArray[i][0]);
                 if (success)
                 {
-                    printf ("Reset activity latches.\n");
+                    printProgress ("Reset activity latches.\n");
                     success = resetActivityLatchesDS2408 (portNumber, &ioDeviceArray[i][0]);
                     if (success)
                     {
                         controlByte &= ~(DS2408_DEVICE_HAS_POWER_ON_RESET | DS2408_RSTZ_IS_STROBE);
                         controlByte |= (DS2408_SEARCH_IS_AND | DS2408_SEARCH_IS_ACTIVITY_LATCHED);
-                        printf ("Setup the control registers.\n");
+                        printProgress ("Setup the control registers.\n");
                         success = writeControlRegisterDS2408 (portNumber, &ioDeviceArray[i][0], controlByte);
                         if (success)
                         {
-                            printf ("Setup the conditional search channel selection mask registers.\n");
+                            printProgress ("Setup the conditional search channel selection mask registers.\n");
                             success = writeCSChannelSelectionMaskRegisterDS2408 (portNumber, &ioDeviceArray[i][0], 0x18);                        
                             if (success)
                             {
-                                printf ("Setup the conditional search channel priority selection registers.\n");
+                                printProgress ("Setup the conditional search channel priority selection registers.\n");
                                 success = writeCSChannelPolaritySelectionRegisterDS2408 (portNumber, &ioDeviceArray[i][0], 0x28);                        
                                 if (success)
                                 {
                                     UInt8 outputByte = 0x80;
                                     
-                                    printf ("Set P7 of each device to be high.\n");
+                                    printProgress ("Set P7 of each device to be high.\n");
                                     success = channelAccessWriteDS2408 (portNumber, &ioDeviceArray[i][0], &outputByte);                        
                                 }
                             }
@@ -183,80 +186,80 @@ int main (int argc, char **argv)
         {
             do
             {
-                printf("---- IO Devices ---- \n");
+                printProgress("---- IO Devices ---- \n");
                 for (i = 0; (i < numIODevices) && success; i++)
                 {
-                    printf ("Device %d, address %.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n", i, ioDeviceArray[i][0], ioDeviceArray[i][1], ioDeviceArray[i][2], ioDeviceArray[i][3], ioDeviceArray[i][4], ioDeviceArray[i][5], ioDeviceArray[i][6], ioDeviceArray[i][7]);
+                    printProgress ("Device %d, address %.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n", i, ioDeviceArray[i][0], ioDeviceArray[i][1], ioDeviceArray[i][2], ioDeviceArray[i][3], ioDeviceArray[i][4], ioDeviceArray[i][5], ioDeviceArray[i][6], ioDeviceArray[i][7]);
                     success = readControlRegisterDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0]);
                     if (success)
                     {
-                        printf (" status reg: 0x%.2x", pageBuffer[0]);
+                        printProgress (" status reg: 0x%.2x", pageBuffer[0]);
                         success = readPIOLogicStateDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0]);
                         if (success)
                         {
-                            printf (", IO reg: 0x%.2x", pageBuffer[0]);
+                            printProgress (", IO reg: 0x%.2x", pageBuffer[0]);
                             success = readPIOOutputLatchStateRegisterDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0]);
                             if (success)
                             {
                                 UInt8 bytesRead;
                                 
-                                printf (", IO O/P latch reg: 0x%.2x", pageBuffer[0]);
+                                printProgress (", IO O/P latch reg: 0x%.2x", pageBuffer[0]);
                                 bytesRead = channelAccessReadDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0], DS2408_MAX_BYTES_IN_CHANNEL_ACCESS);                                    
                                 if (bytesRead > 0)
                                 {
-                                    printf (", IO %d times: ", bytesRead);
+                                    printProgress (", IO %d times: ", bytesRead);
                                     for (x = 0; x < bytesRead; x++)
                                     {
-                                        printf (" 0x%.2x", pageBuffer[x]);                                            
+                                        printProgress (" 0x%.2x", pageBuffer[x]);                                            
                                     }
                                     success = readCSChannelSelectionMaskRegisterDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0]);
                                     if (success)
                                     {
-                                        printf (", CS select reg: 0x%.2x", pageBuffer[0]);
+                                        printProgress (", CS select reg: 0x%.2x", pageBuffer[0]);
                                         success = readCSChannelPolaritySelectionRegisterDS2408 (portNumber, &ioDeviceArray[i][0], &pageBuffer[0]);
                                         if (success)
                                         {
-                                            printf (", CS polarity reg: 0x%.2x.\n", pageBuffer[0]);
+                                            printProgress (", CS polarity reg: 0x%.2x.\n", pageBuffer[0]);
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    printf("\n");
+                    printProgress("\n");
                 } /* IO Devices for loop */
                 
-                printf("---- Battery Devices ---- \n");
+                printProgress("---- Battery Devices ---- \n");
                 for (i = 0; (i < numBatteryDevices) && success; i++)
                 {
-                    printf ("Device %d, address %.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n", i, batteryDeviceArray[i][0], batteryDeviceArray[i][1], batteryDeviceArray[i][2], batteryDeviceArray[i][3], batteryDeviceArray[i][4], batteryDeviceArray[i][5], batteryDeviceArray[i][6], batteryDeviceArray[i][7]);
+                    printProgress ("Device %d, address %.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n", i, batteryDeviceArray[i][0], batteryDeviceArray[i][1], batteryDeviceArray[i][2], batteryDeviceArray[i][3], batteryDeviceArray[i][4], batteryDeviceArray[i][5], batteryDeviceArray[i][6], batteryDeviceArray[i][7]);
                     success = readVddDS2438 (portNumber, &batteryDeviceArray[i][0], &voltage);
                     if (success)
                     {
-                        printf (" Vdd was:  %d mV\n", voltage);
+                        printProgress (" Vdd was:  %d mV\n", voltage);
                         success = readVadDS2438 (portNumber, &batteryDeviceArray[i][0], &voltage);
                         if (success)
                         {
-                            printf (" Vad was:  %d mV\n", voltage);
+                            printProgress (" Vad was:  %d mV\n", voltage);
                             success = readTemperatureDS2438 (portNumber, &batteryDeviceArray[i][0], &temperature);
                             if (success)
                             {
-                                printf (" Temperature was:  %2.2f C\n", temperature);
+                                printProgress (" Temperature was:  %2.2f C\n", temperature);
                                 success = readCurrentDS2438 (portNumber, &batteryDeviceArray[i][0], &current);
                                 if (success)
                                 {
-                                    printf (" Current was:  %d ma (-ve means discharge)\n", current);
+                                    printProgress (" Current was:  %d ma (-ve means discharge)\n", current);
                                     success = readBatteryDS2438 (portNumber, &batteryDeviceArray[i][0], &voltage, &current);
                                     if (success)
                                     {
-                                        printf ("Battery was %2.2f V, %1.3f A, %2.3f W\n", (double) voltage/1000, (double) current/1000, ((double) (voltage *  current * -1)) / 1000000);
+                                        printProgress ("Battery was %2.2f V, %1.3f A, %2.3f W\n", (double) voltage/1000, (double) current/1000, ((double) (voltage *  current * -1)) / 1000000);
                                     }
                                 }
                             }
                             for (x = 0; (x < 8) && success; x++)
                             {
                                 success = readNVPageDS2438 (portNumber, &batteryDeviceArray[i][0], x, &pageBuffer[0]);
-                                printf ("Page %d contents: %2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x\n", x, pageBuffer[0], pageBuffer[1], pageBuffer[2], pageBuffer[3], pageBuffer[4], pageBuffer[5], pageBuffer[6], pageBuffer[7]);
+                                printProgress ("Page %d contents: %2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x\n", x, pageBuffer[0], pageBuffer[1], pageBuffer[2], pageBuffer[3], pageBuffer[4], pageBuffer[5], pageBuffer[6], pageBuffer[7]);
                             }
                         }
                     }
@@ -274,39 +277,39 @@ int main (int argc, char **argv)
                         success = readTimeCapacityCalDS2438 (portNumber, &batteryDeviceArray[i][0], &elapsedTime, &remainingCapacity, &offsetCalibration);
                         if (success)
                         {
-                            printf ("Elapsed time: %lu secs, remaining capacity: %u mAHr, cal. offset: %d\n", elapsedTime, remainingCapacity, offsetCalibration);
+                            printProgress ("Elapsed time: %lu secs, remaining capacity: %u mAHr, cal. offset: %d\n", elapsedTime, remainingCapacity, offsetCalibration);
                             success = readTimePiOffChargingStoppedDS2438 (portNumber, &batteryDeviceArray[i][0], &piOff, &chargingStopped);
                             if (success)
                             {
-                                printf ("Pi last switched off: %lu secs, charging last stopped: %lu secs\n", piOff, chargingStopped);                                
+                                printProgress ("Pi last switched off: %lu secs, charging last stopped: %lu secs\n", piOff, chargingStopped);                                
                                 success = readNVChargeDischargeDS2438 (portNumber, &batteryDeviceArray[i][0], &accumulatedCharge, &accumulatedDischarge);
                                 if (success)
                                 {
-                                    printf ("Accumulated charge: %lu mAHr, accumulated discharge %lu mAHr\n", accumulatedCharge, accumulatedDischarge);
+                                    printProgress ("Accumulated charge: %lu mAHr, accumulated discharge %lu mAHr\n", accumulatedCharge, accumulatedDischarge);
                                     for (x = 0; (x < DS2438_NUM_USER_DATA_PAGES) && success; x++)
                                     {
                                         success = readNVUserDataDS2438 (portNumber, &batteryDeviceArray[i][0], x, &pageBuffer[0]);
                                         if (success)
                                         {
-                                            printf ("UserData %d contents: %2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x\n", x, pageBuffer[0], pageBuffer[1], pageBuffer[2], pageBuffer[3], pageBuffer[4], pageBuffer[5], pageBuffer[6], pageBuffer[7]);
+                                            printProgress ("UserData %d contents: %2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x\n", x, pageBuffer[0], pageBuffer[1], pageBuffer[2], pageBuffer[3], pageBuffer[4], pageBuffer[5], pageBuffer[6], pageBuffer[7]);
                                         }
                                     }
                                 }
                             }                            
                         }
                     }                    
-                    printf("\n");
+                    printProgress("\n");
                 } /* Battery devices for loop */
             } while (!key_abort() && success);
         }
         
         if (!success)
         {
-            printf ("Either something returned false or at least one IO device and at least one Battery device were not found.\n");
+            printDebug ("Either something returned false or at least one IO device and at least one Battery device were not found.\n");
         }
     
         oneWireStopBus (portNumber);
-        printf ("Port released.\n");    
+        printProgress ("Port released.\n");    
     }
 
     return success;

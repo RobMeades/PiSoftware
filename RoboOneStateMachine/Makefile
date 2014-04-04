@@ -17,7 +17,7 @@ ONEWIRESERVER_PRE = ../OneWireServer
 
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
-LIB_OBJ:= $(OBJ_DIR)/state_machine.o $(OBJ_DIR)/init_state.o $(OBJ_DIR)/mobile_state.o $(OBJ_DIR)/batteryidle_state.o $(OBJ_DIR)/docked_state.o $(OBJ_DIR)/docked_charging_state.o $(OBJ_DIR)/docked_mainsidle_state.o $(OBJ_DIR)/shutdown_state.o $(OBJ_DIR)/client.o
+LIB_OBJ:= $(OBJ_DIR)/state_machine.o $(OBJ_DIR)/init_state.o $(OBJ_DIR)/mobile_state.o $(OBJ_DIR)/batteryidle_state.o $(OBJ_DIR)/docked_state.o $(OBJ_DIR)/docked_charging_state.o $(OBJ_DIR)/docked_mainsidle_state.o $(OBJ_DIR)/shutdown_state.o $(OBJ_DIR)/state_machine_public.o
 TST_OBJ:= $(OBJ_DIR)/test.o
 CC =  $(GCC_PREFIX)gcc.exe
 AR =  $(GCC_PREFIX)ar.exe

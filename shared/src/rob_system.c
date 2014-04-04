@@ -10,6 +10,13 @@
 #include <rob_system.h>
 
 /*
+ * GLOBALS - prefixed with g
+ */
+
+static Bool gDebugPrintsAreOn = false;
+static Bool gProgressPrintsAreOn = true;
+
+/*
  * Assert function for debugging (should be called via the macros in rob_system.c).
  */
 Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 param1)
@@ -30,14 +37,62 @@ Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 pa
 }
 
 /*
- * Progress printing function (that can be stubbed out afterwards)
+ * Set progress prints on
+ */
+void setProgressPrintsOn (void)
+{
+    gProgressPrintsAreOn = true;
+}
+
+/*
+ * Set progress prints on or off
+ */
+void setProgressPrintsOff (void)
+{
+    gProgressPrintsAreOn = false;
+}
+
+/*
+ * Set debug prints on
+ */
+void setDebugPrintsOn (void)
+{
+    gDebugPrintsAreOn = true;
+}
+
+/*
+ * Set debug prints off
+ */
+void setDebugPrintsOff (void)
+{
+    gDebugPrintsAreOn = false;
+}
+/*
+ * Progress printing function (that can be stubbed out if necessary)
  */
 void printProgress (const Char * pFormat, ...)
 {
-    va_list args;
-    va_start (args, pFormat);
-    vprintf (pFormat, args);
-    va_end (args);
+    if (gProgressPrintsAreOn)
+    {
+        va_list args;
+        va_start (args, pFormat);
+        vprintf (pFormat, args);
+        va_end (args);
+    }
+}
+
+/*
+ * Print debug
+ */
+void printDebug (const Char * pFormat, ...)
+{
+    if (gDebugPrintsAreOn)
+    {
+        va_list args;
+        va_start (args, pFormat);
+        vprintf (pFormat, args);
+        va_end (args);
+    }
 }
 
 /*
@@ -47,10 +102,13 @@ void printHexDump (const UInt8 * pMemory, UInt16 size)
 {
     UInt8 i;
     
-    for (i = 0; i < size; i +=8)
+    if (gDebugPrintsAreOn)
     {
-        printf ("0x%.8lx: 0x%.2x 0x%.2x 0x%.2x 0x%.2x : 0x%.2x 0x%.2x 0x%.2x 0x%.2x\n", (unsigned long) pMemory, *pMemory, *(pMemory + 1), *(pMemory + 2), *(pMemory + 3), *(pMemory + 4), *(pMemory + 5), *(pMemory + 6), *(pMemory + 7));
-        pMemory +=8;
+        for (i = 0; i < size; i +=8)
+        {
+            printf ("0x%.8lx: 0x%.2x 0x%.2x 0x%.2x 0x%.2x : 0x%.2x 0x%.2x 0x%.2x 0x%.2x\n", (unsigned long) pMemory, *pMemory, *(pMemory + 1), *(pMemory + 2), *(pMemory + 3), *(pMemory + 4), *(pMemory + 5), *(pMemory + 6), *(pMemory + 7));
+            pMemory +=8;
+        }
     }
 }
 

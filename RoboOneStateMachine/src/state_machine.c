@@ -6,7 +6,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <rob_system.h>
-#include <state_machine.h>
+#include <state_machine_interface.h>
+#include <state_machine_public.h>
 #include <init_state.h>
 
 /*
@@ -23,47 +24,47 @@
 
 static void defaultEventInit (RoboOneState *pState)
 {
-    printProgress ("Unsupported Init event in state %s.\n", pState->pName);
+    printDebug ("Unsupported Init event in state %s.\n", pState->pName);
 }
 
 static void defaultEventInitFailure (RoboOneState *pState)
 {
-    printProgress ("Unsupported InitFailure event in state %s.\n", pState->pName);    
+    printDebug ("Unsupported InitFailure event in state %s.\n", pState->pName);    
 }
 
 static void defaultEventTimerExpiry (RoboOneState *pState)
 {
-    printProgress ("Unsupported TimerExpiry event in state %s.\n", pState->pName);        
+    printDebug ("Unsupported TimerExpiry event in state %s.\n", pState->pName);        
 }
 
 static void defaultEventTasksAvailable (RoboOneState *pState)
 {
-    printProgress ("Unsupported TasksAvailable event in state %s.\n", pState->pName);    
+    printDebug ("Unsupported TasksAvailable event in state %s.\n", pState->pName);    
 }
 
 static void defaultEventNoTasksAvailable (RoboOneState *pState)
 {
-    printProgress ("Unsupported NoTasksAvailable event in state %s.\n", pState->pName);        
+    printDebug ("Unsupported NoTasksAvailable event in state %s.\n", pState->pName);        
 }
 
 static void defaultEventMainsPowerAvailable (RoboOneState *pState)
 {    
-    printProgress ("Unsupported MainsPowerAvailable event in state %s.\n", pState->pName);    
+    printDebug ("Unsupported MainsPowerAvailable event in state %s.\n", pState->pName);    
 }
 
 static void defaultEventInsufficientPower (RoboOneState *pState)
 {
-    printProgress ("Unsupported InsufficientPower event in state %s.\n", pState->pName);    
+    printDebug ("Unsupported InsufficientPower event in state %s.\n", pState->pName);    
 }
 
 static void defaultEventFullyCharged (RoboOneState *pState)
 {
-    printProgress ("Unsupported FullyCharged event in state %s.\n", pState->pName);
+    printDebug ("Unsupported FullyCharged event in state %s.\n", pState->pName);
 }
 
 static void defaultEventShutdown (RoboOneState *pState)
 {
-    printProgress ("Unsupported Shutdown event in state %s.\n", pState->pName);
+    printDebug ("Unsupported Shutdown event in state %s.\n", pState->pName);
 }
 
 /*

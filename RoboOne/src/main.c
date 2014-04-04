@@ -104,6 +104,9 @@ int main (int argc, char **argv)
     Bool  success = true;
     pid_t serverPID;
     
+    setDebugPrintsOn();
+    setProgressPrintsOn();
+
     /* Setup the global for everyone to use */
     gOneWireServerPort = atoi (SERVER_PORT_STRING);
     
@@ -116,7 +119,7 @@ int main (int argc, char **argv)
         static char *argv[]={SERVER_EXE, SERVER_PORT_STRING, PNULL};
         
         execv (SERVER_EXE, argv);
-        printProgress ("Couldn't launch %s, err: %s\n", SERVER_EXE, strerror (errno));
+        printDebug ("Couldn't launch %s, err: %s\n", SERVER_EXE, strerror (errno));
         success = false;
     }
     else

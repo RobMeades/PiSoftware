@@ -52,14 +52,14 @@ static Bool checkReceivedMsgContents (Msg *pSendMsg, Msg *pReceivedMsg)
     if (pReceivedMsg->msgLength != pSendMsg->msgLength)
     {
         success = false;
-        printProgress ("\nSend message length (%d) and received message length (%d) are different.\n", pSendMsg->msgLength, pReceivedMsg->msgLength);            
+        printDebug ("\nSend message length (%d) and received message length (%d) are different.\n", pSendMsg->msgLength, pReceivedMsg->msgLength);            
     }
     else
     {
        if (pReceivedMsg->msgType != pSendMsg->msgType)
        {
            success = false;
-           printProgress ("\nSend message type (%d) and received message type (%d) are different.\n", pSendMsg->msgType, pReceivedMsg->msgType);            
+           printDebug ("\nSend message type (%d) and received message type (%d) are different.\n", pSendMsg->msgType, pReceivedMsg->msgType);            
        }
        else
        {
@@ -76,7 +76,7 @@ static Bool checkReceivedMsgContents (Msg *pSendMsg, Msg *pReceivedMsg)
                if (!success)
                {
                    i--;
-                   printProgress ("\nReceived message body differs from sent message body at byte %d, should be %d but is %d.\n", i, pSendMsg->msgBody[i], pReceivedMsg->msgBody[i]);                                       
+                   printDebug ("\nReceived message body differs from sent message body at byte %d, should be %d but is %d.\n", i, pSendMsg->msgBody[i], pReceivedMsg->msgBody[i]);                                       
                }
            }
        }
@@ -98,6 +98,9 @@ int main (int argc, char **argv)
     pid_t serverPID;
     SInt32 oneWireServerPort = -1;
     
+    setDebugPrintsOn();
+    setProgressPrintsOn();
+    
     printProgress ("This will test that the messaging client and server libraries talk.\n");
     printProgress ("Make sure that %s is present 'cos we'll be running it.\n", SERVER_EXE);
 
@@ -112,7 +115,7 @@ int main (int argc, char **argv)
         static char *argv[]={SERVER_EXE, SERVER_PORT_STRING, PNULL};
         
         execv (SERVER_EXE, argv);
-        printProgress ("Couldn't launch %s, err: %s\n", SERVER_EXE, strerror (errno));
+        printDebug ("Couldn't launch %s, err: %s\n", SERVER_EXE, strerror (errno));
     }
     else
     { /* Parent process */
@@ -139,7 +142,7 @@ int main (int argc, char **argv)
                  * will cause the test server to exit */
                 for (i = MAX_MSG_LENGTH; i >= 0; i--)
                 {
-                    printProgress ("+%d", i);
+                    printDebug ("+%d", i);
                     pSendMsg->msgLength = (MsgLength) i;            
                     pSendMsg->msgType = (MsgType) (i - 1);
                     
@@ -166,7 +169,7 @@ int main (int argc, char **argv)
                         {
                             if (i > 0)
                             {                            
-                                printProgress ("-%d", i);
+                                printDebug ("-%d", i);
                                 if (!checkReceivedMsgContents (pSendMsg, pReceivedMsg))
                                 {
                                     success = false;;
@@ -183,7 +186,7 @@ int main (int argc, char **argv)
                     else
                     {
                         success = false;;
-                        printProgress ("Failed to get memory to receive test message.\n");            
+                        printDebug ("Failed to get memory to receive test message.\n");            
                     }            
                 }
                 
@@ -192,23 +195,23 @@ int main (int argc, char **argv)
             else
             {
                 success = false;
-                printProgress ("Failed to get memory to send test message.\n");
+                printDebug ("Failed to get memory to send test message.\n");
             }
             
             /* Wait for server to exit */
             if (waitpid (serverPID, &serverStatus, 0) >= 0)
             {
-                printProgress ("\nServer process exited, status = 0x%x.\n", serverStatus);
+                printDebug ("\nServer process exited, status = 0x%x.\n", serverStatus);
             }
             else
             {
-                printProgress ("\nFailed to wait for server to exit, error %s.\n", strerror (errno));            
+                printDebug ("\nFailed to wait for server to exit, error %s.\n", strerror (errno));            
             }
         }
         else
         {
             success = false;
-            printProgress ("Server process failed to start.\n");            
+            printDebug ("Server process failed to start.\n");            
         }
     }
     
