@@ -14,18 +14,32 @@
 typedef struct RoboOneStateTag
 {
     Char *pName;
-    void (*pInit) (struct RoboOneStateTag *pState);
-    void (*pInitFailure) (struct RoboOneStateTag *pState);
-    void (*pTimerExpiry) (struct RoboOneStateTag *pState);
-    void (*pTasksAvailable) (struct RoboOneStateTag *pState);
-    void (*pNoTasksAvailable) (struct RoboOneStateTag *pState);
-    void (*pMainsPowerAvailable) (struct RoboOneStateTag *pState);
-    void (*pInsufficientPower) (struct RoboOneStateTag *pState);
-    void (*pFullyCharged) (struct RoboOneStateTag *pState);
-    void (*pShutdown) (struct RoboOneStateTag *pState);
+    void (*pEventInit) (struct RoboOneStateTag *pState);
+    void (*pEventInitFailure) (struct RoboOneStateTag *pState);
+    void (*pEventTimerExpiry) (struct RoboOneStateTag *pState);
+    void (*pEventTasksAvailable) (struct RoboOneStateTag *pState);
+    void (*pEventNoTasksAvailable) (struct RoboOneStateTag *pState);
+    void (*pEventMainsPowerAvailable) (struct RoboOneStateTag *pState);
+    void (*pEventInsufficientPower) (struct RoboOneStateTag *pState);
+    void (*pEventFullyCharged) (struct RoboOneStateTag *pState);
+    void (*pEventShutdown) (struct RoboOneStateTag *pState);
 } RoboOneState;
 
 /*
  * FUNCTION PROTOTYPES
  */
+
+RoboOneContext * createRoboOneStateMachine (void);
+void destroyRoboOneStateMachine (RoboOneContext *pInstance);
+
+void eventInitRoboOne (RoboOneContext *pInstance);
+void eventInitFailureRoboOne (RoboOneContext *pInstance);
+void eventTimerExpiryRoboOne (RoboOneContext *pInstance);
+void eventTasksAvailableRoboOne (RoboOneContext *pInstance);
+void eventNoTasksAvailableRoboOne (RoboOneContext *pInstance);
+void eventMainsPowerAvailableRoboOne (RoboOneContext *pInstance);
+void eventInsufficientPowerRoboOne (RoboOneContext *pInstance);
+void eventFullyChargedRoboOne (RoboOneContext *pInstance);
+void eventShutdownRoboOne (RoboOneContext *pInstance);
+
 void defaultImplementation (RoboOneState *pState);

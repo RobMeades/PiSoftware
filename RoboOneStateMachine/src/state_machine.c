@@ -21,47 +21,47 @@
  * STATIC FUNCTIONS: DEFAULT EVENT HANDLERS
  */
 
-static void defaultInit (RoboOneState *pState)
+static void defaultEventInit (RoboOneState *pState)
 {
     printProgress ("Unsupported Init event in state %s.\n", pState->pName);
 }
 
-static void defaultInitFailure (RoboOneState *pState)
+static void defaultEventInitFailure (RoboOneState *pState)
 {
     printProgress ("Unsupported InitFailure event in state %s.\n", pState->pName);    
 }
 
-static void defaultTimerExpiry (RoboOneState *pState)
+static void defaultEventTimerExpiry (RoboOneState *pState)
 {
     printProgress ("Unsupported TimerExpiry event in state %s.\n", pState->pName);        
 }
 
-static void defaultTasksAvailable (RoboOneState *pState)
+static void defaultEventTasksAvailable (RoboOneState *pState)
 {
     printProgress ("Unsupported TasksAvailable event in state %s.\n", pState->pName);    
 }
 
-static void defaultNoTasksAvailable (RoboOneState *pState)
+static void defaultEventNoTasksAvailable (RoboOneState *pState)
 {
     printProgress ("Unsupported NoTasksAvailable event in state %s.\n", pState->pName);        
 }
 
-static void defaultMainsPowerAvailable (RoboOneState *pState)
+static void defaultEventMainsPowerAvailable (RoboOneState *pState)
 {    
     printProgress ("Unsupported MainsPowerAvailable event in state %s.\n", pState->pName);    
 }
 
-static void defaultInsufficientPower (RoboOneState *pState)
+static void defaultEventInsufficientPower (RoboOneState *pState)
 {
     printProgress ("Unsupported InsufficientPower event in state %s.\n", pState->pName);    
 }
 
-static void defaultFullyCharged (RoboOneState *pState)
+static void defaultEventFullyCharged (RoboOneState *pState)
 {
     printProgress ("Unsupported FullyCharged event in state %s.\n", pState->pName);
 }
 
-static void defaultShutdown (RoboOneState *pState)
+static void defaultEventShutdown (RoboOneState *pState)
 {
     printProgress ("Unsupported Shutdown event in state %s.\n", pState->pName);
 }
@@ -72,13 +72,13 @@ static void defaultShutdown (RoboOneState *pState)
 
 void defaultImplementation (RoboOneState *pState)
 {
-    pState->pInit = defaultInit;
-    pState->pInitFailure = defaultInitFailure;
-    pState->pTimerExpiry = defaultTimerExpiry;
-    pState->pTasksAvailable = defaultTasksAvailable;
-    pState->pNoTasksAvailable = defaultNoTasksAvailable;
-    pState->pMainsPowerAvailable = defaultMainsPowerAvailable;
-    pState->pInsufficientPower = defaultInsufficientPower;
-    pState->pFullyCharged = defaultFullyCharged;
-    pState->pShutdown = defaultShutdown;
+    pState->pEventInit = defaultEventInit;
+    pState->pEventInitFailure = defaultEventInitFailure;
+    pState->pEventTimerExpiry = defaultEventTimerExpiry;
+    pState->pEventTasksAvailable = defaultEventTasksAvailable;
+    pState->pEventNoTasksAvailable = defaultEventNoTasksAvailable;
+    pState->pEventMainsPowerAvailable = defaultEventMainsPowerAvailable;
+    pState->pEventInsufficientPower = defaultEventInsufficientPower;
+    pState->pEventFullyCharged = defaultEventFullyCharged;
+    pState->pEventShutdown = defaultEventShutdown;
 }

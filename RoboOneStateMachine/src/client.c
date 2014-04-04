@@ -22,10 +22,6 @@ typedef struct RoboOneContextTag
 } RoboOneContext;
 
 /*
- * STATIC FUNCTIONS
- */
-
-/*
  * PUBLIC FUNCTIONS
  */
 
@@ -48,47 +44,47 @@ void destroyRoboOneStateMachine (RoboOneContext *pInstance)
     free (pInstance);
 }
 
-void initRoboOne (RoboOneContext *pInstance)
+void eventInitRoboOne (RoboOneContext *pInstance)
 {
-    pInstance->state.pInit (&(pInstance->state));
+    pInstance->state.pEventInit (&(pInstance->state));
 }
 
-void initFailureRoboOne (RoboOneContext *pInstance)
+void eventInitFailureRoboOne (RoboOneContext *pInstance)
 {
-    pInstance->state.pInitFailure (&(pInstance->state));
+    pInstance->state.pEventInitFailure (&(pInstance->state));
 }
 
-void timerExpiryRoboOne (RoboOneContext *pInstance)
+void eventTimerExpiryRoboOne (RoboOneContext *pInstance)
 {
-    pInstance->state.pTimerExpiry (&(pInstance->state));
+    pInstance->state.pEventTimerExpiry (&(pInstance->state));
 }
 
-void tasksAvailableRoboOne (RoboOneContext *pInstance)
+void eventTasksAvailableRoboOne (RoboOneContext *pInstance)
 {
-    pInstance->state.pTasksAvailable (&(pInstance->state));
+    pInstance->state.pEventTasksAvailable (&(pInstance->state));
 }
 
-void noTasksAvailableRoboOne (RoboOneContext *pInstance)
+void eventNoTasksAvailableRoboOne (RoboOneContext *pInstance)
 {
-    pInstance->state.pNoTasksAvailable (&(pInstance->state));
+    pInstance->state.pEventNoTasksAvailable (&(pInstance->state));
 }
 
-void mainsPowerAvailableRoboOne (RoboOneContext *pInstance)
+void eventMainsPowerAvailableRoboOne (RoboOneContext *pInstance)
 {
-    pInstance->state.pMainsPowerAvailable (&(pInstance->state));
+    pInstance->state.pEventMainsPowerAvailable (&(pInstance->state));
 }
 
-void insufficientPowerRoboOne (RoboOneContext *pInstance)
+void eventInsufficientPowerRoboOne (RoboOneContext *pInstance)
 {
-    pInstance->state.pMainsPowerAvailable (&(pInstance->state));
+    pInstance->state.pEventMainsPowerAvailable (&(pInstance->state));
 }
 
-void fullyChargedRoboOne (RoboOneContext *pInstance)
+void eventFullyChargedRoboOne (RoboOneContext *pInstance)
 {
-    pInstance->state.pFullyCharged (&(pInstance->state));
+    pInstance->state.pEventFullyCharged (&(pInstance->state));
 }
 
-void shutdownRoboOne (RoboOneContext *pInstance)
+void eventShutdownRoboOne (RoboOneContext *pInstance)
 {
-    pInstance->state.pShutdown (&(pInstance->state));
+    pInstance->state.pEventShutdown (&(pInstance->state));
 }
