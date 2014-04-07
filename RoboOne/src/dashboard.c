@@ -114,7 +114,7 @@ typedef struct WindowInfoTag
 WindowInfo gWindowList[] = {{"Output", {WIN_OUTPUT_HEIGHT, WIN_OUTPUT_WIDTH, WIN_OUTPUT_START_ROW, WIN_OUTPUT_START_COL}, initOutputWindow, updateOutputWindow, PNULL, true}, /* MUST be first in the list for the global pointer just below */
                             {"Pi/Rio", {WIN_RIO_HEIGHT, WIN_RIO_WIDTH, WIN_RIO_START_ROW, WIN_RIO_START_COL}, initRioWindow, updateRioWindow, PNULL, true},
                             {"Hindbrain", {WIN_O_HEIGHT, WIN_O_WIDTH, WIN_O_START_ROW, WIN_O_START_COL}, initOWindow, updateOWindow, PNULL, true},
-                            {"Analogue", {WIN_MUX_HEIGHT, WIN_MUX_WIDTH, WIN_MUX_START_ROW, WIN_MUX_START_COL}, initMuxWindow, updateMuxWindow, PNULL, true},
+                            {"Analogue", {WIN_MUX_HEIGHT, WIN_MUX_WIDTH, WIN_MUX_START_ROW, WIN_MUX_START_COL}, initMuxWindow, updateMuxWindow, PNULL, false},
                             {"Chargers", {WIN_CHG_HEIGHT, WIN_CHG_WIDTH, WIN_CHG_START_ROW, WIN_CHG_START_COL}, initChgWindow, updateChgWindow, PNULL, true},
                             {"", {WIN_CMD_HEIGHT, WIN_CMD_WIDTH, WIN_CMD_START_ROW, WIN_CMD_START_COL}, initCmdWindow, updateCmdWindow, PNULL, true}}; /* Should be last in the list so that display updates leave the cursor here */
 /* Must be in the same order as the enum ChargeState */
@@ -348,6 +348,9 @@ static Bool updateChgWindow (WINDOW *pWin, UInt8 count)
     Bool success;
     ChargeState state[NUM_CHARGERS];
     Bool flashDetectPossible;
+#ifndef ROBOONE_1_0
+    Bool mains12VPresent;
+#endif    
     UInt8 row = 0;
     UInt8 col = 0;
     UInt8 i;
@@ -357,6 +360,9 @@ static Bool updateChgWindow (WINDOW *pWin, UInt8 count)
     wmove (pWin, row, col);
     wclrtoeol (pWin);        
     wprintw (pWin, "  Pi   O1   O2   O3");
+#ifndef ROBOONE_1_0
+    wprintw (pWin, "  12V");
+#endif    
     row++;
     success = readChargerState (&state[0], &flashDetectPossible);
     if (success && flashDetectPossible)
@@ -366,7 +372,25 @@ static Bool updateChgWindow (WINDOW *pWin, UInt8 count)
         for (i = 0; i < NUM_CHARGERS; i++)
         {
             wprintw (pWin, "%s", gChargeStrings[state[i]]);
-        }        
+        }
+#ifndef ROBOONE_1_0
+        success = readMains12VPin (&mains12VPresent);
+        if (success)
+        {
+            if (mains12VPresent)
+            {
+                wprintw (pWin, "  Y");
+            }
+            else
+            {
+                wprintw (pWin, "  N");                
+            }
+        }
+        else
+        {
+            wprintw (pWin, "  ?");            
+        }
+#endif
     }
     row++;
     

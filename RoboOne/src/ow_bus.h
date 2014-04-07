@@ -45,6 +45,7 @@ void stopOneWireBus (void);
 Bool setupDevices (void);
 UInt8 findAllDevices (void);
 
+Bool readMains12VPin (Bool *pMains12VIsPresent);
 Bool readChargerStatePins (UInt8 *pPinsState);
 Bool readChargerState (ChargeState *pState, Bool *pFlashDetectPossible);
 Bool toggleOPwr (void);
@@ -84,6 +85,7 @@ Bool setAllOChargersOff (void);
 Bool disableAllRelays (void);
 Bool enableAllRelays (void);
 Bool readRelaysEnabled (Bool *pIsOn);
+Bool readGpios (UInt8 *pPinsState);
 Bool readRioBattCurrent (SInt16 *pCurrent);
 Bool readO1BattCurrent (SInt16 *pCurrent);
 Bool readO2BattCurrent (SInt16 *pCurrent);

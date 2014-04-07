@@ -15,7 +15,8 @@
 #define KEY_COMMAND_CANCEL '\x1b'   /* the escape key */
 #define BACKSPACE_KEY '\x08'
 #define SCREEN_BACKSPACE "\x1b[1D" /* ANSI escape sequence for back one space: ESC [ 1 D */
-#define GPIO_HEADING_STRING " HPTg  HRTg  Pi12V PiBat H12V  HBat  PiChg H1Chg H2Chg H3Chg "
+#define RELAY_HEADING_STRING " HPTg  HRTg  Pi12V PiBat H12V  HBat"
+#define GPIO_HEADING_STRING  "   0     1     2     3     4     5     6     7"
 #define GPIO_ON_STRING "  ON  "
 #define GPIO_OFF_STRING " OFF  "
 #define GPIO_DONT_KNOW_STRING "  ??  "
@@ -34,7 +35,8 @@ static Bool displayCurrents (WINDOW *pWin);
 static Bool displayVoltages (WINDOW *pWin);
 static Bool displayRemainingCapacities (WINDOW *pWin);
 static Bool displayLifetimeChargesDischarges (WINDOW *pWin);
-static Bool displayGpioStates (WINDOW *pWin);
+static Bool displayRelayStates (WINDOW *pWin);
+static Bool displayGpios (WINDOW *pWin);
 static Bool swapRioBatteryCnf (WINDOW *pWin);
 static Bool swapO1BatteryCnf (WINDOW *pWin);
 static Bool swapO2BatteryCnf (WINDOW *pWin);
@@ -73,8 +75,8 @@ Command gCommandList[] = {{"?", {&commandHelp}, true, "display command help"},
 						  {"I", {&displayCurrents}, true, "display current readings"},
  						  {"V", {&displayVoltages}, true, "display Voltage readings"},
  						  {"A", {&displayRemainingCapacities}, true,  "display the accumulated remaining capacities"},
- 						  {"G", {&displayGpioStates}, true, "display the state of all the GPIO pins"},
                           {"L", {&displayLifetimeChargesDischarges}, true,  "display the lifetime charge/discharge accumulators"},
+                          {"G", {&displayGpios}, true, "display GPIO pin states"},
  						  {"D", {&runDashboard}, false, "display a dashboard of useful information"},
  						  {"Q", {&performCalAllBatteryMonitorsCnf}, true, "calibrate battery monitors"},
                           {"SP", {&swapRioBatteryCnf}, true, "swap the battery connected to the RIO/Pi"},
@@ -104,6 +106,7 @@ Command gCommandList[] = {{"?", {&commandHelp}, true, "display command help"},
  						  {"C2-", {&setO2BatteryChargerOff}, false, "switch hindbrain charger 2 off"},
  						  {"C3+", {&setO3BatteryChargerOn}, false, "switch hindbrain charger 3 on"},
  						  {"C3-", {&setO3BatteryChargerOff}, false, "switch hindbrain charger 3 off"},
+                          {"R?", {&displayRelayStates}, true, "display the state of all relays"},
                           {"RX+", {&disableAllRelays}, false, "enable power to all relays"},
                           {"RX-", {&enableAllRelays}, false, "disable power to all relays"}};
 
@@ -350,7 +353,7 @@ static Bool displayLifetimeChargesDischarges (WINDOW *pWin)
     return success;    
 }
 
-/* Little helper function for the GPIO states
+/* Little helper function for the GPIO/Relay states
  * display function below
  * 
  * pWin     a window to send output to, may
@@ -396,20 +399,21 @@ static void displayGpioStatesHelper (WINDOW *pWin, Bool isKnown, Bool isEnabled,
 }
 
 /*
- * Display the state of all the GPIO pins
+ * Display the state of all the relay
+ * control pins
  *
  * pWin     a window to send output to, may
  *          be PNULL.
  *
  * @return  true if successful, otherwise false.
  */
-static Bool displayGpioStates (WINDOW *pWin)
+static Bool displayRelayStates (WINDOW *pWin)
 {
     Bool success;
     Bool isOn;
     Bool relaysEnabled;
  
-    printHelper (pWin, "%s\n", GPIO_HEADING_STRING);
+    printHelper (pWin, "%s\n", RELAY_HEADING_STRING);
     
     success = readRelaysEnabled (&relaysEnabled);
     if (!relaysEnabled)
@@ -427,19 +431,46 @@ static Bool displayGpioStates (WINDOW *pWin)
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
     success = readOPwrBatt (&isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readRioBatteryCharger (&isOn);
-    displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readO1BatteryCharger (&isOn);
-    displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readO2BatteryCharger (&isOn);
-    displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readO3BatteryCharger (&isOn);
-    displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
     if (!relaysEnabled)
     {
         printHelper (pWin, "]");
     }
     
+    printHelper (pWin, "\n");
+    
+    return true;
+}
+
+/*
+ * Display the state of all GPIO pins
+ *
+ * pWin     a window to send output to, may
+ *          be PNULL.
+ *
+ * @return  always true.
+ */
+static Bool displayGpios (WINDOW *pWin)
+{
+    Bool success;
+    UInt8 pinsState;
+    UInt8 i;
+    Bool isOn;
+    UInt8 mask;
+ 
+    printHelper (pWin, "%s\n", GPIO_HEADING_STRING);
+    
+    success = readGpios (&pinsState);
+    for (i = 0; i < 8; i++)
+    {
+        mask = 1 << i;
+        isOn = false;
+        if (mask & pinsState)
+        {
+            isOn = true;
+        }
+        displayGpioStatesHelper (pWin, success, true, isOn);
+    }
+        
     printHelper (pWin, "\n");
     
     return true;

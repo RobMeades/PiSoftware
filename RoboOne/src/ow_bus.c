@@ -53,14 +53,21 @@
 /* Pins generally low to begin with apart from charger state which is allowed to float as an input,
  * and the Darlington pins which are disabled anyway by setting DARLINGTON_ENABLE_BAR low and
  * the 12V detect pin on the Relay PIO set as an input */
-#define CHARGER_STATE_IO_PIN_CONFIG   0xFF
-#ifdef RUN_FROM_12V
-#define DARLINGTON_IO_PIN_CONFIG      (UInt8) ((DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON) & ~(DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE | DARLINGTON_ENABLE_BAR))
+#ifdef ALL_PINS_UNDRIVEN_DS2408
+#    define CHARGER_STATE_IO_PIN_CONFIG   0xFF
+#    define DARLINGTON_IO_PIN_CONFIG      0xFF
+#    define RELAY_IO_PIN_CONFIG           0xFF
+#    define GENERAL_PURPOSE_IO_PIN_CONFIG 0xFF
 #else
-#define DARLINGTON_IO_PIN_CONFIG      (UInt8) ~(DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE | DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON | DARLINGTON_ENABLE_BAR)
+#    define CHARGER_STATE_IO_PIN_CONFIG   0xFF
+#    ifdef RUN_FROM_12V
+#        define DARLINGTON_IO_PIN_CONFIG      (UInt8) ((DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON) & ~(DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE | DARLINGTON_ENABLE_BAR))
+#    else
+#        define DARLINGTON_IO_PIN_CONFIG      (UInt8) ~(DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE | DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON | DARLINGTON_ENABLE_BAR)
+#    endif
+#    define RELAY_IO_PIN_CONFIG           RELAY_12V_DETECT
+#    define GENERAL_PURPOSE_IO_PIN_CONFIG 0x00
 #endif
-#define RELAY_IO_PIN_CONFIG           RELAY_12V_DETECT
-#define GENERAL_PURPOSE_IO_PIN_CONFIG 0x00
 
 /* Which pin positions should have their state tracked through
  * the locally stored pinsState rather than by just reading
@@ -157,7 +164,59 @@ extern SInt32 gOneWireServerPort;
  * GLOBALS (prefixed with g)
  */
 
-/* ORDER IS IMPORTANT - the OwDeviceName enum is used to index into this */
+/* Determine which device is which with the following procedure:
+ *
+ * 0. Connect the USB Serial port to the RoboOne PCB but none of the relays,
+ *    reset lines, monitoring circuits, mux, etc.  Connect a battery only to
+ *    the Pi/RIO.  Do not connect any 12 Volt supply.
+ * 1. Run the program "tstfind", that is in the OneWire libs, on the Pi, giving it
+ *    /dev/USBSerial as its target serial port.  It will list all the device
+ *    addresses, in reverse byte order (i.e. with the family ID on the left).
+ *    There should be eight devices, four with family ID 0x26 (SBATTERY_FAM) and
+ *    four with family ID 0x29 (PIO_FAM).  Copy the addresses, reversing byte
+ *    order, into the structure below, putting them in the right families but
+ *    otherwise randomly assigning the addresses to the entries.
+ * 2. Make sure that setDebugPrintsOn() is being called in main.c, make sure
+ *    that any things that write to DS2408 pins (e.g. 'Analogue' in gWindowList[])
+ *    are disabled and build this program with ALL_PINS_UNDRIVEN_DS2408 defined.
+ *    Download it to the Pi and run it.  Everything should run and stay running,
+ *    though your screen will likely be full of debug.  If things stop running
+ *    you've forgtten to disable something that accesses the DS2408s.
+ * 3. Disable setDebugPrintsOn() and build/load/run this program again.
+ *    Short out each of the 0.05 ohm measurement resistors and use the 'Q'
+ *    calibration function to run a calibration.
+ * 4. Look at the dashboard readings for volts.  The one that is saying anything
+ *    at all is the RIO battery monitor. Swap the address of that device in the
+ *    table below with that of the RIO entry (making sure you change the right
+ *    conditionally compiled section).  Rebuild and re-download this program to
+ *    the Pi and verify that RIO now shows volts.
+ * 5. Take another battery and plug it in as one of the Orangutan batteries,
+ *    iterate step 4 and repeat until you've sorted all the battery monitors,
+ *    making sure to re-build and re-download at each iteration.
+ * 6. Plug in the charger monitoring cables and then plug in a 12 Volt supply.
+ *    This should cause one or more of the charging LEDs to light up.  Check
+ *    on the dashboard display to see if the corresponding charger indication
+ *    comes up.  If it doesn't, swap the PIO addresses below until it does.
+ *    In this way you get the OW_NAME_CHARGER_STATE_PIO entry sorted.
+ *    IMPORTANT: disconnect 12 Volt power once more, it is dangerous to leave
+ *    if connected when we don't know where it's going.
+ * 7. Repeat 6 but this time look at the 12V present indicator on the dashboard.
+ *    If this matches the real world then the OW_NAME_RELAY_PIO entry is sorted,
+ *    if not swap PIO entries (aside from OW_NAME_CHARGER_STATE_PIO) until it
+ *    does.
+ * 8. Connect one of the General Purpose IO pins to ground.  Use the 'G' menu
+ *    option to read the GPIOs state and see if it matches the real world (the
+ *    one you have shorted to ground should be OFF, the rest ON).  If it doesn't
+ *    swap the addresses in the OW_NAME_GENERAL_PURPOSE_PIO and
+ *    OW_NAME_DARLINGTON_PIO entries below.  Retry with this setting.
+ * 9. Recompile without ALL_PINS_UNDRIVEN_DS2408 and all should be sorted.
+ * 
+ */
+
+/* ORDER IS IMPORTANT - the OwDeviceName enum is used to index into the
+ * gDeviceStaticConfigList array */
+
+#ifdef ROBOONE_1_0
 OwDevicesStaticConfig gDeviceStaticConfigList[] =
          {{OW_NAME_RIO_BATTERY_MONITOR, {{SBATTERY_FAM, 0xb5, 0x02, 0xb3, 0x01, 0x00, 0x00, 0xbc}}, {{RIO_BATTERY_MONITOR_CONFIG}}},
           {OW_NAME_O1_BATTERY_MONITOR, {{SBATTERY_FAM, 0x84, 0x0d, 0xb3, 0x01, 0x00, 0x00, 0x09}}, {{O1_BATTERY_MONITOR_CONFIG}}},
@@ -167,6 +226,17 @@ OwDevicesStaticConfig gDeviceStaticConfigList[] =
           {OW_NAME_DARLINGTON_PIO, {{PIO_FAM, 0x7f, 0x6e, 0x0d, 0x00, 0x00, 0x00, 0xb1}}, {{DARLINGTON_IO_CONFIG, DARLINGTON_IO_SHADOW_MASK, DARLINGTON_IO_PIN_CONFIG}}},
           {OW_NAME_RELAY_PIO, {{PIO_FAM, 0x5e, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x8d}}, {{RELAY_IO_CONFIG, RELAY_IO_SHADOW_MASK, RELAY_IO_PIN_CONFIG}}},
           {OW_NAME_GENERAL_PURPOSE_PIO, {{PIO_FAM, 0x50, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x9e}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_SHADOW_MASK, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
+#else
+OwDevicesStaticConfig gDeviceStaticConfigList[] =
+         {{OW_NAME_RIO_BATTERY_MONITOR, {{SBATTERY_FAM, 0xcf, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0x0b}}, {{RIO_BATTERY_MONITOR_CONFIG}}},
+          {OW_NAME_O1_BATTERY_MONITOR, {{SBATTERY_FAM, 0x69, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0xe5}}, {{O1_BATTERY_MONITOR_CONFIG}}},
+          {OW_NAME_O2_BATTERY_MONITOR, {{SBATTERY_FAM, 0x19, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0x7d}}, {{O2_BATTERY_MONITOR_CONFIG}}},
+          {OW_NAME_O3_BATTERY_MONITOR, {{SBATTERY_FAM, 0x53, 0x20, 0xb3, 0x01, 0x00, 0x00, 0x5c}}, {{O3_BATTERY_MONITOR_CONFIG}}},
+          {OW_NAME_CHARGER_STATE_PIO, {{PIO_FAM, 0xbc, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0xa3}}, {{CHARGER_STATE_IO_CONFIG, CHARGER_STATE_IO_SHADOW_MASK, CHARGER_STATE_IO_PIN_CONFIG}}},
+          {OW_NAME_DARLINGTON_PIO, {{PIO_FAM, 0xaf, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0xa1}}, {{DARLINGTON_IO_CONFIG, DARLINGTON_IO_SHADOW_MASK, DARLINGTON_IO_PIN_CONFIG}}},
+          {OW_NAME_RELAY_PIO, {{PIO_FAM, 0xbd, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0x94}}, {{RELAY_IO_CONFIG, RELAY_IO_SHADOW_MASK, RELAY_IO_PIN_CONFIG}}},
+          {OW_NAME_GENERAL_PURPOSE_PIO, {{PIO_FAM, 0x02, 0x06, 0x0d, 0x00, 0x00, 0x00, 0x4c}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_SHADOW_MASK, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
+#endif
 
 /* Obviously these need to be in the same order as the above */
 Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
@@ -320,7 +390,7 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSerialNumb
 #endif
 
 /*
- * Print out an address for debug purposes.
+ * Print out the address of a OneWire device.
  * 
  * pAddress   pointer to the 8-byte address.
  * newline    if true, add a newline on the end.
@@ -335,7 +405,7 @@ static void printAddress (const UInt8 *pAddress, Bool newline)
 
     for (i = 0; i < NUM_BYTES_IN_SERIAL_NUM; i++)
     {
-        printDebug ("%.2x", *pAddress);
+        printProgress ("%.2x", *pAddress);
         pAddress++;                
     }
     
@@ -858,7 +928,7 @@ Bool setupDevices (void)
 #endif
                         if (success)
                         {
-                            pinsState = gDeviceStaticConfigList[i].specifics.ds2408.pinsState;                     
+                            pinsState = gDeviceStaticConfigList[i].specifics.ds2408.pinsState;
 #ifdef DONT_USE_ONE_WIRE_SERVER
                             success = channelAccessWriteDS2408 (gPortNumber, pAddress, &pinsState);
 #else
@@ -898,6 +968,38 @@ Bool setupDevices (void)
     }
 
     return success;
+}
+
+/*
+ * Read 12V from mains pin.  Only works for RoboOne 1.1
+ * and beyond.
+ *
+ * pMains12VIsPresent  somewhere to store the Bool result,
+ *                     true if 12V from mains is present,
+ *                     otherwise false.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readMains12VPin (Bool *pMains12VIsPresent)
+{
+#ifndef ROBOONE_1_0 
+    Bool success;
+    UInt8 pinsState;
+    
+    success = readPins (OW_NAME_RELAY_PIO, &pinsState);
+    if (success)
+    {
+        *pMains12VIsPresent = false;
+        if (pinsState & RELAY_12V_DETECT)
+        {
+            *pMains12VIsPresent = true;
+        }
+    }
+
+    return success; 
+#else
+    return false;
+#endif    
 }
 
 /*
@@ -1673,6 +1775,19 @@ Bool readRelaysEnabled (Bool *pIsOn)
 }
 
 /*
+ * Read the state of the GPIO pins.
+ * 
+ * pPinsState  somewhere to store the state of
+ *             the GIPO pins.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readGpios (UInt8 *pPinsState)
+{
+    return readPinsWithShadow (OW_NAME_GENERAL_PURPOSE_PIO, pPinsState);
+}
+
+/*
  * Read the current being drawn from the Rio/Pi/5V battery.
  *
  * pCurrent  a pointer to somewhere to put the current reading.
@@ -2092,7 +2207,6 @@ Bool performCalAllBatteryMonitors (void)
 {
     Bool success;
     
-    printProgress ("\nWARNING: calibrating all battery monitors, make sure no current is flowing!\n");
     success = performCalRioBatteryMonitor();
     if (success)
     {

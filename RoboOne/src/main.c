@@ -104,7 +104,7 @@ int main (int argc, char **argv)
     Bool  success = true;
     pid_t serverPID;
     
-    setDebugPrintsOn();
+    /* setDebugPrintsOn(); */
     setProgressPrintsOn();
 
     /* Setup the global for everyone to use */
