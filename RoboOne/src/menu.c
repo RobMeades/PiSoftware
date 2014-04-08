@@ -15,8 +15,8 @@
 #define KEY_COMMAND_CANCEL '\x1b'   /* the escape key */
 #define BACKSPACE_KEY '\x08'
 #define SCREEN_BACKSPACE "\x1b[1D" /* ANSI escape sequence for back one space: ESC [ 1 D */
-#define RELAY_HEADING_STRING " HPTg  HRTg  Pi12V PiBat H12V  HBat"
-#define GPIO_HEADING_STRING  "   0     1     2     3     4     5     6     7"
+#define RELAY_HEADING_STRING " HPTg  HRTg  Pi12V PiBat H12V  HBat  PiChg H1Chg H2Chg H3Chg"
+#define GPIO_HEADING_STRING  "  0     1     2     3     4     5     6     7"
 #define GPIO_ON_STRING "  ON  "
 #define GPIO_OFF_STRING " OFF  "
 #define GPIO_DONT_KNOW_STRING "  ??  "
@@ -77,7 +77,6 @@ Command gCommandList[] = {{"?", {&commandHelp}, true, "display command help"},
  						  {"A", {&displayRemainingCapacities}, true,  "display the accumulated remaining capacities"},
                           {"L", {&displayLifetimeChargesDischarges}, true,  "display the lifetime charge/discharge accumulators"},
                           {"G", {&displayGpios}, true, "display GPIO pin states"},
- 						  {"D", {&runDashboard}, false, "display a dashboard of useful information"},
  						  {"Q", {&performCalAllBatteryMonitorsCnf}, true, "calibrate battery monitors"},
                           {"SP", {&swapRioBatteryCnf}, true, "swap the battery connected to the RIO/Pi"},
                           {"S1", {&swapO1BatteryCnf}, true, "swap the battery connected to the O1"},
@@ -107,8 +106,8 @@ Command gCommandList[] = {{"?", {&commandHelp}, true, "display command help"},
  						  {"C3+", {&setO3BatteryChargerOn}, false, "switch hindbrain charger 3 on"},
  						  {"C3-", {&setO3BatteryChargerOff}, false, "switch hindbrain charger 3 off"},
                           {"R?", {&displayRelayStates}, true, "display the state of all relays"},
-                          {"RX+", {&disableAllRelays}, false, "enable power to all relays"},
-                          {"RX-", {&enableAllRelays}, false, "disable power to all relays"}};
+                          {"RX+", {&enableAllRelays}, false, "enable power to all relays"},
+                          {"RX-", {&disableAllRelays}, false, "disable power to all relays"}};
 
 UInt8 gIndexOfExitCommand = 1;         /* Keep this pointed at the "X" command entry above */
 
@@ -431,6 +430,14 @@ static Bool displayRelayStates (WINDOW *pWin)
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
     success = readOPwrBatt (&isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
+    success = readRioBatteryCharger (&isOn);
+    displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
+    success = readO1BatteryCharger (&isOn);
+    displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
+    success = readO2BatteryCharger (&isOn);
+    displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
+    success = readO3BatteryCharger (&isOn);
+    displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
     if (!relaysEnabled)
     {
         printHelper (pWin, "]");
@@ -459,7 +466,7 @@ static Bool displayGpios (WINDOW *pWin)
  
     printHelper (pWin, "%s\n", GPIO_HEADING_STRING);
     
-    success = readGpios (&pinsState);
+    success = readGeneralPurposeIOs (&pinsState);
     for (i = 0; i < 8; i++)
     {
         mask = 1 << i;

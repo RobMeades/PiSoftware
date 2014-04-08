@@ -85,7 +85,7 @@ Bool setAllOChargersOff (void);
 Bool disableAllRelays (void);
 Bool enableAllRelays (void);
 Bool readRelaysEnabled (Bool *pIsOn);
-Bool readGpios (UInt8 *pPinsState);
+Bool readGeneralPurposeIOs (UInt8 *pPinsState);
 Bool readRioBattCurrent (SInt16 *pCurrent);
 Bool readO1BattCurrent (SInt16 *pCurrent);
 Bool readO2BattCurrent (SInt16 *pCurrent);

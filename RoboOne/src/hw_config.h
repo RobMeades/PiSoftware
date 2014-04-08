@@ -51,7 +51,7 @@
 #define RELAY_O1_CHARGER_OFF         0x08
 #define RELAY_O2_CHARGER_OFF         0x10
 #define RELAY_O3_CHARGER_OFF         0x20
-#define RELAY_ENABLE                 0x40
+#define RELAY_ENABLE_BAR             0x40
 #define RELAY_12V_DETECT             0x80 /* This is an input */
 
 /* How the pins are connected on the "general purpose" PIO chip */

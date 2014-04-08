@@ -51,8 +51,8 @@
 #define GENERAL_PURPOSE_IO_CONFIG     DEFAULT_DS2408_CONFIG
 
 /* Pins generally low to begin with apart from charger state which is allowed to float as an input,
- * and the Darlington pins which are disabled anyway by setting DARLINGTON_ENABLE_BAR low and
- * the 12V detect pin on the Relay PIO set as an input */
+ * and the Darlington pins which are disabled anyway by setting DARLINGTON_ENABLE_BAR high,
+ * the 12V detect pin on the Relay PIO set as an input and RELAY_ENABLE_BAR high */
 #ifdef ALL_PINS_UNDRIVEN_DS2408
 #    define CHARGER_STATE_IO_PIN_CONFIG   0xFF
 #    define DARLINGTON_IO_PIN_CONFIG      0xFF
@@ -61,11 +61,11 @@
 #else
 #    define CHARGER_STATE_IO_PIN_CONFIG   0xFF
 #    ifdef RUN_FROM_12V
-#        define DARLINGTON_IO_PIN_CONFIG      (UInt8) ((DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON) & ~(DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE | DARLINGTON_ENABLE_BAR))
+#        define DARLINGTON_IO_PIN_CONFIG      (UInt8) ((DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON) & ~(DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE) | DARLINGTON_ENABLE_BAR)
 #    else
-#        define DARLINGTON_IO_PIN_CONFIG      (UInt8) ~(DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE | DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON | DARLINGTON_ENABLE_BAR)
+#        define DARLINGTON_IO_PIN_CONFIG      (UInt8) (~(DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON | DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE) | DARLINGTON_ENABLE_BAR)
 #    endif
-#    define RELAY_IO_PIN_CONFIG           RELAY_12V_DETECT
+#    define RELAY_IO_PIN_CONFIG           RELAY_12V_DETECT | RELAY_ENABLE_BAR
 #    define GENERAL_PURPOSE_IO_PIN_CONFIG 0x00
 #endif
 
@@ -1695,7 +1695,7 @@ Bool setAllOChargersOff (void)
  * Disable the power to all relays.  Note
  * that this doesn't change their logical state,
  * i.e. when power is enabled to them they will
- * return to their previous state.
+ * return to their previous logic state.
  * 
  * @return  true if successful, otherwise false.
  */
@@ -1704,7 +1704,7 @@ Bool disableAllRelays (void)
     Bool success;
     
     /* First disable the external relays */
-    success = setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_ENABLE, false);
+    success = setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_ENABLE_BAR, true);
     
     if (success)
     {
@@ -1717,7 +1717,7 @@ Bool disableAllRelays (void)
 
 /*
  * Enable the power to all relays, returning
- * them to their previous state.
+ * them to their previous logic state.
  * 
  * @return  true if successful, otherwise false.
  */
@@ -1726,7 +1726,7 @@ Bool enableAllRelays (void)
     Bool success;
     
     /* First enable the external relays */
-    success = setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_ENABLE, true);
+    success = setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_ENABLE_BAR, false);
     
     if (success)
     {
@@ -1764,7 +1764,7 @@ Bool readRelaysEnabled (Bool *pIsOn)
         if (success && (pIsOn != PNULL))
         {
             *pIsOn = false;
-            if ((pinsStateRelay & RELAY_ENABLE) && ~(pinsStateDarlington & DARLINGTON_ENABLE_BAR))
+            if (((pinsStateRelay & RELAY_ENABLE_BAR) == 0) && ((pinsStateDarlington & DARLINGTON_ENABLE_BAR) == 0))
             {
                 *pIsOn = true;
             }        
@@ -1775,14 +1775,14 @@ Bool readRelaysEnabled (Bool *pIsOn)
 }
 
 /*
- * Read the state of the GPIO pins.
+ * Read the state of the General Purpose IO pins.
  * 
  * pPinsState  somewhere to store the state of
- *             the GIPO pins.
+ *             the pins.
  *
  * @return  true if successful, otherwise false.
  */
-Bool readGpios (UInt8 *pPinsState)
+Bool readGeneralPurposeIOs (UInt8 *pPinsState)
 {
     return readPinsWithShadow (OW_NAME_GENERAL_PURPOSE_PIO, pPinsState);
 }
