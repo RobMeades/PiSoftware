@@ -670,7 +670,10 @@ static Bool togglePinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask)
  * Chargers can be off, green or red but never
  * both green and red at the same time.
  * 
- * pinsState   a reading of all the charger states
+ * success     whether the state was successfully
+ *             read.
+ * poweredOn   whether the charger is powered on.        
+ * pinsState   a reading of all the charge states
  *             from the charger state PIO. 
  * greenMask   a bit mask for the pins that mean
  *             green for a charger.
@@ -679,23 +682,31 @@ static Bool togglePinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask)
  *
  * @return  true if successful, otherwise false.
  */
-static ChargeState getChargeState (UInt8 pinsState, UInt8 greenMask, UInt8 redMask)
+static ChargeState getChargeState (Bool success, Bool poweredOn, UInt8 pinsState, UInt8 greenMask, UInt8 redMask)
 {
-    ChargeState state = CHARGE_STATE_OFF;
+    ChargeState state = CHARGE_STATE_UNKNOWN;
     
-    if (pinsState & greenMask)
+    if (success)
     {
-        state = CHARGE_STATE_GREEN;
-    }
-    if (pinsState & redMask)
-    {
-        if (state == CHARGE_STATE_GREEN)
+        state = CHARGE_STATE_NO_POWER;
+        if (poweredOn)
         {
-            state = CHARGE_STATE_BAD;            
-        }
-        else
-        {
-            state = CHARGE_STATE_RED;
+            state = CHARGE_STATE_OFF;
+            if (pinsState & greenMask)
+            {
+                state = CHARGE_STATE_GREEN;
+            }
+            if (pinsState & redMask)
+            {
+                if (state == CHARGE_STATE_GREEN)
+                {
+                    state = CHARGE_STATE_BAD;            
+                }
+                else
+                {
+                    state = CHARGE_STATE_RED;
+                }
+            }
         }
     }
     
@@ -1017,8 +1028,8 @@ Bool readChargerStatePins (UInt8 *pPinsState)
 
 /*
  * Read the state of the chargers.  This function
- * must be called at intervals (no less than
- * one second apart) to detect the flashing charge state.
+ * must be called at intervals (no less than one
+ * second apart) to detect the flashing charge state.
  *
  * pState               a pointer to an array of
  *                      size NUM_CHARGERS to store
@@ -1041,6 +1052,8 @@ Bool readChargerState (ChargeState *pState, Bool *pFlashDetectPossible)
     UInt8 pinsState;
     UInt8 pinsEdgeState;
     UInt32 ticksNow;
+    Bool chargerPowered;
+    Bool relaysPowered;
     
     ASSERT_PARAM (pState != PNULL, (unsigned long) pState);
     ASSERT_PARAM (pFlashDetectPossible != PNULL, (unsigned long) pFlashDetectPossible);
@@ -1063,25 +1076,37 @@ Bool readChargerState (ChargeState *pState, Bool *pFlashDetectPossible)
         {
             *pFlashDetectPossible = false;
             
-            /* Determine the states of the chargers from the reading */
-            *(pState + CHARGER_RIO) = getChargeState (pinsState, CHARGER_RIO_GREEN, CHARGER_RIO_RED);
-            *(pState + CHARGER_O1) = getChargeState (pinsState, CHARGER_O1_GREEN, CHARGER_O1_RED);
-            *(pState + CHARGER_O2) = getChargeState (pinsState, CHARGER_O2_GREEN, CHARGER_O2_RED);
-            *(pState + CHARGER_O3) = getChargeState (pinsState, CHARGER_O3_GREEN, CHARGER_O3_RED);
-            
-            /* Setup the flashing results if it's been long enough since the last reading to tell */
-            if ((ticksAtLastRead - ticksNow) > 1)
+            /* Determine the states of charge from the reading and
+             * the charger state itself (powered on or off)
+             * Note: the wiring on RoboOne is such that unless
+             * the relays are powered and the relay for that charger
+             * deliberately switched off, the charger is powered ON */
+            success = readRelaysEnabled (&relaysPowered);
+            if (success)
             {
-                success = readAndResetRisingEdgePins (OW_NAME_CHARGER_STATE_PIO, &pinsEdgeState); 
-                if (success)
+                success =  readRioBatteryCharger (&chargerPowered);
+                *(pState + CHARGER_RIO) = getChargeState (success, !(relaysPowered && !chargerPowered), pinsState, CHARGER_RIO_GREEN, CHARGER_RIO_RED);
+                success =  readO1BatteryCharger (&chargerPowered);
+                *(pState + CHARGER_O1) = getChargeState (success, !(relaysPowered && !chargerPowered), pinsState, CHARGER_O1_GREEN, CHARGER_O1_RED);
+                success =  readO2BatteryCharger (&chargerPowered);
+                *(pState + CHARGER_O2) = getChargeState (success, !(relaysPowered && !chargerPowered), pinsState, CHARGER_O2_GREEN, CHARGER_O2_RED);
+                success =  readO3BatteryCharger (&chargerPowered);
+                *(pState + CHARGER_O3) = getChargeState (success, !(relaysPowered && !chargerPowered), pinsState, CHARGER_O3_GREEN, CHARGER_O3_RED);
+                
+                /* Setup the flashing results if it's been long enough since the last reading to tell */
+                if ((ticksAtLastRead - ticksNow) > 1)
                 {
-                    *pFlashDetectPossible = true;
-                    *(pState + CHARGER_RIO) = getChargeFlashingState (*(pState + CHARGER_RIO), lastPinsEdgeState, pinsEdgeState, CHARGER_RIO_GREEN, CHARGER_RIO_RED);
-                    *(pState + CHARGER_O1) = getChargeFlashingState (*(pState + CHARGER_O1), lastPinsEdgeState, pinsEdgeState, CHARGER_O1_GREEN, CHARGER_O1_RED);
-                    *(pState + CHARGER_O2) = getChargeFlashingState (*(pState + CHARGER_O2), lastPinsEdgeState, pinsEdgeState, CHARGER_O2_GREEN, CHARGER_O2_RED);
-                    *(pState + CHARGER_O3) = getChargeFlashingState (*(pState + CHARGER_O3), lastPinsEdgeState, pinsEdgeState, CHARGER_O3_GREEN, CHARGER_O3_RED);
-                    lastPinsEdgeState = pinsEdgeState;
-                    ticksAtLastRead = ticksNow;
+                    success = readAndResetRisingEdgePins (OW_NAME_CHARGER_STATE_PIO, &pinsEdgeState); 
+                    if (success)
+                    {
+                        *pFlashDetectPossible = true;
+                        *(pState + CHARGER_RIO) = getChargeFlashingState (*(pState + CHARGER_RIO), lastPinsEdgeState, pinsEdgeState, CHARGER_RIO_GREEN, CHARGER_RIO_RED);
+                        *(pState + CHARGER_O1) = getChargeFlashingState (*(pState + CHARGER_O1), lastPinsEdgeState, pinsEdgeState, CHARGER_O1_GREEN, CHARGER_O1_RED);
+                        *(pState + CHARGER_O2) = getChargeFlashingState (*(pState + CHARGER_O2), lastPinsEdgeState, pinsEdgeState, CHARGER_O2_GREEN, CHARGER_O2_RED);
+                        *(pState + CHARGER_O3) = getChargeFlashingState (*(pState + CHARGER_O3), lastPinsEdgeState, pinsEdgeState, CHARGER_O3_GREEN, CHARGER_O3_RED);
+                        lastPinsEdgeState = pinsEdgeState;
+                        ticksAtLastRead = ticksNow;
+                    }
                 }
             }
         }

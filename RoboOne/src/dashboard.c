@@ -33,15 +33,19 @@
 #define WIN_MUX_START_COL         2
 #define WIN_MUX_HEIGHT            1
 #define WIN_MUX_WIDTH             70
-#define WIN_CHG_START_ROW         12
+#define WIN_POWER_START_ROW       9 /* sits on top of the mux window so move this if you ever want them both on */
+#define WIN_POWER_START_COL       2
+#define WIN_POWER_HEIGHT          3
+#define WIN_POWER_WIDTH           35
+#define WIN_CHG_START_ROW         13
 #define WIN_CHG_START_COL         2
 #define WIN_CHG_HEIGHT            2
 #define WIN_CHG_WIDTH             25
-#define WIN_CMD_START_ROW         11 /* Starts a row higher as there is no heading */
+#define WIN_CMD_START_ROW         12 /* Starts a row higher as there is no heading */
 #define WIN_CMD_START_COL         28
 #define WIN_CMD_HEIGHT            2
 #define WIN_CMD_WIDTH             25
-#define WIN_OUTPUT_START_ROW      16
+#define WIN_OUTPUT_START_ROW      17
 #define WIN_OUTPUT_START_COL      2
 #define WIN_OUTPUT_HEIGHT         35
 #define WIN_OUTPUT_WIDTH          76
@@ -60,11 +64,12 @@
 /* The strings */
 #define STRING_MAIN_HEADING "RoboOne Dashboard"
 #define COMMAND_PROMPT "Command (? for help): "
+#define STRING_POWER_HEADING "  Mains     Pi/RIO  Hindbrain"
  
 /* Misc stuff */
 #define MAX_NUM_CHARS_IN_ROW  SCR_WIDTH
 #define SLOW_UPDATE_BACKOFF   10
-#define SLOWER_UPDATE_BACKOFF 30
+#define SLOWER_UPDATE_BACKOFF 20
 
 /*
  * STATIC FUNCTION PROTOTYPES
@@ -77,6 +82,8 @@ static void initRioWindow (WINDOW *pWin);
 static Bool updateRioWindow (WINDOW *pWin, UInt8 count);
 static void initOWindow (WINDOW *pWin);
 static Bool updateOWindow (WINDOW *pWin, UInt8 count);
+static void initPowerWindow (WINDOW *pWin);
+static Bool updatePowerWindow (WINDOW *pWin, UInt8 count);
 static void initMuxWindow (WINDOW *pWin);
 static Bool updateMuxWindow (WINDOW *pWin, UInt8 count);
 static void initChgWindow (WINDOW *pWin);
@@ -114,17 +121,66 @@ typedef struct WindowInfoTag
 WindowInfo gWindowList[] = {{"Output", {WIN_OUTPUT_HEIGHT, WIN_OUTPUT_WIDTH, WIN_OUTPUT_START_ROW, WIN_OUTPUT_START_COL}, initOutputWindow, updateOutputWindow, PNULL, true}, /* MUST be first in the list for the global pointer just below */
                             {"Pi/Rio", {WIN_RIO_HEIGHT, WIN_RIO_WIDTH, WIN_RIO_START_ROW, WIN_RIO_START_COL}, initRioWindow, updateRioWindow, PNULL, true},
                             {"Hindbrain", {WIN_O_HEIGHT, WIN_O_WIDTH, WIN_O_START_ROW, WIN_O_START_COL}, initOWindow, updateOWindow, PNULL, true},
+                            {"Power", {WIN_POWER_HEIGHT, WIN_POWER_WIDTH, WIN_POWER_START_ROW, WIN_POWER_START_COL}, initPowerWindow, updatePowerWindow, PNULL, true},
                             {"Analogue", {WIN_MUX_HEIGHT, WIN_MUX_WIDTH, WIN_MUX_START_ROW, WIN_MUX_START_COL}, initMuxWindow, updateMuxWindow, PNULL, false},
                             {"Chargers", {WIN_CHG_HEIGHT, WIN_CHG_WIDTH, WIN_CHG_START_ROW, WIN_CHG_START_COL}, initChgWindow, updateChgWindow, PNULL, true},
                             {"", {WIN_CMD_HEIGHT, WIN_CMD_WIDTH, WIN_CMD_START_ROW, WIN_CMD_START_COL}, initCmdWindow, updateCmdWindow, PNULL, true}}; /* Should be last in the list so that display updates leave the cursor here */
 /* Must be in the same order as the enum ChargeState */
-Char * gChargeStrings[] = {" Off ", " Grn ", "*Grn*", " Red ", "*Red*", "  5  ", " Nul ", " Bad "};
+Char * gChargeStrings[] = {" --- ", " Off ", " Grn ", "*Grn*", " Red ", "*Red*", "  6  ", " ??? ", " Nul ", " Bad "};
 WINDOW **gpOutputWindow = &(gWindowList[0].pWin);
 
 /*
  * STATIC FUNCTIONS
  */
 
+/* Helper function for the power display window
+ * Note: the wiring on RoboOne is such that unless
+ * the relays are powered and the relay for that device
+ * is deliberately switched to 12V/mains power
+ * then the device is battery powered.
+ * 
+ * pWin      window to send output to.
+ * isKnown   whether the state of the GPIO is known
+ *           or not.
+ * isEnabled whether there is power to the relays.
+ * is12V     whether the 12V supply is on.
+ * isBatt    whether the battery supply is on.
+ * 
+ * @return  none.
+ */
+
+static void displayPowerStatesHelper (WINDOW *pWin, Bool isKnown, Bool isEnabled, Bool is12V, Bool isBatt)
+{
+    if (isKnown)
+    {
+        if ((is12V && isEnabled) && isBatt)
+        {            
+            wprintw (pWin, "  !BOTH!  ");
+        }
+        else
+        {
+            if (is12V && isEnabled)
+            {
+                wprintw (pWin, "  mains   ");
+            }
+            else
+            {
+                if (isBatt || !isEnabled)
+                {
+                    wprintw (pWin, "   batt   ");
+                }
+                else
+                {
+                    wprintw (pWin, "   ----   ");                    
+                }
+            }
+        }
+    }
+    else
+    {
+        wprintw (pWin, "    ??    ");            
+    }
+}
 /*
  * Init function for Rio window.
  * 
@@ -264,6 +320,98 @@ static Bool updateOWindow (WINDOW *pWin, UInt8 count)
 }
 
 /*
+ * Init function for the power window.
+ * 
+ * pWin    the window where the power
+ *         stuff is to be displayed.
+ */
+static void initPowerWindow (WINDOW *pWin)
+{
+}
+
+/*
+ * Display the state of power to things various.
+ * 
+ * pWin    the window where the power stuff
+ *         can be displayed.
+ * count   the number of times this function
+ *         has been called.  This is used to
+ *         update some items more often than
+ *         others.
+ * 
+ * @return  always false, meaning "not finished".
+ */
+static Bool updatePowerWindow (WINDOW *pWin, UInt8 count)
+{
+    UInt8 row = 0;
+    UInt8 col = 0;
+    Bool success;
+    Bool relaysEnabled;
+    Bool mains12VPresent;
+    Bool is12V;
+    Bool isBatt;
+
+    ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
+
+    if (count % SLOW_UPDATE_BACKOFF == 0)
+    {
+        wmove (pWin, row, col);
+        wclrtoeol (pWin);     
+        wprintw (pWin, "%s", STRING_POWER_HEADING);
+        row++;
+        
+        wmove (pWin, row, col);
+        wclrtoeol (pWin);
+        
+        /* First print the state of 12V power presence */
+        success = readMains12VPin (&mains12VPresent);
+        if (success)
+        {
+            if (mains12VPresent)
+            {
+                wprintw (pWin, " present  ");
+            }
+            else
+            {
+                wprintw (pWin, "   ----   ");                
+            }
+        }
+        else
+        {
+            wprintw (pWin, "    ??    ");            
+        }
+        
+        /* Then print how each of the Pi and the Hindbrain
+         * are powered. */
+        success = readRelaysEnabled (&relaysEnabled);
+        if (success)
+        {
+            success = readRioPwr12V (&is12V);
+            if (success)
+            {
+                success = readRioPwrBatt (&isBatt);
+            }
+            displayPowerStatesHelper (pWin, success, relaysEnabled, is12V, isBatt);
+            success = readOPwr12V (&is12V);
+            if (success)
+            {
+                success = readOPwrBatt (&isBatt);
+            }
+            displayPowerStatesHelper (pWin, success, relaysEnabled, is12V, isBatt);
+        }
+        row++;
+    }
+    else
+    {
+        row++;
+    }
+
+    wnoutrefresh (pWin);
+    
+    return false;
+}
+
+/*
  * Init function for analogue mux window.
  * 
  * pWin    the window where the analogue
@@ -348,9 +496,6 @@ static Bool updateChgWindow (WINDOW *pWin, UInt8 count)
     Bool success;
     ChargeState state[NUM_CHARGERS];
     Bool flashDetectPossible;
-#ifndef ROBOONE_1_0
-    Bool mains12VPresent;
-#endif    
     UInt8 row = 0;
     UInt8 col = 0;
     UInt8 i;
@@ -360,9 +505,6 @@ static Bool updateChgWindow (WINDOW *pWin, UInt8 count)
     wmove (pWin, row, col);
     wclrtoeol (pWin);        
     wprintw (pWin, "  Pi   O1   O2   O3");
-#ifndef ROBOONE_1_0
-    wprintw (pWin, "  12V");
-#endif    
     row++;
     success = readChargerState (&state[0], &flashDetectPossible);
     if (success && flashDetectPossible)
@@ -373,24 +515,6 @@ static Bool updateChgWindow (WINDOW *pWin, UInt8 count)
         {
             wprintw (pWin, "%s", gChargeStrings[state[i]]);
         }
-#ifndef ROBOONE_1_0
-        success = readMains12VPin (&mains12VPresent);
-        if (success)
-        {
-            if (mains12VPresent)
-            {
-                wprintw (pWin, "  Y");
-            }
-            else
-            {
-                wprintw (pWin, "  N");                
-            }
-        }
-        else
-        {
-            wprintw (pWin, "  ?");            
-        }
-#endif
     }
     row++;
     

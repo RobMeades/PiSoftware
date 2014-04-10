@@ -419,6 +419,7 @@ static Bool displayRelayStates (WINDOW *pWin)
     {
         printHelper (pWin, "[");
     }
+    success = readOPwr (&isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
     success = readORst (&isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);

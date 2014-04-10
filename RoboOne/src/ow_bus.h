@@ -26,12 +26,14 @@ typedef enum ChargerTag
 /* The state that a charger can be in */
 typedef enum ChargeStateTag
 {
-    CHARGE_STATE_OFF = 0,
-    CHARGE_STATE_GREEN = 1,
-    CHARGE_STATE_FLASHING_GREEN = 2,
-    CHARGE_STATE_RED = 3,
-    CHARGE_STATE_FLASHING_RED = 4,
+    CHARGE_STATE_NO_POWER = 0,
+    CHARGE_STATE_OFF = 1,
+    CHARGE_STATE_GREEN = 2,
+    CHARGE_STATE_FLASHING_GREEN = 3,
+    CHARGE_STATE_RED = 4,
+    CHARGE_STATE_FLASHING_RED = 5,
     NUM_CHARGE_STATES,
+    CHARGE_STATE_UNKNOWN,
     CHARGE_STATE_NULL,
     CHARGE_STATE_BAD
 } ChargeState;
