@@ -373,7 +373,7 @@ static Bool updatePowerWindow (WINDOW *pWin, UInt8 count)
             }
             else
             {
-                wprintw (pWin, "   ----   ");                
+                wprintw (pWin, "   ---    ");                
             }
         }
         else

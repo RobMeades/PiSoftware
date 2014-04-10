@@ -24,16 +24,6 @@
 #define CHARGER_O3_RED     0x80
 
 /* How the pins are connected on the "Darlington" PIO chip */
-#ifdef ROBOONE_1_0
-#define DARLINGTON_NON_DARLINGTON_SPARE_1 0x01/* Note that this is NOT via the Darlington chip, it is simply a spare IO, brought out on pin 1 of the spare IO header */
-#define DARLINGTON_RIO_PWR_12V_ON         0x02
-#define DARLINGTON_RIO_PWR_BATT_OFF       0x04
-#define DARLINGTON_O_PWR_TOGGLE           0x08
-#define DARLINGTON_O_RESET_TOGGLE         0x10
-#define DARLINGTON_SPARE_3                0x20 /* Connected to pin 3 of the spare header */
-#define DARLINGTON_SPARE_4                0x40 /* Connected to pin 4 of the spare header */
-#define DARLINGTON_ENABLE_BAR             0x80 /* Note that this does NOT go via the Darlington chip, it is used as an enable _to_ the Darlington chip */
-#else
 #define DARLINGTON_RIO_PWR_12V_ON         0x01
 #define DARLINGTON_RIO_PWR_BATT_OFF       0x02
 #define DARLINGTON_O_PWR_TOGGLE           0x04
@@ -42,7 +32,6 @@
 #define DARLINGTON_SPARE_3                0x20 /* Connected to pin 3 of the spare header */
 #define DARLINGTON_SPARE_4                0x40 /* Connected to pin 4 of the spare header */
 #define DARLINGTON_ENABLE_BAR             0x80 /* Note that this does NOT go via the Darlington chip, it is used as an enable _to_ the Darlington chip */
-#endif
 
 /* How the pins are connected on the "relay" PIO chip */
 #define RELAY_O_PWR_12V_ON           0x01
@@ -64,16 +53,8 @@
 #define GENERAL_PURPOSE_IO_6         0x40
 #define GENERAL_PURPOSE_IO_7         0x80
 
-#ifdef ROBOONE_1_0
-#define GENERAL_PURPOSE_IO_MUX_A0         GENERAL_PURPOSE_IO_0   /* If J1 is connected, General Purpose IO 0 is connected to A0 of the mux chip */
-#define GENERAL_PURPOSE_IO_MUX_A1         GENERAL_PURPOSE_IO_1   /* If J2 is connected, General Purpose IO 1 is connected to A1 of the mux chip */
-#define GENERAL_PURPOSE_IO_MUX_A2         GENERAL_PURPOSE_IO_2   /* If J3 is connected, General Purpose IO 2 is connected to A2 of the mux chip */
-#define GENERAL_PURPOSE_IO_MUX_SHIFT      0                      /* How much to shift a number left by in order to overlay it on the mux select pins */
-#define DARLINGTON_MUX_ENABLE_BAR         DARLINGTON_ENABLE_BAR  /* If J4 is connected, General Purpose IO 3 is connected to ~E of the mux chip */
-#else
 #define GENERAL_PURPOSE_IO_MUX_A0         GENERAL_PURPOSE_IO_4 /* If J2 is connected, General Purpose IO 4 is connected to A0 of the mux chip */
 #define GENERAL_PURPOSE_IO_MUX_A1         GENERAL_PURPOSE_IO_5 /* If J3 is connected, General Purpose IO 5 is connected to A1 of the mux chip */
 #define GENERAL_PURPOSE_IO_MUX_A2         GENERAL_PURPOSE_IO_6 /* If J4 is connected, General Purpose IO 6 is connected to A2 of the mux chip */
 #define GENERAL_PURPOSE_IO_MUX_SHIFT      4                    /* How much to shift a number left by in order to overlay it on the mux select pins */
 #define GENERAL_PURPOSE_IO_MUX_ENABLE_BAR GENERAL_PURPOSE_IO_7 /* If J5 is connected, General Purpose IO 7 is connected to ~E of the mux chip */
-#endif

@@ -216,17 +216,6 @@ extern SInt32 gOneWireServerPort;
 /* ORDER IS IMPORTANT - the OwDeviceName enum is used to index into the
  * gDeviceStaticConfigList array */
 
-#ifdef ROBOONE_1_0
-OwDevicesStaticConfig gDeviceStaticConfigList[] =
-         {{OW_NAME_RIO_BATTERY_MONITOR, {{SBATTERY_FAM, 0xb5, 0x02, 0xb3, 0x01, 0x00, 0x00, 0xbc}}, {{RIO_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_O1_BATTERY_MONITOR, {{SBATTERY_FAM, 0x84, 0x0d, 0xb3, 0x01, 0x00, 0x00, 0x09}}, {{O1_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_O2_BATTERY_MONITOR, {{SBATTERY_FAM, 0xdd, 0x29, 0xb3, 0x01, 0x00, 0x00, 0x56}}, {{O2_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_O3_BATTERY_MONITOR, {{SBATTERY_FAM, 0x82, 0x30, 0xb3, 0x01, 0x00, 0x00, 0xd3}}, {{O3_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_CHARGER_STATE_PIO, {{PIO_FAM, 0x8d, 0xf2, 0x0c, 0x00, 0x00, 0x00, 0xb4}}, {{CHARGER_STATE_IO_CONFIG, CHARGER_STATE_IO_SHADOW_MASK, CHARGER_STATE_IO_PIN_CONFIG}}},
-          {OW_NAME_DARLINGTON_PIO, {{PIO_FAM, 0x7f, 0x6e, 0x0d, 0x00, 0x00, 0x00, 0xb1}}, {{DARLINGTON_IO_CONFIG, DARLINGTON_IO_SHADOW_MASK, DARLINGTON_IO_PIN_CONFIG}}},
-          {OW_NAME_RELAY_PIO, {{PIO_FAM, 0x5e, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x8d}}, {{RELAY_IO_CONFIG, RELAY_IO_SHADOW_MASK, RELAY_IO_PIN_CONFIG}}},
-          {OW_NAME_GENERAL_PURPOSE_PIO, {{PIO_FAM, 0x50, 0x64, 0x0d, 0x00, 0x00, 0x00, 0x9e}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_SHADOW_MASK, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
-#else
 OwDevicesStaticConfig gDeviceStaticConfigList[] =
          {{OW_NAME_RIO_BATTERY_MONITOR, {{SBATTERY_FAM, 0xcf, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0x0b}}, {{RIO_BATTERY_MONITOR_CONFIG}}},
           {OW_NAME_O1_BATTERY_MONITOR, {{SBATTERY_FAM, 0x69, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0xe5}}, {{O1_BATTERY_MONITOR_CONFIG}}},
@@ -236,7 +225,6 @@ OwDevicesStaticConfig gDeviceStaticConfigList[] =
           {OW_NAME_DARLINGTON_PIO, {{PIO_FAM, 0xaf, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0xa1}}, {{DARLINGTON_IO_CONFIG, DARLINGTON_IO_SHADOW_MASK, DARLINGTON_IO_PIN_CONFIG}}},
           {OW_NAME_RELAY_PIO, {{PIO_FAM, 0xbd, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0x94}}, {{RELAY_IO_CONFIG, RELAY_IO_SHADOW_MASK, RELAY_IO_PIN_CONFIG}}},
           {OW_NAME_GENERAL_PURPOSE_PIO, {{PIO_FAM, 0x02, 0x06, 0x0d, 0x00, 0x00, 0x00, 0x4c}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_SHADOW_MASK, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
-#endif
 
 /* Obviously these need to be in the same order as the above */
 Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
@@ -982,8 +970,7 @@ Bool setupDevices (void)
 }
 
 /*
- * Read 12V from mains pin.  Only works for RoboOne 1.1
- * and beyond.
+ * Read 12V from mains pin.
  *
  * pMains12VIsPresent  somewhere to store the Bool result,
  *                     true if 12V from mains is present,
@@ -993,7 +980,6 @@ Bool setupDevices (void)
  */
 Bool readMains12VPin (Bool *pMains12VIsPresent)
 {
-#ifndef ROBOONE_1_0 
     Bool success;
     UInt8 pinsState;
     
@@ -1008,9 +994,6 @@ Bool readMains12VPin (Bool *pMains12VIsPresent)
     }
 
     return success; 
-#else
-    return false;
-#endif    
 }
 
 /*
@@ -2420,9 +2403,6 @@ Bool setAnalogueMuxInput (UInt8 input)
     Bool  success = true;
     UInt8 pinsState;
     UInt8 pinsStateToWrite;
-#ifdef ROBOONE_1_0
-    UInt8 extraPinsState;
-#endif    
     
     ASSERT_PARAM (input < 8, input);
 
@@ -2431,40 +2411,19 @@ Bool setAnalogueMuxInput (UInt8 input)
     success = readPinsWithShadow (OW_NAME_GENERAL_PURPOSE_PIO, &pinsState);
 
     /* First, disable the device while we change things */
-#ifdef ROBOONE_1_0
-    /* For RoboOne 1.0 only, the enable line is actually
-     * on the Darlington IO chip.
-     * TODO: this will need changing for RoboOne 1.1 */
     if (success)
     {
-        success = readPinsWithShadow (OW_NAME_DARLINGTON_PIO, &extraPinsState);        
-        
-        /* First, disable the device while we change things */
-        extraPinsState |= DARLINGTON_MUX_ENABLE_BAR;
-        pinsStateToWrite = extraPinsState;
+        pinsState |= GENERAL_PURPOSE_IO_MUX_ENABLE_BAR;
+        pinsStateToWrite = pinsState;
 #ifdef DONT_USE_ONE_WIRE_SERVER
-        success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_DARLINGTON_PIO].address.value[0], &pinsStateToWrite);
+        success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite);
 #else
-        success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, &gDeviceStaticConfigList[OW_NAME_DARLINGTON_PIO].address.value[0], &pinsStateToWrite, sizeof (pinsStateToWrite), PNULL);
+        success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite, sizeof (pinsStateToWrite), PNULL);
 #endif
-
         if (success)
         {
             /* Setup the shadow to match the result */
-            gDeviceStaticConfigList[OW_NAME_DARLINGTON_PIO].specifics.ds2408.pinsState = extraPinsState;
-#else
-            pinsState |= GENERAL_PURPOSE_IO_MUX_ENABLE_BAR;
-            pinsStateToWrite = pinsState;
-#ifdef DONT_USE_ONE_WIRE_SERVER
-            success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite);
-#else
-            success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite, sizeof (pinsStateToWrite), PNULL);
-#endif
-            if (success)
-            {
-                /* Setup the shadow to match the result */
-                gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].specifics.ds2408.pinsState = pinsState;
-#endif
+            gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].specifics.ds2408.pinsState = pinsState;
             /* Now set the IO lines attached to pins A0 to A2 of the HEF4051B */
             pinsStateToWrite = pinsState;
             pinsStateToWrite &= ~(GENERAL_PURPOSE_IO_MUX_A0 | GENERAL_PURPOSE_IO_MUX_A1 | GENERAL_PURPOSE_IO_MUX_A2);
@@ -2481,20 +2440,6 @@ Bool setAnalogueMuxInput (UInt8 input)
                 gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].specifics.ds2408.pinsState = pinsState;
 
                 /* Now enable the mux */
-#ifdef ROBOONE_1_0
-                extraPinsState &= ~DARLINGTON_MUX_ENABLE_BAR;
-                pinsStateToWrite = extraPinsState;
-#ifdef DONT_USE_ONE_WIRE_SERVER
-                success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_DARLINGTON_PIO].address.value[0], &pinsStateToWrite);
-#else
-                success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite, sizeof (pinsStateToWrite), PNULL);
-#endif
-                /* If it worked, setup the shadow to match the result */
-                if (success)
-                {
-                    gDeviceStaticConfigList[OW_NAME_DARLINGTON_PIO].specifics.ds2408.pinsState = extraPinsState;
-                }            
-#else
                 pinsState &= ~GENERAL_PURPOSE_IO_MUX_ENABLE_BAR;
                 pinsStateToWrite = pinsState;
 #ifdef DONT_USE_ONE_WIRE_SERVER
@@ -2506,7 +2451,7 @@ Bool setAnalogueMuxInput (UInt8 input)
                 {
                     /* Setup the shadow to match the result */
                     gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].specifics.ds2408.pinsState = pinsState;
-#endif
+                }
             }            
         }
     }
