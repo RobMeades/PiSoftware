@@ -472,3 +472,7 @@ export NCURSES_NO_SETBUF
 MAKE YET ANOTHER BACKUP
 Now everything is working, make backup 1.0.
 
+POSTSCRIPT
+Other things I found I needed after doing all the above:
+
+In order to program my Orangutan board from the Pi: pacman -S avrdude
