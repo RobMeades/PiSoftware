@@ -95,7 +95,7 @@ Command gCommandList[] = {{"?", {&commandHelp}, true, "display command help"},
  						  {"HB-", {&setOPwrBattOff}, false, "switch hindbrain (AKA Orangutan) battery power off"},
  						  {"HM+", {&setOPwr12VOn}, false, "switch hindbrain (AKA Orangutan) mains power on"},
  						  {"HM-", {&setOPwr12VOff}, false, "switch hindbrain (AKA Orangutan) mains power off"},
-                          {"HS", {&sendOString}, false, "send hindbrain (AKA Orangutan) a string"},
+                          {"HS", {&sendOString}, true, "send hindbrain (AKA Orangutan) a string"},
  						  {"CX+", {&setAllBatteryChargersOn}, false, "switch all chargers on"},
  						  {"CX-", {&setAllBatteryChargersOff}, false, "switch all chargers off"},
  						  {"CP+", {&setRioBatteryChargerOn}, false, "switch RIO/Pi charger on"},
@@ -533,12 +533,20 @@ static Bool sendOString (WINDOW *pWin)
     Char buffer[O_STRING_MAX_LENGTH];
     UInt32 bytesReceived = sizeof (buffer);
     
-    if (getStringInput (pWin, "Cmd: ", &buffer[0], sizeof (buffer)) != PNULL)
-    {    
+    if (getStringInput (pWin, "String: ", &buffer[0], sizeof (buffer)) != PNULL)
+    {
         success = sendStringToOrangutan (&buffer[0], &buffer[0], &bytesReceived);
         if (success)
         {
-            printHelper (pWin, "%s\n", &buffer[0]);
+            printHelper (pWin, "\nSend successful");
+            if (bytesReceived > 1) /* There will always be a terminator, hence the 1 */
+            {
+                printHelper (pWin, ", response: %s.\n", &buffer[0]);                
+            }
+            else
+            {
+                printHelper (pWin, ", no response.\n");                                
+            }
         }
     }
     
@@ -863,9 +871,10 @@ Bool getYesInput (WINDOW *pWin, Char *pPrompt)
  *           may be PNULL.
  * pString   a pointer to a place to store
  *           the string.  It will be null
- *           terminater.
+ *           terminated.
  * stringLen the maximum length of the
- *           string. 
+ *           returned string (including
+ *           terminator). 
  *
  * @return  a pointer to the string.
  * 
@@ -884,7 +893,8 @@ Char * getStringInput (WINDOW *pWin, Char *pPrompt, Char *pString, UInt32 string
     {
         /* Save current settings and then set us up for canonical input (i.e. needs enter to complete) */
         memcpy (&newSettings, &savedSettings, sizeof (newSettings));
-        newSettings.c_lflag &= ICANON | ECHO | ECHOK | ECHONL | ECHOKE | ICRNL;
+        newSettings.c_iflag |= ICRNL;
+        newSettings.c_lflag |= ICANON | ECHO | ECHOE | ECHOK | ECHOKE;
         tcsetattr (STDIN_FILENO, TCSANOW, &newSettings);
         
         /* Prompt for input */
@@ -898,7 +908,8 @@ Char * getStringInput (WINDOW *pWin, Char *pPrompt, Char *pString, UInt32 string
             }
         }
         
-        /* Now get the string */
+        /* Now get the string. fgets() will include the LF that terminates
+         * the input and will add a null terminator to the string also */
         pReturnValue = fgets (pString, stringLen, stdin);
         
         /* Restore saved settings */

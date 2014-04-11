@@ -18,10 +18,10 @@
  * MANIFEST CONSTANTS
  */
 
-#define ORANGUTAN_PORT_STRING             "/dev/OrangutanUSB"
+#define ORANGUTAN_PORT_STRING             "/dev/serial/by-id/usb-Silicon_Labs_Pololu_Orangutan_X2_Serial_Adapter_0J64869-if00-port0"
 #define ORANGUTAN_BAUD_RATE               B9600
-#define ORANGUTAN_WAIT_TIMEOUT_TENTHS_SEC 10
-#define ORANGUTAN_RESPONSE_TERMINATOR     '\010'
+#define ORANGUTAN_WAIT_TIMEOUT_TENTHS_SEC 20
+#define ORANGUTAN_RESPONSE_TERMINATOR     '\r' /* CR */
 #define ORANGUTAN_BUFFER_SIZE             255
 
 /*
@@ -48,7 +48,7 @@
  *                      that can be stored (including a null
  *                      terminator).  It will be set by this
  *                      function to the length of the received
- *                      string (including null terminator).
+ *                      string (with guaranteed null terminator).
  *                      If the calling function sets this value
  *                      to zero then this function does not wait
  *                      for a response.  
@@ -73,22 +73,22 @@ Bool sendStringToOrangutan (Char *pSendString, Char *pReceiveString, UInt32 *pRe
     {
         tcgetattr (fd, &savedSettings); /* save current port settings */
           
-        memset (&newSettings, sizeof(newSettings), 0);
-        newSettings.c_cflag = ORANGUTAN_BAUD_RATE | CS8 | CLOCAL | CREAD;
-        newSettings.c_iflag = IGNPAR;
-        newSettings.c_oflag = 0;
-          
-        /* set input mode (non-canonical, no echo,...) */
-        newSettings.c_lflag = 0;
-           
-        newSettings.c_cc[VTIME]    = ORANGUTAN_WAIT_TIMEOUT_TENTHS_SEC;
-        newSettings.c_cc[VMIN]     = 0;
+        memset (&newSettings, sizeof (newSettings), 0);
+        cfsetospeed(&newSettings, ORANGUTAN_BAUD_RATE);
+        cfsetispeed(&newSettings, ORANGUTAN_BAUD_RATE);
+        newSettings.c_cflag |= CS8 | CLOCAL | CREAD;        
+        newSettings.c_iflag |= IGNBRK | IGNPAR;
+        
+        newSettings.c_cc[VTIME] = ORANGUTAN_WAIT_TIMEOUT_TENTHS_SEC;
+        newSettings.c_cc[VMIN]  = 0;
           
         tcflush (fd, TCIFLUSH);
         if (tcsetattr (fd, TCSANOW, &newSettings) >= 0)
         {
-            /* Write the null-terminated string, leaving the terminator out */
-            if (write (fd, pSendString, strlen (pSendString) - 1) >= 0)
+            SInt32 bytesToSend = strlen (pSendString) + 1;
+            
+            /* Write the null-terminated string, including the terminator (strlen() doesn't include it, hence the +1 above)*/
+            if (write (fd, pSendString, bytesToSend) == bytesToSend)
             {
                 success = true;
                 /* If we need to, wait for the response string */
@@ -112,25 +112,26 @@ Bool sendStringToOrangutan (Char *pSendString, Char *pReceiveString, UInt32 *pRe
                             }
                             
                             /* Stop overruns */
-                            if (*pReceiveStringLength + bytesReceived > maxBytesToReceive)
+                            if (*pReceiveStringLength + bytesReceived > maxBytesToReceive - 1) /* -1 to leave room for adding a terminator */
                             {
-                                bytesReceived = maxBytesToReceive - *pReceiveStringLength;
+                                bytesReceived = maxBytesToReceive - *pReceiveStringLength - 1;
                             }
                             
                             /* Copy to the output and set the length */
                             memcpy (pReceiveString + *pReceiveStringLength, &buffer[0], bytesReceived);                        
-                            *pReceiveStringLength += bytesReceived;
-                            
-                            /* Replace the last character with a null terminator if we're done */
-                            if (done && (*pReceiveStringLength > 0))
-                            {
-                                *(pReceiveString + *pReceiveStringLength - 1) = 0;
-                            }
+                            *pReceiveStringLength += bytesReceived;                            
                         }
                         else
                         {
                             done = true;
                         }
+                    }
+                    
+                    /* Add a null terminator if we're done */
+                    if (maxBytesToReceive > 0)
+                    {
+                        *(pReceiveString + *pReceiveStringLength) = 0;
+                        (*pReceiveStringLength)++;
                     }
                 }
             }
@@ -138,6 +139,8 @@ Bool sendStringToOrangutan (Char *pSendString, Char *pReceiveString, UInt32 *pRe
             /* Restore terminal settings */
             tcsetattr (fd, TCSANOW, &savedSettings);
         }
+        
+        close (fd);
     }
 
     return success;
