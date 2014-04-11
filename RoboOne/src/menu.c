@@ -7,6 +7,7 @@
 #include <ow_bus.h>
 #include <menu.h>
 #include <dashboard.h>
+#include <orangutan.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -24,6 +25,7 @@
 #define SWAP_BATTERY_STATE_PROMPT "Is the new battery fully charged (Y) (N if it is discharged)?: "
 #define SWAP_BATTERY_CNF_MSG "Battery data updated.\n"
 #define BATTERY_CAPACITY 2200
+#define O_STRING_MAX_LENGTH 50
 
 /*
  * STATIC FUNCTION PROTOTYPES
@@ -42,7 +44,7 @@ static Bool swapO1BatteryCnf (WINDOW *pWin);
 static Bool swapO2BatteryCnf (WINDOW *pWin);
 static Bool swapO3BatteryCnf (WINDOW *pWin);
 static Bool performCalAllBatteryMonitorsCnf (WINDOW *pWin);
-
+static Bool sendOString(WINDOW *pWin);
 /*
  * TYPES
  */
@@ -93,6 +95,7 @@ Command gCommandList[] = {{"?", {&commandHelp}, true, "display command help"},
  						  {"HB-", {&setOPwrBattOff}, false, "switch hindbrain (AKA Orangutan) battery power off"},
  						  {"HM+", {&setOPwr12VOn}, false, "switch hindbrain (AKA Orangutan) mains power on"},
  						  {"HM-", {&setOPwr12VOff}, false, "switch hindbrain (AKA Orangutan) mains power off"},
+                          {"HS", {&sendOString}, false, "send hindbrain (AKA Orangutan) a string"},
  						  {"CX+", {&setAllBatteryChargersOn}, false, "switch all chargers on"},
  						  {"CX-", {&setAllBatteryChargersOff}, false, "switch all chargers off"},
  						  {"CP+", {&setRioBatteryChargerOn}, false, "switch RIO/Pi charger on"},
@@ -495,7 +498,7 @@ static Bool displayGpios (WINDOW *pWin)
  *
  * @return  true if successful, otherwise false.
  */
-static bool performCalAllBatteryMonitorsCnf (WINDOW *pWin)
+static Bool performCalAllBatteryMonitorsCnf (WINDOW *pWin)
 {
     Bool success = true;
     
@@ -510,6 +513,32 @@ static bool performCalAllBatteryMonitorsCnf (WINDOW *pWin)
         else
         {
             printHelper (pWin, "%s\n", GENERIC_FAILURE_MSG);
+        }
+    }
+    
+    return success;
+}
+
+/*
+ * Send a string to the Orangutan.
+ *
+ * pWin     a window to send output to, may
+ *          be PNULL.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool sendOString (WINDOW *pWin)
+{
+    Bool success = false;
+    Char buffer[O_STRING_MAX_LENGTH];
+    UInt32 bytesReceived = sizeof (buffer);
+    
+    if (getStringInput (pWin, "Cmd: ", &buffer[0], sizeof (buffer)) != PNULL)
+    {    
+        success = sendStringToOrangutan (&buffer[0], &buffer[0], &bytesReceived);
+        if (success)
+        {
+            printHelper (pWin, "%s\n", &buffer[0]);
         }
     }
     
@@ -821,6 +850,62 @@ Bool getYesInput (WINDOW *pWin, Char *pPrompt)
     }
     
     return answerIsYes;
+}
+
+/*
+ * Get a string of input.  This does its own
+ * terminal settings stuff so that
+ * it can be called from anywhere.
+ * 
+ * pWin      a window to get input from,
+ *           may be PNULL.
+ * pPrompt   a string to print as a prompt,
+ *           may be PNULL.
+ * pString   a pointer to a place to store
+ *           the string.  It will be null
+ *           terminater.
+ * stringLen the maximum length of the
+ *           string. 
+ *
+ * @return  a pointer to the string.
+ * 
+ */
+Char * getStringInput (WINDOW *pWin, Char *pPrompt, Char *pString, UInt32 stringLen)
+{
+    Char * pReturnValue = PNULL;
+    struct termios savedSettings;
+    struct termios newSettings;
+
+    ASSERT_PARAM (pString != PNULL, (unsigned long) pString);
+    ASSERT_PARAM (stringLen > 0, stringLen);
+
+    /* Check if this is a TTY device */
+    if (tcgetattr (STDIN_FILENO, &savedSettings) == 0)
+    {
+        /* Save current settings and then set us up for canonical input (i.e. needs enter to complete) */
+        memcpy (&newSettings, &savedSettings, sizeof (newSettings));
+        newSettings.c_lflag &= ICANON | ECHO | ECHOK | ECHONL | ECHOKE | ICRNL;
+        tcsetattr (STDIN_FILENO, TCSANOW, &newSettings);
+        
+        /* Prompt for input */
+        if (pPrompt != PNULL)
+        {
+            printHelper (pWin, pPrompt);
+            if (pWin != PNULL)
+            {
+                wnoutrefresh (pWin);
+                doupdate ();
+            }
+        }
+        
+        /* Now get the string */
+        pReturnValue = fgets (pString, stringLen, stdin);
+        
+        /* Restore saved settings */
+        tcsetattr (STDIN_FILENO, TCSANOW, &savedSettings);
+    }
+    
+    return pReturnValue;
 }
 
 /*

@@ -15,5 +15,6 @@
  */
 
 Bool getYesInput (WINDOW *pWin, Char *pPrompt);
+Char * getStringInput (WINDOW *pWin, Char *pPrompt, Char * pString, UInt32 stringLen);
 Bool handleUserCmdMenu (WINDOW *pCmdWin, UInt8 key, WINDOW *pOutputWin, Bool *pExitMenu);
 Bool runMenu (void);
