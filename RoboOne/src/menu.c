@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <termios.h>
 #include <unistd.h>
 #include <rob_system.h>
@@ -144,6 +145,44 @@ static void printHelper (WINDOW *pWin, const Char * pFormat, ...)
         vprintf (pFormat, args);
         va_end (args);
     }
+}
+
+/*
+ * Remove control characters from a null
+ * terminated string.
+ * 
+ * pInput   the null terminated input string.
+ * pOutput  pointer to somewhere to store the
+ *          filtered string, needs to be
+ *          at least as large as pInput. The
+ *          null terminator is copied.
+ * 
+ * @return  none.
+ */
+static void removeCtrlCharacters (const Char *pInput, Char *pOutput)
+{
+    UInt32 i;
+    UInt32 inputLength;
+    Char *pDest;
+    const Char *pSrc;
+    
+    ASSERT_PARAM (pInput != PNULL, (unsigned long) pInput);
+    ASSERT_PARAM (pOutput != PNULL, (unsigned long) pOutput);
+    
+    inputLength = strlen (pInput);
+    
+    pSrc = pInput;
+    pDest = pOutput;
+    for (i = 0; i < inputLength; i++)
+    {
+        if (isprint (*pSrc))
+        {
+            *pDest = *pSrc;
+            pDest++;
+        }
+        pSrc++;
+    }
+    *pDest = 0; /* Add the null terminator */
 }
 
 /*
@@ -532,21 +571,28 @@ static Bool sendOString (WINDOW *pWin)
     Bool success = false;
     Char buffer[O_STRING_MAX_LENGTH];
     UInt32 bytesReceived = sizeof (buffer);
+    Char displayBuffer[O_STRING_MAX_LENGTH];
     
     if (getStringInput (pWin, "String: ", &buffer[0], sizeof (buffer)) != PNULL)
     {
+        removeCtrlCharacters (&buffer[0], &displayBuffer[0]);
         success = sendStringToOrangutan (&buffer[0], &buffer[0], &bytesReceived);
         if (success)
         {
-            printHelper (pWin, "\nSend successful");
+            printHelper (pWin, "\nSent '%s' successfully", &displayBuffer[0]);
             if (bytesReceived > 1) /* There will always be a terminator, hence the 1 */
             {
-                printHelper (pWin, ", response: %s.\n", &buffer[0]);                
+                removeCtrlCharacters (&buffer[0], &displayBuffer[0]);
+                printHelper (pWin, ", response: '%s'.\n", &displayBuffer[0]);                
             }
             else
             {
                 printHelper (pWin, ", no response.\n");                                
             }
+        }
+        else
+        {
+            printHelper (pWin, "\nSend failed.\n");
         }
     }
     
@@ -897,6 +943,7 @@ Char * getStringInput (WINDOW *pWin, Char *pPrompt, Char *pString, UInt32 string
         newSettings.c_lflag |= ICANON | ECHO | ECHOE | ECHOK | ECHOKE;
         tcsetattr (STDIN_FILENO, TCSANOW, &newSettings);
         
+        tcflush (STDIN_FILENO, TCIFLUSH);
         /* Prompt for input */
         if (pPrompt != PNULL)
         {

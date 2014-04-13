@@ -64,6 +64,7 @@ Bool sendStringToOrangutan (Char *pSendString, Char *pReceiveString, UInt32 *pRe
     struct termios savedSettings;
     struct termios newSettings;
     Char buffer[ORANGUTAN_BUFFER_SIZE];
+    UInt8 i;
     
     ASSERT_PARAM (pSendString != PNULL, (unsigned long) pSendString);
 
@@ -73,7 +74,7 @@ Bool sendStringToOrangutan (Char *pSendString, Char *pReceiveString, UInt32 *pRe
     {
         tcgetattr (fd, &savedSettings); /* save current port settings */
           
-        memset (&newSettings, sizeof (newSettings), 0);
+        memset (&newSettings, 0, sizeof (newSettings));
         cfsetospeed(&newSettings, ORANGUTAN_BAUD_RATE);
         cfsetispeed(&newSettings, ORANGUTAN_BAUD_RATE);
         newSettings.c_cflag |= CS8 | CLOCAL | CREAD;        
@@ -82,12 +83,12 @@ Bool sendStringToOrangutan (Char *pSendString, Char *pReceiveString, UInt32 *pRe
         newSettings.c_cc[VTIME] = ORANGUTAN_WAIT_TIMEOUT_TENTHS_SEC;
         newSettings.c_cc[VMIN]  = 0;
           
-        tcflush (fd, TCIFLUSH);
+        tcflush (fd, TCIOFLUSH);
         if (tcsetattr (fd, TCSANOW, &newSettings) >= 0)
         {
-            SInt32 bytesToSend = strlen (pSendString) + 1;
+            SInt32 bytesToSend = strlen (pSendString);
             
-            /* Write the null-terminated string, including the terminator (strlen() doesn't include it, hence the +1 above)*/
+            /* Write the string, excluding the terminator */
             if (write (fd, pSendString, bytesToSend) == bytesToSend)
             {
                 success = true;
@@ -106,9 +107,13 @@ Bool sendStringToOrangutan (Char *pSendString, Char *pReceiveString, UInt32 *pRe
                         
                         if (bytesReceived > 0)
                         {
-                            if (buffer[bytesReceived] == ORANGUTAN_RESPONSE_TERMINATOR)
+                            for (i = 0; (i < bytesReceived) && !done; i++)
                             {
-                                done = true;                            
+                                if (buffer[i] == ORANGUTAN_RESPONSE_TERMINATOR)
+                                {
+                                    done = true;
+                                    bytesReceived = i + 1; /* Chop off at the terminator */
+                                }
                             }
                             
                             /* Stop overruns */
