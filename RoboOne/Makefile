@@ -16,15 +16,10 @@ SERVER_PRE = ../MessagingServer
 CLIENT_PRE = ../MessagingClient
 ONEWIRESERVER_PRE = ../OneWireServer
 
-OW_LIBS_PRE = ../OneWireLibs
-OW_LIBS_FLAGS = -I$(OW_LIBS_PRE)/common -I$(OW_LIBS_PRE)/lib/userial/shared -I$(OW_LIBS_PRE)/lib/userial/link/Linux -DDEBUG
-OW_LIBS_OBJ_PRE = $(OW_LIBS_PRE)/builds/uLinuxGNU/obj
-OW_LIBS = $(OW_LIBS_OBJ_PRE)/owlinkobjs
-
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
 CC = $(GCC_PREFIX)gcc.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ONEWIRESERVER_PRE)/$(API_DIR) $(OW_LIBS_FLAGS) $(FLAGS) $(OW_LIBS_FLAGS)
+CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ONEWIRESERVER_PRE)/$(API_DIR) $(FLAGS)
 LDFLAGS = -lncurses $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(ONEWIRE_PRE)/$(OBJ_DIR)/one_wire.a $(OW_LIBS) $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a
 
 all: $(PROGRAM)

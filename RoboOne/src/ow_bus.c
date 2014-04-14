@@ -8,10 +8,10 @@
  */ 
  
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <ownet.h>
-#include <atod26.h>
+#include <unistd.h>
 #include <rob_system.h>
 #include <one_wire.h>
 #include <ow_bus.h>
@@ -27,7 +27,7 @@
 
 #define ONEWIRE_PORT_STRING    "/dev/USBSerial"
 #define MAX_NUM_DEVICES 8    /* This MUST be the same as the number of elements in the gDeviceStaticConfigList[] below */
-#define TOGGLE_DELAY_MS 500  /* How long to toggle a set of pins from current state to opposite and back again */
+#define TOGGLE_DELAY_US 500000L  /* How long to toggle a set of pins from current state to opposite and back again */
 
 /* Enable current measurement, integrated current accummulator, charge/discharge
  * counting and shadowing of charge/discharge count to non-volatile storage */
@@ -168,8 +168,8 @@ extern SInt32 gOneWireServerPort;
  * 1. Run the program "tstfind", that is in the OneWire libs, on the Pi, giving it
  *    /dev/USBSerial as its target serial port.  It will list all the device
  *    addresses, in reverse byte order (i.e. with the family ID on the left).
- *    There should be eight devices, four with family ID 0x26 (SBATTERY_FAM) and
- *    four with family ID 0x29 (PIO_FAM).  Copy the addresses, reversing byte
+ *    There should be eight devices, four with family ID 0x26 (FAMILY_SBATTERY) and
+ *    four with family ID 0x29 (FAMILY_PIO).  Copy the addresses, reversing byte
  *    order, into the structure below, putting them in the right families but
  *    otherwise randomly assigning the addresses to the entries.
  * 2. Make sure that setDebugPrintsOn() is being called in main.c, make sure
@@ -213,14 +213,14 @@ extern SInt32 gOneWireServerPort;
  * gDeviceStaticConfigList array */
 
 OwDevicesStaticConfig gDeviceStaticConfigList[] =
-         {{OW_NAME_RIO_BATTERY_MONITOR, {{SBATTERY_FAM, 0xcf, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0x0b}}, {{RIO_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_O1_BATTERY_MONITOR, {{SBATTERY_FAM, 0x69, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0xe5}}, {{O1_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_O2_BATTERY_MONITOR, {{SBATTERY_FAM, 0x19, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0x7d}}, {{O2_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_O3_BATTERY_MONITOR, {{SBATTERY_FAM, 0x53, 0x20, 0xb3, 0x01, 0x00, 0x00, 0x5c}}, {{O3_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_CHARGER_STATE_PIO, {{PIO_FAM, 0xbc, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0xa3}}, {{CHARGER_STATE_IO_CONFIG, CHARGER_STATE_IO_SHADOW_MASK, CHARGER_STATE_IO_PIN_CONFIG}}},
-          {OW_NAME_DARLINGTON_PIO, {{PIO_FAM, 0xaf, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0xa1}}, {{DARLINGTON_IO_CONFIG, DARLINGTON_IO_SHADOW_MASK, DARLINGTON_IO_PIN_CONFIG}}},
-          {OW_NAME_RELAY_PIO, {{PIO_FAM, 0xbd, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0x94}}, {{RELAY_IO_CONFIG, RELAY_IO_SHADOW_MASK, RELAY_IO_PIN_CONFIG}}},
-          {OW_NAME_GENERAL_PURPOSE_PIO, {{PIO_FAM, 0x02, 0x06, 0x0d, 0x00, 0x00, 0x00, 0x4c}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_SHADOW_MASK, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
+         {{OW_NAME_RIO_BATTERY_MONITOR, {{FAMILY_SBATTERY, 0xcf, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0x0b}}, {{RIO_BATTERY_MONITOR_CONFIG}}},
+          {OW_NAME_O1_BATTERY_MONITOR, {{FAMILY_SBATTERY, 0x69, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0xe5}}, {{O1_BATTERY_MONITOR_CONFIG}}},
+          {OW_NAME_O2_BATTERY_MONITOR, {{FAMILY_SBATTERY, 0x19, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0x7d}}, {{O2_BATTERY_MONITOR_CONFIG}}},
+          {OW_NAME_O3_BATTERY_MONITOR, {{FAMILY_SBATTERY, 0x53, 0x20, 0xb3, 0x01, 0x00, 0x00, 0x5c}}, {{O3_BATTERY_MONITOR_CONFIG}}},
+          {OW_NAME_CHARGER_STATE_PIO, {{FAMILY_PIO, 0xbc, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0xa3}}, {{CHARGER_STATE_IO_CONFIG, CHARGER_STATE_IO_SHADOW_MASK, CHARGER_STATE_IO_PIN_CONFIG}}},
+          {OW_NAME_DARLINGTON_PIO, {{FAMILY_PIO, 0xaf, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0xa1}}, {{DARLINGTON_IO_CONFIG, DARLINGTON_IO_SHADOW_MASK, DARLINGTON_IO_PIN_CONFIG}}},
+          {OW_NAME_RELAY_PIO, {{FAMILY_PIO, 0xbd, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0x94}}, {{RELAY_IO_CONFIG, RELAY_IO_SHADOW_MASK, RELAY_IO_PIN_CONFIG}}},
+          {OW_NAME_GENERAL_PURPOSE_PIO, {{FAMILY_PIO, 0x02, 0x06, 0x0d, 0x00, 0x00, 0x00, 0x4c}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_SHADOW_MASK, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
 
 /* Obviously these need to be in the same order as the above */
 Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
@@ -415,10 +415,10 @@ static OwDeviceType getDeviceType (const UInt8 *pAddress)
     
     switch (*pAddress)
     {
-        case SBATTERY_FAM:
+        case FAMILY_SBATTERY:
             type = OW_TYPE_DS2438_BATTERY_MONITOR;
             break;
-        case PIO_FAM:
+        case FAMILY_PIO:
             type = OW_TYPE_DS2408_PIO;
             break;
         default:
@@ -641,7 +641,7 @@ static Bool togglePinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask)
             gDeviceStaticConfigList[deviceName].specifics.ds2408.pinsState = pinsState;
         }
         
-        msDelay (TOGGLE_DELAY_MS);
+        usleep (TOGGLE_DELAY_US);
     }
     
     return success;

@@ -24,6 +24,7 @@
 
 #define SERVER_EXE "./one_wire_server"
 #define SERVER_PORT_STRING "5234"
+#define STATE_MACHINE_EXE "./roboone_state_machine"
 
 /*
  * EXTERN
@@ -103,6 +104,7 @@ int main (int argc, char **argv)
 {
     Bool  success = true;
     pid_t serverPID;
+    pid_t stateMachinePID;
     
     /* setDebugPrintsOn(); */
     setProgressPrintsOn();
@@ -112,55 +114,90 @@ int main (int argc, char **argv)
     
     /* Spawn a child that will become the One Wire server. */
     serverPID = fork();
-    
     if (serverPID == 0)
     {
-        /* Start OneWire server process on port 5000 */
-        static char *argv[]={SERVER_EXE, SERVER_PORT_STRING, PNULL};
+        /* Start OneWire server process on a given port */
+        static char *argv1[] = {SERVER_EXE, SERVER_PORT_STRING, PNULL};
         
-        execv (SERVER_EXE, argv);
-        printDebug ("Couldn't launch %s, err: %s\n", SERVER_EXE, strerror (errno));
+        execv (SERVER_EXE, argv1);
+        printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", SERVER_EXE, strerror (errno));
         success = false;
     }
     else
-    { /* Parent process */
-      /* Setup what's necessary for OneWire bus stuff */
-        usleep (SERVER_START_DELAY_PI_US); /* Wait for the server to start */
-        success = startOneWireBus();
-        
-        /* Find and setup the devices on the OneWire bus */
-        if (success)
+    {
+        if (serverPID < 0)
         {
-            success = setupDevices();
-            
-            if (success)
+            printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", SERVER_EXE, strerror (errno));
+            success = false;            
+        }
+        else
+        {   /* Parent process */
+            /* Spawn a child that will become the RoboOne state machine. */
+            stateMachinePID = fork();
+            if (stateMachinePID == 0)
             {
-                /* Display the dashboard */
-                success = runDashboard();
+                /* Start RoboOne state machine process */
+                static char *argv2[] = {STATE_MACHINE_EXE, PNULL};
+                
+                execv (STATE_MACHINE_EXE, argv2);
+                printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", STATE_MACHINE_EXE, strerror (errno));
+                success = false;        
             }
             else
             {
-                /* If the setup fails, print out what devices we can find */
-                findAllDevices();
+                if (stateMachinePID < 0)
+                {
+                    printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", STATE_MACHINE_EXE, strerror (errno));
+                    success = false;                                
+                }
+                else
+                { /* Parent process again */
+                  /* Setup what's necessary for OneWire bus stuff */
+                    usleep (SERVER_START_DELAY_PI_US); /* Wait for the server to start */
+                    success = startOneWireBus();
+                    
+                    /* Find and setup the devices on the OneWire bus */
+                    if (success)
+                    {
+                        success = setupDevices();
+                        
+                        if (success)
+                        {
+                            /* Display the dashboard */
+                            success = runDashboard();
+                        }
+                        else
+                        {
+                            /* If the setup fails, print out what devices we can find */
+                            findAllDevices();
+                        }
+                    }
+                    
+                    if (success)
+                    {
+                        printProgress ("\nDone.\n");
+                    }
+                    else
+                    {
+                        printProgress ("\nFailed!\n");
+                    }
+                    
+                    /* Shut things down gracefully */
+                    stopOneWireBus ();
+                    
+                    /* Stop the server */
+                    stopOneWireServer (gOneWireServerPort);
+                    
+                    waitpid (serverPID, 0, 0); /* wait for server to exit */
+                    waitpid (stateMachinePID, 0, 0); /* wait for state machine to exit */
+                }
             }
         }
-        
-        if (success)
-        {
-            printProgress ("\nDone.\n");
-        }
-        else
-        {
-            printProgress ("\nFailed!\n");
-        }
-        
-        /* Shut things down gracefully */
-        stopOneWireBus ();
-        
-        /* Stop the server */
-        stopOneWireServer (gOneWireServerPort);
-        
-        waitpid (serverPID, 0, 0); /* wait for server to exit */
+    }
+    
+    if (!success)
+    {
+        exit (-1);
     }
     
     return success;

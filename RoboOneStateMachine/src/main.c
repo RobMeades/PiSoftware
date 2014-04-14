@@ -1,6 +1,5 @@
 /*
- * test.c
- * Test the RoboOne State Machine
+ * Entry point for the RoboOne State Machine
  */ 
  
 #include <stdio.h>
@@ -11,7 +10,7 @@
 #include <state_machine_public.h>
 
 /*
- * main for testing
+ * main
  */
 int main (int argc, char **argv)
 {
@@ -20,5 +19,12 @@ int main (int argc, char **argv)
     setDebugPrintsOn();
     setProgressPrintsOn();
 
+    printProgress ("RoboOne state machine started.\n");
+    
+    if (!success)
+    {
+        exit (-1);
+    }
+    
     return success;
 }
