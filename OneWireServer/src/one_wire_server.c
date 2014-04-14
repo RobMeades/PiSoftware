@@ -63,7 +63,7 @@ static UInt16 actionOneWireStartBus (Char *pSerialPortString, OneWireStartBusCnf
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionOneWireStopBus (MsgHeader *pMsgHeader, OneWireStopBusCnf *pSendMsgBody)
+static UInt16 actionOneWireStopBus (OneWireMsgHeader *pMsgHeader, OneWireStopBusCnf *pSendMsgBody)
 {
     UInt16 sendMsgBodyLength = 0;
 
@@ -113,7 +113,7 @@ static UInt16 actionOneWireServerExit (OneWireServerExitCnf *pSendMsgBody)
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionOneWireFindAllDevices (MsgHeader *pMsgHeader, OneWireFindAllDevicesCnf *pSendMsgBody)
+static UInt16 actionOneWireFindAllDevices (OneWireMsgHeader *pMsgHeader, OneWireFindAllDevicesCnf *pSendMsgBody)
 {
     UInt8 numDevicesFound;
     UInt16 sendMsgBodyLength = 0;
@@ -147,7 +147,7 @@ static UInt16 actionOneWireFindAllDevices (MsgHeader *pMsgHeader, OneWireFindAll
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionOneWireAccessDevice (MsgHeader *pMsgHeader, OneWireAccessDeviceCnf *pSendMsgBody)
+static UInt16 actionOneWireAccessDevice (OneWireMsgHeader *pMsgHeader, OneWireAccessDeviceCnf *pSendMsgBody)
 {
     UInt16 sendMsgBodyLength = 0;
     
@@ -172,7 +172,7 @@ static UInt16 actionOneWireAccessDevice (MsgHeader *pMsgHeader, OneWireAccessDev
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionDisableTestModeDS2408 (MsgHeader *pMsgHeader, DisableTestModeDS2408Cnf *pSendMsgBody)
+static UInt16 actionDisableTestModeDS2408 (OneWireMsgHeader *pMsgHeader, DisableTestModeDS2408Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -202,7 +202,7 @@ static UInt16 actionDisableTestModeDS2408 (MsgHeader *pMsgHeader, DisableTestMod
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionReadByteRegister (OneWireMsgType msgType, MsgHeader *pMsgHeader, UInt8 *pSendMsgBody)
+static UInt16 actionReadByteRegister (OneWireMsgType msgType, OneWireMsgHeader *pMsgHeader, UInt8 *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -293,7 +293,7 @@ static UInt16 actionReadByteRegister (OneWireMsgType msgType, MsgHeader *pMsgHea
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionWriteByteRegister (OneWireMsgType msgType, MsgHeader *pMsgHeader, UInt8 data, UInt8 *pSendMsgBody)
+static UInt16 actionWriteByteRegister (OneWireMsgType msgType, OneWireMsgHeader *pMsgHeader, UInt8 data, UInt8 *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -346,7 +346,7 @@ static UInt16 actionWriteByteRegister (OneWireMsgType msgType, MsgHeader *pMsgHe
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionResetActivityLatchesDS2408 (MsgHeader *pMsgHeader, ResetActivityLatchesDS2408Cnf *pSendMsgBody)
+static UInt16 actionResetActivityLatchesDS2408 (OneWireMsgHeader *pMsgHeader, ResetActivityLatchesDS2408Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -374,7 +374,7 @@ static UInt16 actionResetActivityLatchesDS2408 (MsgHeader *pMsgHeader, ResetActi
  * @return        the length of the message body
  *                to send back.
  */
-static UInt16 actionChannelAccessReadDS2408 (MsgHeader *pMsgHeader, UInt8 numBytesToRead, ChannelAccessReadDS2408Cnf *pSendMsgBody)
+static UInt16 actionChannelAccessReadDS2408 (OneWireMsgHeader *pMsgHeader, UInt8 numBytesToRead, ChannelAccessReadDS2408Cnf *pSendMsgBody)
 {
     UInt16 sendMsgBodyLength = 0;
     UInt8 data [DS2408_MAX_BYTES_IN_CHANNEL_ACCESS];
@@ -414,7 +414,7 @@ static UInt16 actionChannelAccessReadDS2408 (MsgHeader *pMsgHeader, UInt8 numByt
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionChannelAccessWriteDS2408 (MsgHeader *pMsgHeader, UInt8 *pData, ChannelAccessWriteDS2408Cnf *pSendMsgBody)
+static UInt16 actionChannelAccessWriteDS2408 (OneWireMsgHeader *pMsgHeader, UInt8 *pData, ChannelAccessWriteDS2408Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -443,7 +443,7 @@ static UInt16 actionChannelAccessWriteDS2408 (MsgHeader *pMsgHeader, UInt8 *pDat
  * @return        the length of the message body
  *                to send back.
  */
-static UInt16 actionReadNVPageDS2438 (MsgHeader *pMsgHeader, UInt8 page, ReadNVPageDS2438Cnf *pSendMsgBody)
+static UInt16 actionReadNVPageDS2438 (OneWireMsgHeader *pMsgHeader, UInt8 page, ReadNVPageDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -479,7 +479,7 @@ static UInt16 actionReadNVPageDS2438 (MsgHeader *pMsgHeader, UInt8 page, ReadNVP
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionWriteNVPageDS2438 (MsgHeader *pMsgHeader, UInt8 page, UInt8 *pMem, UInt8 size, WriteNVPageDS2438Cnf *pSendMsgBody)
+static UInt16 actionWriteNVPageDS2438 (OneWireMsgHeader *pMsgHeader, UInt8 page, UInt8 *pMem, UInt8 size, WriteNVPageDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -511,7 +511,7 @@ static UInt16 actionWriteNVPageDS2438 (MsgHeader *pMsgHeader, UInt8 page, UInt8 
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionReadVxdDS2438 (OneWireMsgType msgType, MsgHeader *pMsgHeader, UInt8 *pSendMsgBody)
+static UInt16 actionReadVxdDS2438 (OneWireMsgType msgType, OneWireMsgHeader *pMsgHeader, UInt8 *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -562,7 +562,7 @@ static UInt16 actionReadVxdDS2438 (OneWireMsgType msgType, MsgHeader *pMsgHeader
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionReadTemperatureDS2438 (MsgHeader *pMsgHeader, ReadTemperatureDS2438Cnf *pSendMsgBody)
+static UInt16 actionReadTemperatureDS2438 (OneWireMsgHeader *pMsgHeader, ReadTemperatureDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -592,7 +592,7 @@ static UInt16 actionReadTemperatureDS2438 (MsgHeader *pMsgHeader, ReadTemperatur
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionReadCurrentDS2438 (MsgHeader *pMsgHeader, ReadCurrentDS2438Cnf *pSendMsgBody)
+static UInt16 actionReadCurrentDS2438 (OneWireMsgHeader *pMsgHeader, ReadCurrentDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -622,7 +622,7 @@ static UInt16 actionReadCurrentDS2438 (MsgHeader *pMsgHeader, ReadCurrentDS2438C
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionReadBatteryDS2438 (MsgHeader *pMsgHeader, ReadBatteryDS2438Cnf *pSendMsgBody)
+static UInt16 actionReadBatteryDS2438 (OneWireMsgHeader *pMsgHeader, ReadBatteryDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -654,7 +654,7 @@ static UInt16 actionReadBatteryDS2438 (MsgHeader *pMsgHeader, ReadBatteryDS2438C
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionReadNVConfigThresholdDS2438 (MsgHeader *pMsgHeader, ReadNVConfigThresholdDS2438Cnf *pSendMsgBody)
+static UInt16 actionReadNVConfigThresholdDS2438 (OneWireMsgHeader *pMsgHeader, ReadNVConfigThresholdDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -689,7 +689,7 @@ static UInt16 actionReadNVConfigThresholdDS2438 (MsgHeader *pMsgHeader, ReadNVCo
  * @return          the length of the message body
  *                  to send back.
  */
-static UInt16 actionWriteNVConfigThresholdDS2438 (MsgHeader *pMsgHeader, UInt8 config, Bool thresholdPresent, UInt8 threshold, WriteNVConfigThresholdDS2438Cnf *pSendMsgBody)
+static UInt16 actionWriteNVConfigThresholdDS2438 (OneWireMsgHeader *pMsgHeader, UInt8 config, Bool thresholdPresent, UInt8 threshold, WriteNVConfigThresholdDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -721,7 +721,7 @@ static UInt16 actionWriteNVConfigThresholdDS2438 (MsgHeader *pMsgHeader, UInt8 c
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionReadTimeCapacityCalDS2438 (MsgHeader *pMsgHeader, ReadTimeCapacityCalDS2438Cnf *pSendMsgBody)
+static UInt16 actionReadTimeCapacityCalDS2438 (OneWireMsgHeader *pMsgHeader, ReadTimeCapacityCalDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -759,7 +759,7 @@ static UInt16 actionReadTimeCapacityCalDS2438 (MsgHeader *pMsgHeader, ReadTimeCa
  * @return          the length of the message body
  *                  to send back.
  */
-static UInt16 actionWriteTimeCapacityDS2438 (MsgHeader *pMsgHeader, UInt32 elapsedTime, Bool remainingCapacityPresent, UInt16 remainingCapacity, WriteTimeCapacityDS2438Cnf *pSendMsgBody)
+static UInt16 actionWriteTimeCapacityDS2438 (OneWireMsgHeader *pMsgHeader, UInt32 elapsedTime, Bool remainingCapacityPresent, UInt16 remainingCapacity, WriteTimeCapacityDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -791,7 +791,7 @@ static UInt16 actionWriteTimeCapacityDS2438 (MsgHeader *pMsgHeader, UInt32 elaps
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionReadTimePiOffChargingStoppedDS2438 (MsgHeader *pMsgHeader, ReadTimePiOffChargingStoppedDS2438Cnf *pSendMsgBody)
+static UInt16 actionReadTimePiOffChargingStoppedDS2438 (OneWireMsgHeader *pMsgHeader, ReadTimePiOffChargingStoppedDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -823,7 +823,7 @@ static UInt16 actionReadTimePiOffChargingStoppedDS2438 (MsgHeader *pMsgHeader, R
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionReadNVChargeDischargeDS2438 (MsgHeader *pMsgHeader, ReadNVChargeDischargeDS2438Cnf *pSendMsgBody)
+static UInt16 actionReadNVChargeDischargeDS2438 (OneWireMsgHeader *pMsgHeader, ReadNVChargeDischargeDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -858,7 +858,7 @@ static UInt16 actionReadNVChargeDischargeDS2438 (MsgHeader *pMsgHeader, ReadNVCh
  * @return          the length of the message body
  *                  to send back.
  */
-static UInt16 actionWriteNVChargeDischargeDS2438 (MsgHeader *pMsgHeader, UInt32 charge, Bool dischargePresent, UInt32 discharge, WriteNVChargeDischargeDS2438Cnf *pSendMsgBody)
+static UInt16 actionWriteNVChargeDischargeDS2438 (OneWireMsgHeader *pMsgHeader, UInt32 charge, Bool dischargePresent, UInt32 discharge, WriteNVChargeDischargeDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -891,7 +891,7 @@ static UInt16 actionWriteNVChargeDischargeDS2438 (MsgHeader *pMsgHeader, UInt32 
  * @return        the length of the message body
  *                to send back.
  */
-static UInt16 actionReadNVUserDataDS2438 (MsgHeader *pMsgHeader, UInt8 block, ReadNVUserDataDS2438Cnf *pSendMsgBody)
+static UInt16 actionReadNVUserDataDS2438 (OneWireMsgHeader *pMsgHeader, UInt8 block, ReadNVUserDataDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -927,7 +927,7 @@ static UInt16 actionReadNVUserDataDS2438 (MsgHeader *pMsgHeader, UInt8 block, Re
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionWriteNVUserDataDS2438 (MsgHeader *pMsgHeader, UInt8 block, UInt8 *pMem, UInt8 size, WriteNVUserDataDS2438Cnf *pSendMsgBody)
+static UInt16 actionWriteNVUserDataDS2438 (OneWireMsgHeader *pMsgHeader, UInt8 block, UInt8 *pMem, UInt8 size, WriteNVUserDataDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -957,7 +957,7 @@ static UInt16 actionWriteNVUserDataDS2438 (MsgHeader *pMsgHeader, UInt8 block, U
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionPerformCalDS2438 (MsgHeader *pMsgHeader, PerformCalDS2438Cnf *pSendMsgBody)
+static UInt16 actionPerformCalDS2438 (OneWireMsgHeader *pMsgHeader, PerformCalDS2438Cnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
@@ -990,7 +990,7 @@ static UInt16 actionPerformCalDS2438 (MsgHeader *pMsgHeader, PerformCalDS2438Cnf
  */
 static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pReceivedMsgBody, Msg *pSendMsg)
 {
-    MsgHeader msgHeader;
+    OneWireMsgHeader oneWireMsgHeader;
     ServerReturnCode returnCode = SERVER_SUCCESS_KEEP_RUNNING;
         
     ASSERT_PARAM (pReceivedMsgBody != PNULL, (unsigned long) pReceivedMsgBody);
@@ -998,7 +998,7 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
     
     pSendMsg->msgLength = 0;
     /* Get the message header, which is at the start of the message body */
-    memcpy (&msgHeader, pReceivedMsgBody, sizeof (msgHeader));
+    memcpy (&oneWireMsgHeader, pReceivedMsgBody, sizeof (oneWireMsgHeader));
 
     /* We always respond with the same message type */
     pSendMsg->msgType = (MsgType) receivedMsgType;
@@ -1019,7 +1019,7 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
         break;
         case ONE_WIRE_STOP_BUS:
         {
-            pSendMsg->msgLength += actionOneWireStopBus (&msgHeader, (OneWireStopBusCnf *) &(pSendMsg->msgBody[0]));
+            pSendMsg->msgLength += actionOneWireStopBus (&oneWireMsgHeader, (OneWireStopBusCnf *) &(pSendMsg->msgBody[0]));
         }
         break;
         case ONE_WIRE_SERVER_EXIT:
@@ -1030,12 +1030,12 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
         break;
         case ONE_WIRE_FIND_ALL_DEVICES:
         {
-            pSendMsg->msgLength += actionOneWireFindAllDevices (&msgHeader, (OneWireFindAllDevicesCnf *) &(pSendMsg->msgBody[0]));
+            pSendMsg->msgLength += actionOneWireFindAllDevices (&oneWireMsgHeader, (OneWireFindAllDevicesCnf *) &(pSendMsg->msgBody[0]));
         }
         break;
         case ONE_WIRE_ACCESS_DEVICE:
         {
-            pSendMsg->msgLength += actionOneWireAccessDevice (&msgHeader, (OneWireAccessDeviceCnf *) &(pSendMsg->msgBody[0]));
+            pSendMsg->msgLength += actionOneWireAccessDevice (&oneWireMsgHeader, (OneWireAccessDeviceCnf *) &(pSendMsg->msgBody[0]));
         }
         break;
 		/*
@@ -1043,7 +1043,7 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
 		 */
         case DISABLE_TEST_MODE_DS2408:
         {
-            pSendMsg->msgLength += actionDisableTestModeDS2408 (&msgHeader, (DisableTestModeDS2408Cnf *) &(pSendMsg->msgBody[0]));
+            pSendMsg->msgLength += actionDisableTestModeDS2408 (&oneWireMsgHeader, (DisableTestModeDS2408Cnf *) &(pSendMsg->msgBody[0]));
         }
         break;
         case READ_CONTROL_REGISTER_DS2408:
@@ -1053,42 +1053,42 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
         case READ_CS_CHANNEL_SELECTION_MASK_REGISTER_DS2408:
         case READ_CS_CHANNEL_POLARITY_SELECTION_REGISTER_DS2408:
         {
-            pSendMsg->msgLength += actionReadByteRegister (receivedMsgType, &msgHeader, &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadByteRegister (receivedMsgType, &oneWireMsgHeader, &pSendMsg->msgBody[0]);
         }
         break;
         case WRITE_CONTROL_REGISTER_DS2408:
         {
             UInt8 data = ((WriteControlRegisterDS2408Req *) pReceivedMsgBody)->data;
-            pSendMsg->msgLength += actionWriteByteRegister (receivedMsgType, &msgHeader, data, &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionWriteByteRegister (receivedMsgType, &oneWireMsgHeader, data, &pSendMsg->msgBody[0]);
         }
         break;
         case WRITE_CS_CHANNEL_SELECTION_MASK_REGISTER_DS2408:
         {
             UInt8 data = ((WriteCSChannelSelectionMaskRegisterDS2408Req *) pReceivedMsgBody)->data;
-            pSendMsg->msgLength += actionWriteByteRegister (receivedMsgType, &msgHeader, data, &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionWriteByteRegister (receivedMsgType, &oneWireMsgHeader, data, &pSendMsg->msgBody[0]);
         }
         break;
         case WRITE_CS_CHANNEL_POLARITY_SELECTION_REGISTER_DS2408:
         {
             UInt8 data = ((WriteCSChannelPolaritySelectionRegisterDS2408Req *) pReceivedMsgBody)->data;
-            pSendMsg->msgLength += actionWriteByteRegister (receivedMsgType, &msgHeader, data,  &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionWriteByteRegister (receivedMsgType, &oneWireMsgHeader, data,  &pSendMsg->msgBody[0]);
         }
         break;
         case RESET_ACTIVITY_LATCHES_DS2408:
         {
-            pSendMsg->msgLength += actionResetActivityLatchesDS2408 (&msgHeader, (ResetActivityLatchesDS2408Cnf *) &(pSendMsg->msgBody[0]));
+            pSendMsg->msgLength += actionResetActivityLatchesDS2408 (&oneWireMsgHeader, (ResetActivityLatchesDS2408Cnf *) &(pSendMsg->msgBody[0]));
         }
         break;
         case CHANNEL_ACCESS_READ_DS2408:
         {
             UInt8 numBytesToRead = ((ChannelAccessReadDS2408Req *) pReceivedMsgBody)->numBytesToRead;
-            pSendMsg->msgLength += actionChannelAccessReadDS2408 (&msgHeader, numBytesToRead, (ChannelAccessReadDS2408Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionChannelAccessReadDS2408 (&oneWireMsgHeader, numBytesToRead, (ChannelAccessReadDS2408Cnf *) &pSendMsg->msgBody[0]);
         }
         break;
         case CHANNEL_ACCESS_WRITE_DS2408:
         {
             UInt8 *pData = &((ChannelAccessWriteDS2408Req *) pReceivedMsgBody)->data[0];
-            pSendMsg->msgLength += actionChannelAccessWriteDS2408 (&msgHeader, pData, (ChannelAccessWriteDS2408Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionChannelAccessWriteDS2408 (&oneWireMsgHeader, pData, (ChannelAccessWriteDS2408Cnf *) &pSendMsg->msgBody[0]);
         }
         break;
 		/*
@@ -1097,7 +1097,7 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
         case READ_NV_PAGE_DS2438:
         {
             UInt8 page = ((ReadNVPageDS2438Req *) pReceivedMsgBody)->page;
-            pSendMsg->msgLength += actionReadNVPageDS2438 (&msgHeader, page, (ReadNVPageDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadNVPageDS2438 (&oneWireMsgHeader, page, (ReadNVPageDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
         break;
         case WRITE_NV_PAGE_DS2438:
@@ -1105,33 +1105,33 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
             UInt8 page = ((WriteNVPageDS2438Req *) pReceivedMsgBody)->writeNVPageDS2438.page;
             UInt8 *pMem = &(((WriteNVPageDS2438Req *) pReceivedMsgBody)->writeNVPageDS2438.mem[0]);
             UInt8 memLength = ((WriteNVPageDS2438Req *) pReceivedMsgBody)->writeNVPageDS2438.memLength;
-            pSendMsg->msgLength += actionWriteNVPageDS2438 (&msgHeader, page, pMem, memLength, (WriteNVPageDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionWriteNVPageDS2438 (&oneWireMsgHeader, page, pMem, memLength, (WriteNVPageDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
         break;
         case READ_VDD_DS2438:
         case READ_VAD_DS2438:
         {
-            pSendMsg->msgLength += actionReadVxdDS2438 (receivedMsgType, &msgHeader, &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadVxdDS2438 (receivedMsgType, &oneWireMsgHeader, &pSendMsg->msgBody[0]);
         }
         break;
         case READ_TEMPERATURE_DS2438:
         {
-            pSendMsg->msgLength += actionReadTemperatureDS2438 (&msgHeader, (ReadTemperatureDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadTemperatureDS2438 (&oneWireMsgHeader, (ReadTemperatureDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         case READ_CURRENT_DS2438:
         {
-            pSendMsg->msgLength += actionReadCurrentDS2438 (&msgHeader, (ReadCurrentDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadCurrentDS2438 (&oneWireMsgHeader, (ReadCurrentDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         case READ_BATTERY_DS2438:
         {
-            pSendMsg->msgLength += actionReadBatteryDS2438 (&msgHeader, (ReadBatteryDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadBatteryDS2438 (&oneWireMsgHeader, (ReadBatteryDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         case READ_NV_CONFIG_THRESHOLD_DS2438:
         {
-            pSendMsg->msgLength += actionReadNVConfigThresholdDS2438 (&msgHeader, (ReadNVConfigThresholdDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadNVConfigThresholdDS2438 (&oneWireMsgHeader, (ReadNVConfigThresholdDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         case WRITE_NV_CONFIG_THRESHOLD_DS2438:
@@ -1139,12 +1139,12 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
             UInt8 config = ((WriteNVConfigThresholdDS2438Req *) pReceivedMsgBody)->writeNVConfigThresholdDS2438.config;
             Bool thresholdPresent = ((WriteNVConfigThresholdDS2438Req *) pReceivedMsgBody)->writeNVConfigThresholdDS2438.thresholdPresent;
             UInt8 threshold = ((WriteNVConfigThresholdDS2438Req *) pReceivedMsgBody)->writeNVConfigThresholdDS2438.threshold;
-            pSendMsg->msgLength += actionWriteNVConfigThresholdDS2438 (&msgHeader, config, thresholdPresent, threshold, (WriteNVConfigThresholdDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionWriteNVConfigThresholdDS2438 (&oneWireMsgHeader, config, thresholdPresent, threshold, (WriteNVConfigThresholdDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         case READ_TIME_CAPACITY_CAL_DS2438:
         {
-            pSendMsg->msgLength += actionReadTimeCapacityCalDS2438 (&msgHeader, (ReadTimeCapacityCalDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadTimeCapacityCalDS2438 (&oneWireMsgHeader, (ReadTimeCapacityCalDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         case WRITE_TIME_CAPACITY_DS2438:
@@ -1152,17 +1152,17 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
             UInt32 elapsedTime = ((WriteTimeCapacityDS2438Req *) pReceivedMsgBody)->writeTimeCapacityDS2438.elapsedTime;
             Bool remainingCapacityPresent = ((WriteTimeCapacityDS2438Req *) pReceivedMsgBody)->writeTimeCapacityDS2438.remainingCapacityPresent;
             UInt16 remainingCapacity = ((WriteTimeCapacityDS2438Req *) pReceivedMsgBody)->writeTimeCapacityDS2438.remainingCapacity;
-            pSendMsg->msgLength += actionWriteTimeCapacityDS2438 (&msgHeader, elapsedTime, remainingCapacityPresent, remainingCapacity, (WriteTimeCapacityDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionWriteTimeCapacityDS2438 (&oneWireMsgHeader, elapsedTime, remainingCapacityPresent, remainingCapacity, (WriteTimeCapacityDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         case READ_TIME_PI_OFF_CHARGING_STOPPED_DS2438:
         {
-            pSendMsg->msgLength += actionReadTimePiOffChargingStoppedDS2438 (&msgHeader, (ReadTimePiOffChargingStoppedDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadTimePiOffChargingStoppedDS2438 (&oneWireMsgHeader, (ReadTimePiOffChargingStoppedDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         case READ_NV_CHARGE_DISCHARGE_DS2438:
         {
-            pSendMsg->msgLength += actionReadNVChargeDischargeDS2438 (&msgHeader, (ReadNVChargeDischargeDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadNVChargeDischargeDS2438 (&oneWireMsgHeader, (ReadNVChargeDischargeDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         case WRITE_NV_CHARGE_DISCHARGE_DS2438:
@@ -1170,13 +1170,13 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
             UInt32 charge = ((WriteNVChargeDischargeDS2438Req *) pReceivedMsgBody)->writeNVChargeDischargeDS2438.charge;
             Bool dischargePresent = ((WriteNVChargeDischargeDS2438Req *) pReceivedMsgBody)->writeNVChargeDischargeDS2438.dischargePresent;
             UInt16 discharge = ((WriteNVChargeDischargeDS2438Req *) pReceivedMsgBody)->writeNVChargeDischargeDS2438.discharge;
-            pSendMsg->msgLength += actionWriteNVChargeDischargeDS2438 (&msgHeader, charge, dischargePresent, discharge, (WriteNVChargeDischargeDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionWriteNVChargeDischargeDS2438 (&oneWireMsgHeader, charge, dischargePresent, discharge, (WriteNVChargeDischargeDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         case READ_NV_USER_DATA_DS2438:
         {
             UInt8 block = ((ReadNVUserDataDS2438Req *) pReceivedMsgBody)->block;
-            pSendMsg->msgLength += actionReadNVUserDataDS2438 (&msgHeader, block, (ReadNVUserDataDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadNVUserDataDS2438 (&oneWireMsgHeader, block, (ReadNVUserDataDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         case WRITE_NV_USER_DATA_DS2438:
@@ -1184,12 +1184,12 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
             UInt8 block = ((WriteNVUserDataDS2438Req *) pReceivedMsgBody)->writeNVUserDataDS2438.block;
             UInt8 *pMem = &(((WriteNVUserDataDS2438Req *) pReceivedMsgBody)->writeNVUserDataDS2438.mem[0]);
             UInt8 memLength = ((WriteNVUserDataDS2438Req *) pReceivedMsgBody)->writeNVUserDataDS2438.memLength;
-            pSendMsg->msgLength += actionWriteNVUserDataDS2438 (&msgHeader, block, pMem, memLength, (WriteNVUserDataDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionWriteNVUserDataDS2438 (&oneWireMsgHeader, block, pMem, memLength, (WriteNVUserDataDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         case PERFORM_CAL_DS2438:
         {
-            pSendMsg->msgLength += actionPerformCalDS2438 (&msgHeader, (PerformCalDS2438Cnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionPerformCalDS2438 (&oneWireMsgHeader, (PerformCalDS2438Cnf *) &pSendMsg->msgBody[0]);
         }
 		break;
         default:

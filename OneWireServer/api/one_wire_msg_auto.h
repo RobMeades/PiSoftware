@@ -15,8 +15,8 @@
  */
 typedef enum OneWireMsgTypeTag
 {
-#undef MSG_DEF
-#define MSG_DEF MSG_DEF_TYPE
+#undef ONE_WIRE_MSG_DEF
+#define ONE_WIRE_MSG_DEF ONE_WIRE_MSG_DEF_TYPE
 #include <one_wire_msgs.h>
 MAX_NUM_ONE_WIRE_MSGS
 } OneWireMsgType;
@@ -24,15 +24,15 @@ MAX_NUM_ONE_WIRE_MSGS
 /*
  * MESSAGES BODIES: REQ MESSAGES
  */
-#undef MSG_DEF
-#define MSG_DEF MAKE_ONE_WIRE_MSG_STRUCT_REQ
+#undef ONE_WIRE_MSG_DEF
+#define ONE_WIRE_MSG_DEF MAKE_ONE_WIRE_MSG_STRUCT_REQ
 #include <one_wire_msgs.h>
 
 /*
  * MESSAGES BODIES: CNF MESSAGES
  */
-#undef MSG_DEF
-#define MSG_DEF MAKE_ONE_WIRE_MSG_STRUCT_CNF
+#undef ONE_WIRE_MSG_DEF
+#define ONE_WIRE_MSG_DEF MAKE_ONE_WIRE_MSG_STRUCT_CNF
 #include <one_wire_msgs.h>
 
 /*
@@ -40,8 +40,8 @@ MAX_NUM_ONE_WIRE_MSGS
  */
 typedef union OneWireMsgUnionReqTag
 {
-#undef MSG_DEF
-#define MSG_DEF MAKE_UNION_MEMBER_REQ
+#undef ONE_WIRE_MSG_DEF
+#define ONE_WIRE_MSG_DEF MAKE_ONE_WIRE_UNION_MEMBER_REQ
 #include <one_wire_msgs.h>
 } OneWireMsgUnionReq;
 
@@ -50,8 +50,8 @@ typedef union OneWireMsgUnionReqTag
  */
 typedef union OneWireMsgUnionCnfTag
 {
-#undef MSG_DEF
-#define MSG_DEF MAKE_UNION_MEMBER_CNF
+#undef ONE_WIRE_MSG_DEF
+#define ONE_WIRE_MSG_DEF MAKE_ONE_WIRE_UNION_MEMBER_CNF
 #include <one_wire_msgs.h>
 } OneWireMsgUnionCnf;
 #pragma pack(pop) /* End of packing */ 

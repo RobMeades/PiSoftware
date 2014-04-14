@@ -8,6 +8,7 @@
 #include <rob_system.h>
 #include <state_machine_interface.h>
 #include <state_machine_public.h>
+#include <state_machine_events.h>
 #include <init_state.h>
 
 /*
@@ -21,26 +22,6 @@
 /*
  * PUBLIC FUNCTIONS
  */
-
-RoboOneContext * createRoboOneStateMachine (void)
-{
-    RoboOneContext *pInstance;
-    
-    pInstance = malloc (sizeof (RoboOneContext));
-    
-    if (pInstance != PNULL)
-    {
-        transitionToInit (&(pInstance->state));
-    }   
-    
-    return pInstance;
-}
-
-void destroyRoboOneStateMachine (RoboOneContext *pInstance)
-{
-    free (pInstance);
-}
-
 void eventInitRoboOne (RoboOneContext *pInstance)
 {
     pInstance->state.pEventInit (&(pInstance->state));

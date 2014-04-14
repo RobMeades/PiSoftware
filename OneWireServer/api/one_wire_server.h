@@ -22,11 +22,11 @@
  */
 
 /* All OneWire REQuest messages have this at the start of their msgBody */
-typedef struct MsgHeaderTag
+typedef struct OneWireMsgHeaderTag
 {
     SInt32 portNumber;
     UInt8 serialNumber[NUM_BYTES_IN_SERIAL_NUM];  
-} MsgHeader;
+} OneWireMsgHeader;
 
 /*
  * TYPES FOR REQ MESSAGES

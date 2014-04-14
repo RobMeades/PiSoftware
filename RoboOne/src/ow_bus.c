@@ -233,10 +233,6 @@ Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
                           "GENERAL_PURPOSE_PIO"};
 SInt32 gPortNumber = -1;
 
-/* A globally available send and receive message, saves error checking the mallocs/frees */
-Msg gSendMsg;
-Msg gReceiveMsg;
-
 /*
  * STATIC FUNCTIONS
  */
@@ -272,7 +268,7 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSerialNumb
     ClientReturnCode returnCode;
     Bool success = true;
     Msg *pSendMsg;
-    MsgHeader sendMsgHeader;
+    OneWireMsgHeader sendMsgHeader;
     UInt16 sendMsgBodyLength = 0;
     Msg *pReceivedMsg;
     UInt16 receivedMsgBodyLength = 0;

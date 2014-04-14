@@ -18,7 +18,7 @@
  * MANIFEST CONSTANTS
  */
 
-#define ORANGUTAN_PORT_STRING             "/dev/serial/by-id/usb-Silicon_Labs_Pololu_Orangutan_X2_Serial_Adapter_0J64869-if00-port0"
+#define ORANGUTAN_PORT_STRING             "/dev/OrangutanUSB"
 #define ORANGUTAN_BAUD_RATE               B9600
 #define ORANGUTAN_WAIT_TIMEOUT_TENTHS_SEC 20
 #define ORANGUTAN_RESPONSE_TERMINATOR     '\r' /* CR */

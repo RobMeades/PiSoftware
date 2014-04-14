@@ -6,16 +6,16 @@
 #define ONE_WIRE_EMPTY UInt8 nothing
 
 /* The basic message macro, never used by itself but included her for completeness */
-#define MSG_DEF(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER)
+#define ONE_WIRE_MSG_DEF(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER)
 
 /* Extract the message type from the list */
-#define MSG_DEF_TYPE(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER) mSGtYPE,
+#define ONE_WIRE_MSG_DEF_TYPE(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER) mSGtYPE,
 
-/* Construct a full typedef for a REQ (incoming) message, putting the mandatory OneWireReqMsgHeader at the start */
-#define MAKE_ONE_WIRE_MSG_STRUCT_REQ(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER) typedef struct mSGsTRUCT##ReqTag   \
-                                                                                                {                                  \
-                                                                                                    MsgHeader msgHeader;           \
-                                                                                                    rEQmSGmEMBER;                  \
+/* Construct a full typedef for a REQ (incoming) message, putting the mandatory OneWireMsgHeader at the start */
+#define MAKE_ONE_WIRE_MSG_STRUCT_REQ(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER) typedef struct mSGsTRUCT##ReqTag       \
+                                                                                                {                                      \
+                                                                                                    OneWireMsgHeader oneWiremsgHeader; \
+                                                                                                    rEQmSGmEMBER;                      \
                                                                                                 } mSGsTRUCT##Req;
 
 /* Construct a full typedef for a CNF (outgoing) message, putting the mandatory Bool for success/fail at the start */
@@ -26,6 +26,6 @@
                                                                                                 } mSGsTRUCT##Cnf;
 
 /* Construct the members of the message unions */
-#define MAKE_UNION_MEMBER_REQ(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER)        mSGsTRUCT##Req mSGmEMBER##Req;
-#define MAKE_UNION_MEMBER_CNF(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER)        mSGsTRUCT##Cnf mSGmEMBER##Cnf;
+#define MAKE_ONE_WIRE_UNION_MEMBER_REQ(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER)        mSGsTRUCT##Req mSGmEMBER##Req;
+#define MAKE_ONE_WIRE_UNION_MEMBER_CNF(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER)        mSGsTRUCT##Cnf mSGmEMBER##Cnf;
 

@@ -6,6 +6,8 @@
 #include <curses.h> /* Has to be ahead of rob_system.h in the list as it fiddles with bool */
 #include <ow_bus.h>
 #include <menu.h>
+#include <state_machine_interface.h>
+#include <state_machine_public.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -49,6 +51,10 @@
 #define WIN_OUTPUT_START_COL      2
 #define WIN_OUTPUT_HEIGHT         35
 #define WIN_OUTPUT_WIDTH          76
+#define WIN_STATE_START_ROW       9 /* sits on top of the mux window so move this if you ever want them both on */
+#define WIN_STATE_START_COL       35
+#define WIN_STATE_HEIGHT          3
+#define WIN_STATE_WIDTH           28
 
 /* The places that various things should appear on the background
  * screen, negative meaning to count up from the bottom of the
@@ -88,6 +94,8 @@ static void initMuxWindow (WINDOW *pWin);
 static Bool updateMuxWindow (WINDOW *pWin, UInt8 count);
 static void initChgWindow (WINDOW *pWin);
 static Bool updateChgWindow (WINDOW *pWin, UInt8 count);
+static void initStateWindow (WINDOW *pWin);
+static Bool updateStateWindow (WINDOW *pWin, UInt8 count);
 
 /*
  * TYPES
@@ -114,6 +122,12 @@ typedef struct WindowInfoTag
 } WindowInfo;
 
 /*
+ * EXTERN
+ */
+
+extern RoboOneContext *gpRoboOneContext;
+
+/*
  * GLOBALS (prefixed with g)
  */
 
@@ -124,6 +138,7 @@ WindowInfo gWindowList[] = {{"Output", {WIN_OUTPUT_HEIGHT, WIN_OUTPUT_WIDTH, WIN
                             {"Power", {WIN_POWER_HEIGHT, WIN_POWER_WIDTH, WIN_POWER_START_ROW, WIN_POWER_START_COL}, initPowerWindow, updatePowerWindow, PNULL, true},
                             {"Analogue", {WIN_MUX_HEIGHT, WIN_MUX_WIDTH, WIN_MUX_START_ROW, WIN_MUX_START_COL}, initMuxWindow, updateMuxWindow, PNULL, false},
                             {"Chargers", {WIN_CHG_HEIGHT, WIN_CHG_WIDTH, WIN_CHG_START_ROW, WIN_CHG_START_COL}, initChgWindow, updateChgWindow, PNULL, true},
+                            {"State", {WIN_STATE_HEIGHT, WIN_STATE_WIDTH, WIN_STATE_START_ROW, WIN_STATE_START_COL}, initStateWindow, updateStateWindow, PNULL, true},
                             {"", {WIN_CMD_HEIGHT, WIN_CMD_WIDTH, WIN_CMD_START_ROW, WIN_CMD_START_COL}, initCmdWindow, updateCmdWindow, PNULL, true}}; /* Should be last in the list so that display updates leave the cursor here */
 /* Must be in the same order as the enum ChargeState */
 Char * gChargeStrings[] = {" --- ", " Off ", " Grn ", "*Grn*", " Red ", "*Red*", "  6  ", " ??? ", " Nul ", " Bad "};
@@ -606,6 +621,45 @@ static void initOutputWindow (WINDOW *pWin)
  */
 static Bool updateOutputWindow (WINDOW *pWin, UInt8 count)
 {
+    return false;
+}
+
+/*
+ * Init function for the State window.
+ * 
+ * pWin    the window where the state stuff
+ *         is to be displayed.
+ */
+static void initStateWindow (WINDOW *pWin)
+{
+}
+
+/*
+ * Display the state window.
+ * 
+ * pWin     the window where state information
+ *          can be diesplayed.
+ * count    the number of times this function
+ *          has been called.  This is used to
+ *          update some items more often than
+ *          others.
+ * 
+ * @return  true if the exit key has been 
+ *          pressed, otherwise false.
+ */
+static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
+{    
+    ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
+    
+    /* Display the state */
+    wmove (pWin, 0, 0);
+    wclrtoeol (pWin);
+    if (gpRoboOneContext != PNULL)
+    {
+        wprintw (pWin, "%s", gpRoboOneContext->state.pName);
+        wnoutrefresh (pWin);
+    }
+    
     return false;
 }
 
