@@ -92,7 +92,7 @@ static Bool readSPPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 pag
 
     ASSERT_PARAM (page < DS2438_NUM_PAGES, page);
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == SBATTERY_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_SBATTERY, pSerialNumber[0]);
     
     /* Select the device */
     owSerialNum (portNumber, pSerialNumber, FALSE);
@@ -166,7 +166,7 @@ static Bool writeSPPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 pa
 
     ASSERT_PARAM (page < DS2438_NUM_PAGES, page);
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == SBATTERY_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_SBATTERY, pSerialNumber[0]);
     ASSERT_PARAM (pMem != PNULL, (unsigned long) pMem);
     ASSERT_PARAM (size <= DS2438_NUM_BYTES_IN_PAGE, size);
     
@@ -223,7 +223,7 @@ static Bool readAdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, Bool isVdd, U
     UInt8 guardCounter1 = GUARD_COUNTER;
 
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == SBATTERY_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_SBATTERY, pSerialNumber[0]);
 
     while (success && !done && (guardCounter > 0))
     {
@@ -393,7 +393,7 @@ Bool readNVPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 page, UInt
 
     ASSERT_PARAM (page < DS2438_NUM_PAGES, page);
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == SBATTERY_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_SBATTERY, pSerialNumber[0]);
     
     /* Select the device */
     owSerialNum (portNumber, pSerialNumber, FALSE);
@@ -446,7 +446,7 @@ Bool writeNVPageDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 page, UIn
 
     ASSERT_PARAM (page < DS2438_NUM_PAGES, page);
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == SBATTERY_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_SBATTERY, pSerialNumber[0]);
     ASSERT_PARAM (pMem != PNULL, (unsigned long) pMem);
     ASSERT_PARAM (size <= DS2438_NUM_BYTES_IN_PAGE, size);
 
@@ -575,7 +575,7 @@ Bool readBatteryDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltag
     UInt8 guardCounter1 = GUARD_COUNTER;
 
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == SBATTERY_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_SBATTERY, pSerialNumber[0]);
 
     while (success && !done && guardCounter > 0)
     {
@@ -668,7 +668,7 @@ Bool readTemperatureDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, double *pTe
     UInt8 guardCounter = GUARD_COUNTER;
 
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == SBATTERY_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_SBATTERY, pSerialNumber[0]);
 
     /* Select the device */
     owSerialNum (portNumber, pSerialNumber, FALSE);

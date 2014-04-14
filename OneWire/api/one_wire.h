@@ -19,7 +19,7 @@ Bool oneWireAccessDevice (SInt32 portNumber, UInt8 *pAddress);
  * Definitions specific to DS2408 PIO chip
  */
 
-#define PIO_FAM 0x29
+#define FAMILY_PIO 0x29
 
 #define DS2408_SEARCH_IS_ACTIVITY_LATCHED  0x01 /* Conditional search reads activity latch not just the PIO pins */ 
 #define DS2408_SEARCH_IS_AND               0x02 /* Conditional search is a bit-wise AND search, not a bit-wise OR search */
@@ -45,6 +45,7 @@ Bool writeCSChannelPolaritySelectionRegisterDS2408 (SInt32 portNumber, UInt8 *pS
 /*
  * Definitions specific to DS2438 battery monitoring chip
  */
+#define FAMILY_SBATTERY 0x26
 
 #define DS2438_ADB_IS_BUSY              0x40 /* A/D conversion is in progress */
 #define DS2438_NVB_IS_BUSY              0x20 /* Write to non-volatile storage is in progress */

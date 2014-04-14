@@ -72,7 +72,7 @@ static Bool readMemoryDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt16 pa
     ASSERT_PARAM (page >= DS2408_FIRST_PAGE, page);
     ASSERT_PARAM (page <= DS2408_LAST_USEFUL_PAGE, page);
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == PIO_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_PIO, pSerialNumber[0]);
     ASSERT_PARAM (size <= DS2408_NUM_USEFUL_PAGES, size);
     
     /* Select the device */
@@ -151,7 +151,7 @@ static Bool writeMemoryDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt16 p
     ASSERT_PARAM (page >= DS2408_FIRST_WRITEABLE_PAGE, page);
     ASSERT_PARAM (page <= DS2408_LAST_PAGE, page);
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == PIO_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_PIO, pSerialNumber[0]);
     ASSERT_PARAM (size <= DS2408_NUM_USEFUL_PAGES, size);
     
     /* Select the device */
@@ -203,7 +203,7 @@ Bool disableTestModeDS2408 (SInt32 portNumber, UInt8 *pSerialNumber)
     UInt8 count=0;
 
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == PIO_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_PIO, pSerialNumber[0]);
     
     /* Select the device */
     owSerialNum (portNumber, pSerialNumber, FALSE);
@@ -321,7 +321,7 @@ UInt8 channelAccessReadDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *p
     UInt8 bytesRead = 0;
 
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == PIO_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_PIO, pSerialNumber[0]);
     ASSERT_PARAM (numBytesToRead <= DS2408_MAX_BYTES_IN_CHANNEL_ACCESS, numBytesToRead);
     
     /* Select the device */
@@ -387,7 +387,7 @@ Bool channelAccessWriteDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *p
     UInt8 count=0;
 
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == PIO_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_PIO, pSerialNumber[0]);
     ASSERT_PARAM (pData != PNULL, (unsigned long) pData);
     
     /* Select the device */
@@ -483,7 +483,7 @@ Bool resetActivityLatchesDS2408 (SInt32 portNumber, UInt8 *pSerialNumber)
     UInt8 count=0;
 
     ASSERT_PARAM (pSerialNumber != PNULL, (unsigned long) pSerialNumber);
-    ASSERT_PARAM (pSerialNumber[0] == PIO_FAM, pSerialNumber[0]);
+    ASSERT_PARAM (pSerialNumber[0] == FAMILY_PIO, pSerialNumber[0]);
     
     /* Select the device */
     owSerialNum (portNumber, pSerialNumber, FALSE);

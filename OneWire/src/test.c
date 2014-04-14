@@ -52,8 +52,8 @@ int main (int argc, char **argv)
     }
     else
     {  
-        numBatteryDevices = FindDevices (portNumber, &batteryDeviceArray[0], SBATTERY_FAM, MAX_BATTERY_DEVICES);
-        numIODevices = FindDevices (portNumber, &ioDeviceArray[0], PIO_FAM, MAX_IO_DEVICES);
+        numBatteryDevices = FindDevices (portNumber, &batteryDeviceArray[0], FAMILY_SBATTERY, MAX_BATTERY_DEVICES);
+        numIODevices = FindDevices (portNumber, &ioDeviceArray[0], FAMILY_PIO, MAX_IO_DEVICES);
 
         if (numBatteryDevices == 0)
         {
