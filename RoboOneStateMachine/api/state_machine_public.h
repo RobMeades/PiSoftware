@@ -11,11 +11,14 @@
  * TYPES
  */
 
+#pragma pack(push, 1) /* This structure is used in messages and so HAS to be fully packed */
+
 typedef struct RoboOneContextTag
 {
   RoboOneState state;
 } RoboOneContext;
 
+#pragma pack(pop) /* End of packing */ 
 /*
  * FUNCTION PROTOTYPES
  */

@@ -6,14 +6,17 @@
 /*
  * MANIFEST CONSTANTS
  */
+#define STATE_NAME_STRING_LENGTH 25
+
 
 /*
  * TYPES
  */
+#pragma pack(push, 1) /* This structure is used in messages and so HAS to be fully packed */
 
 typedef struct RoboOneStateTag
 {
-    Char *pName;
+    Char name[STATE_NAME_STRING_LENGTH];
     void (*pEventInit) (struct RoboOneStateTag *pState);
     void (*pEventInitFailure) (struct RoboOneStateTag *pState);
     void (*pEventTimerExpiry) (struct RoboOneStateTag *pState);
@@ -24,6 +27,8 @@ typedef struct RoboOneStateTag
     void (*pEventFullyCharged) (struct RoboOneStateTag *pState);
     void (*pEventShutdown) (struct RoboOneStateTag *pState);
 } RoboOneState;
+
+#pragma pack(pop) /* End of packing */ 
 
 /*
  * FUNCTION PROTOTYPES

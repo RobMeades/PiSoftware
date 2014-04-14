@@ -10,6 +10,7 @@
 /*
  * MANIFEST CONSTANTS
  */
+#define DOCKED_STATE_NAME "Docked" /* Not longer than STATE_NAME_STRING_LENGTH -1 characters */
 
 /*
  * TYPES
@@ -27,5 +28,6 @@ void transitionToDocked (RoboOneState *pState)
 {
     /* Fill in default handlers first */
     defaultImplementation (pState);
-    pState->pName = "Docked";
+    memcpy (&(pState->name[0]), DOCKED_STATE_NAME, strlen (DOCKED_STATE_NAME) + 1); /* +1 for terminator */
+    printDebug ("Transitioning to %s state.\n", &(pState->name[0]));
 }

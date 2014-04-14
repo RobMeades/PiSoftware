@@ -23,47 +23,47 @@
 
 static void defaultEventInit (RoboOneState *pState)
 {
-    printDebug ("Unsupported Init event in state %s.\n", pState->pName);
+    printDebug ("Unsupported Init event in state %s.\n", &(pState->name[0]));
 }
 
 static void defaultEventInitFailure (RoboOneState *pState)
 {
-    printDebug ("Unsupported InitFailure event in state %s.\n", pState->pName);    
+    printDebug ("Unsupported InitFailure event in state %s.\n", &(pState->name[0]));    
 }
 
 static void defaultEventTimerExpiry (RoboOneState *pState)
 {
-    printDebug ("Unsupported TimerExpiry event in state %s.\n", pState->pName);        
+    printDebug ("Unsupported TimerExpiry event in state %s.\n", &(pState->name[0]));        
 }
 
 static void defaultEventTasksAvailable (RoboOneState *pState)
 {
-    printDebug ("Unsupported TasksAvailable event in state %s.\n", pState->pName);    
+    printDebug ("Unsupported TasksAvailable event in state %s.\n", &(pState->name[0]));    
 }
 
 static void defaultEventNoTasksAvailable (RoboOneState *pState)
 {
-    printDebug ("Unsupported NoTasksAvailable event in state %s.\n", pState->pName);        
+    printDebug ("Unsupported NoTasksAvailable event in state %s.\n", &(pState->name[0]));        
 }
 
 static void defaultEventMainsPowerAvailable (RoboOneState *pState)
 {    
-    printDebug ("Unsupported MainsPowerAvailable event in state %s.\n", pState->pName);    
+    printDebug ("Unsupported MainsPowerAvailable event in state %s.\n", &(pState->name[0]));    
 }
 
 static void defaultEventInsufficientPower (RoboOneState *pState)
 {
-    printDebug ("Unsupported InsufficientPower event in state %s.\n", pState->pName);    
+    printDebug ("Unsupported InsufficientPower event in state %s.\n", &(pState->name[0]));    
 }
 
 static void defaultEventFullyCharged (RoboOneState *pState)
 {
-    printDebug ("Unsupported FullyCharged event in state %s.\n", pState->pName);
+    printDebug ("Unsupported FullyCharged event in state %s.\n", &(pState->name[0]));
 }
 
 static void defaultEventShutdown (RoboOneState *pState)
 {
-    printDebug ("Unsupported Shutdown event in state %s.\n", pState->pName);
+    printDebug ("Unsupported Shutdown event in state %s.\n", &(pState->name[0]));
 }
 
 /*

@@ -10,6 +10,7 @@
 /*
  * MANIFEST CONSTANTS
  */
+#define MOBILE_STATE_NAME "Mobile" /* Not longer than STATE_NAME_STRING_LENGTH -1 characters */
 
 /*
  * TYPES
@@ -27,6 +28,6 @@ void transitionToMobile (RoboOneState *pState)
 {
     /* Fill in default handlers first */
     defaultImplementation (pState);
-    pState->pName = "Mobile";
-
+    memcpy (&(pState->name[0]), MOBILE_STATE_NAME, strlen (MOBILE_STATE_NAME) + 1); /* +1 for terminator */
+    printDebug ("Transitioning to %s state.\n", &(pState->name[0]));
 }

@@ -10,6 +10,7 @@
 /*
  * MANIFEST CONSTANTS
  */
+#define SHUTDOWN_STATE_NAME "Shutdown" /* Not longer than STATE_NAME_STRING_LENGTH -1 characters */
 
 /*
  * TYPES
@@ -27,6 +28,6 @@ void transitionToShutdown (RoboOneState *pState)
 {
     /* Fill in default handlers first */
     defaultImplementation (pState);
-    pState->pName = "Shutdown";
-
+    memcpy (&(pState->name[0]), SHUTDOWN_STATE_NAME, strlen (SHUTDOWN_STATE_NAME) + 1); /* +1 for terminator */
+    printDebug ("Transitioning to %s state.\n", &(pState->name[0]));
 }

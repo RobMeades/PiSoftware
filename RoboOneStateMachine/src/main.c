@@ -32,7 +32,7 @@ int main (int argc, char **argv)
     ServerReturnCode returnCode = SERVER_ERR_GENERAL_FAILURE;
     UInt16 stateMachineServerPort;
 
-    setDebugPrintsOn();
+    /* setDebugPrintsOn(); */
     setProgressPrintsOn();
 
     if (argc == 2)

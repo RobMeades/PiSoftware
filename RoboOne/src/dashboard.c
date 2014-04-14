@@ -656,7 +656,7 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
     wclrtoeol (pWin);
     if (gpRoboOneContext != PNULL)
     {
-        wprintw (pWin, "%s", gpRoboOneContext->state.pName);
+        wprintw (pWin, "%s", &(gpRoboOneContext->state.name[0]));
         wnoutrefresh (pWin);
     }
     

@@ -27,10 +27,10 @@
  * MANIFEST CONSTANTS
  */
 
-#define SERVER_EXE "./one_wire_server"
-#define SERVER_PORT_STRING "5234"
-#define STATE_MACHINE_EXE "./roboone_state_machine"
-#define STATE_MACHINE_PORT_STRING "5235"
+#define ONE_WIRE_SERVER_EXE "./one_wire_server"
+#define ONE_WIRE_SERVER_PORT_STRING "5234"
+#define STATE_MACHINE_SERVER_EXE "./roboone_state_machine"
+#define STATE_MACHINE_SERVER_PORT_STRING "5235"
 
 /*
  * EXTERN
@@ -155,24 +155,24 @@ int main (int argc, char **argv)
     setProgressPrintsOn();
 
     /* Setup the globals for everyone to use */
-    gOneWireServerPort = atoi (SERVER_PORT_STRING);
-    gStateMachineServerPort = atoi (STATE_MACHINE_PORT_STRING);
+    gOneWireServerPort = atoi (ONE_WIRE_SERVER_PORT_STRING);
+    gStateMachineServerPort = atoi (STATE_MACHINE_SERVER_PORT_STRING);
     
     /* Spawn a child that will become the One Wire server. */
     serverPID = fork();
     if (serverPID == 0)
     {
         /* Start OneWire server process on a given port */
-        static char *argv1[] = {SERVER_EXE, SERVER_PORT_STRING, PNULL};
+        static char *argv1[] = {ONE_WIRE_SERVER_EXE, ONE_WIRE_SERVER_PORT_STRING, PNULL};
         
-        execv (SERVER_EXE, argv1);
-        printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", SERVER_EXE, strerror (errno));
+        execv (ONE_WIRE_SERVER_EXE, argv1);
+        printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", ONE_WIRE_SERVER_EXE, strerror (errno));
     }
     else
     {
         if (serverPID < 0)
         {
-            printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", SERVER_EXE, strerror (errno));
+            printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", ONE_WIRE_SERVER_EXE, strerror (errno));
         }
         else
         {   /* Parent process */
@@ -191,16 +191,16 @@ int main (int argc, char **argv)
                     if (stateMachinePID == 0)
                     {
                         /* Start RoboOne state machine process */
-                        static char *argv2[] = {STATE_MACHINE_EXE, STATE_MACHINE_PORT_STRING, PNULL};
+                        static char *argv2[] = {STATE_MACHINE_SERVER_EXE, STATE_MACHINE_SERVER_PORT_STRING, PNULL};
                           
-                        execv (STATE_MACHINE_EXE, argv2);
-                        printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", STATE_MACHINE_EXE, strerror (errno));
+                        execv (STATE_MACHINE_SERVER_EXE, argv2);
+                        printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", STATE_MACHINE_SERVER_EXE, strerror (errno));
                     }
                     else
                     {
                         if (stateMachinePID < 0)
                         {
-                            printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", STATE_MACHINE_EXE, strerror (errno));
+                            printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", STATE_MACHINE_SERVER_EXE, strerror (errno));
                         }
                         else
                         {   /* Parent process again */
@@ -212,7 +212,7 @@ int main (int argc, char **argv)
                                 gpRoboOneContext = pRoboOneContext;
                                 usleep (SERVER_START_DELAY_PI_US); /* Wait for the server to be ready before messaging it */
                                 startStateMachineServer (pRoboOneContext);
-                                  
+                                
                                 /* Finally, display the dashboard */
                                 success = runDashboard();
                                 

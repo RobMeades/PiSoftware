@@ -314,24 +314,24 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSerialNumb
             
             pReceivedMsg->msgLength = 0;
     
-            printDebug ("\nClient: sending message of type %d, length %d, hex dump:\n", pSendMsg->msgType, pSendMsg->msgLength);
+            printDebug ("\nOW Client: sending message of type %d, length %d, hex dump:\n", pSendMsg->msgType, pSendMsg->msgLength);
             printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
             returnCode = runMessagingClient (gOneWireServerPort, pSendMsg, pReceivedMsg);
                     
-            printDebug ("Client: message system returnCode: %d\n", returnCode);
+            printDebug ("OW Client: message system returnCode: %d\n", returnCode);
             /* This code makes assumptions about packing (i.e. that it's '1' and that the
              * Bool 'success' is at the start of the body) so be careful */
             if (returnCode == CLIENT_SUCCESS && (pReceivedMsg->msgLength > sizeof (pReceivedMsg->msgType)))
             { 
                 /* Check the Bool 'success' at the start of the message body */
                 receivedMsgBodyLength = pReceivedMsg->msgLength - sizeof (pReceivedMsg->msgType);
-                printDebug ("Client: receivedMsgBodyLength: %d\n", receivedMsgBodyLength);
+                printDebug ("OW Client: receivedMsgBodyLength: %d\n", receivedMsgBodyLength);
                 if (receivedMsgBodyLength >= sizeof (Bool))
                 {
-                    printDebug ("Client: success field: %d\n", (Bool) pReceivedMsg->msgBody[0]);
+                    printDebug ("OW Client: success field: %d\n", (Bool) pReceivedMsg->msgBody[0]);
                     if ((Bool) pReceivedMsg->msgBody[0])
                     {
-                        printDebug ("Client: received message type %d, hex dump:\n", pReceivedMsg->msgType);
+                        printDebug ("OW Client: received message type %d, hex dump:\n", pReceivedMsg->msgType);
                         printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);
 
                         if (pReceivedMsgSpecifics != PNULL)
