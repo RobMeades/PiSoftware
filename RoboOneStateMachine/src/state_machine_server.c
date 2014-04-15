@@ -23,302 +23,99 @@
  */
 
 /*
+ * GLOBALS - prefixed with g
+ */
+
+RoboOneContext *pgRoboOneContext = PNULL;
+
+
+/*
  * STATIC FUNCTIONS
  */
 
 /*
  * Handle a message that will cause us to start.
  * 
- * pSendMsgBody    pointer to the relevant message
- *                 type to fill in with a response,
- *                 which will be overlaid over the
- *                 body of the response message.
- *                 The standard StateMachineMsgHeader
- *                 should already have been filled in
- *                 (though this function may modify
- *                 its contents).
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
  * 
- * @return         the length of any specifics added
- *                 to the message body, over and above
- *                 the StateMachineMsgHeader.
+ * @return       the length of the message body
+ *               to send back.
  */
 static UInt16 actionStateMachineServerStart (StateMachineServerStartCnf *pSendMsgBody)
 {
-    UInt16 sendMsgSpecificsLength = 0;
+    UInt16 sendMsgBodyLength = 0;
 
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+
+    pgRoboOneContext = malloc (sizeof (RoboOneContext));
     
-    transitionToInit (&(pSendMsgBody->stateMachineMsgHeader.state));
+    pSendMsgBody->success = false;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
     
-    return sendMsgSpecificsLength;
+    if (pgRoboOneContext != PNULL)
+    {
+        transitionToInit (&(pgRoboOneContext->state));
+        pSendMsgBody->success = true;
+    }
+    
+    return sendMsgBodyLength;
 }
 
 /*
  * Handle a message that will cause us to exit.
  * 
- * pSendMsgBody    pointer to the relevant message
- *                 type to fill in with a response,
- *                 which will be overlaid over the
- *                 body of the response message.
- *                 The standard StateMachineMsgHeader
- *                 should already have been filled in
- *                 (though this function may modify
- *                 its contents).
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
  * 
- * @return         the length of any specifics added
- *                 to the message body, over and above
- *                 the StateMachineMsgHeader.
+ * @return       the length of the message body
+ *               to send back.
  */
 static UInt16 actionStateMachineServerStop (StateMachineServerStopCnf *pSendMsgBody)
 {
-    UInt16 sendMsgSpecificsLength = 0;
+    UInt16 sendMsgBodyLength = 0;
 
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
     
-    return sendMsgSpecificsLength;
+    free (pgRoboOneContext);
+    pgRoboOneContext = PNULL;
+
+    pSendMsgBody->success = true;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+
+    return sendMsgBodyLength;
 }
 
 /*
- * Handle an Init event.
+ * Handle a message that will send back
+ * the contents of the context to the
+ * sender.
  * 
- * pSendMsgBody    pointer to the relevant message
- *                 type to fill in with a response,
- *                 which will be overlaid over the
- *                 body of the response message.
- *                 The standard StateMachineMsgHeader
- *                 should already have been filled in
- *                 (though this function may modify
- *                 its contents).
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
  * 
- * @return         the length of any specifics added
- *                 to the message body, over and above
- *                 the StateMachineMsgHeader.
+ * @return       the length of the message body
+ *               to send back.
  */
-static UInt16 actionStateMachineEventInit (StateMachineEventInitCnf *pSendMsgBody)
+static UInt16 actionStateMachineServerGetContext (StateMachineServerGetContextCnf *pSendMsgBody)
 {
-    UInt16 sendMsgSpecificsLength = 0;
+    UInt16 sendMsgBodyLength = 0;
 
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
     
-    eventInitRoboOne (&(pSendMsgBody->stateMachineMsgHeader));
+    if (pgRoboOneContext != PNULL)
+    {
+        memcpy (pSendMsgBody, pgRoboOneContext, sizeof (StateMachineServerGetContextCnf));
+        sendMsgBodyLength += sizeof (StateMachineServerGetContextCnf);
+    }    
     
-    return sendMsgSpecificsLength;
-}
-
-/*
- * Handle an InitFailure event.
- * 
- * pSendMsgBody    pointer to the relevant message
- *                 type to fill in with a response,
- *                 which will be overlaid over the
- *                 body of the response message.
- *                 The standard StateMachineMsgHeader
- *                 should already have been filled in
- *                 (though this function may modify
- *                 its contents).
- * 
- * @return         the length of any specifics added
- *                 to the message body, over and above
- *                 the StateMachineMsgHeader.
- */
-static UInt16 actionStateMachineEventInitFailure (StateMachineEventInitFailureCnf *pSendMsgBody)
-{
-    UInt16 sendMsgSpecificsLength = 0;
-
-    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
-    
-    eventInitFailureRoboOne (&(pSendMsgBody->stateMachineMsgHeader));
-    
-    return sendMsgSpecificsLength;
-}
-
-/*
- * Handle a TimerExpiry event.
- * 
- * pSendMsgBody    pointer to the relevant message
- *                 type to fill in with a response,
- *                 which will be overlaid over the
- *                 body of the response message.
- *                 The standard StateMachineMsgHeader
- *                 should already have been filled in
- *                 (though this function may modify
- *                 its contents).
- * 
- * @return         the length of any specifics added
- *                 to the message body, over and above
- *                 the StateMachineMsgHeader.
- */
-static UInt16 actionStateMachineEventTimerExpiry (StateMachineEventTimerExpiryCnf *pSendMsgBody)
-{
-    UInt16 sendMsgSpecificsLength = 0;
-
-    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
-    
-    eventTimerExpiryRoboOne (&(pSendMsgBody->stateMachineMsgHeader));
-
-    return sendMsgSpecificsLength;
-}
-
-/*
- * Handle a TasksAvailable event.
- * 
- * pSendMsgBody    pointer to the relevant message
- *                 type to fill in with a response,
- *                 which will be overlaid over the
- *                 body of the response message.
- *                 The standard StateMachineMsgHeader
- *                 should already have been filled in
- *                 (though this function may modify
- *                 its contents).
- * 
- * @return         the length of any specifics added
- *                 to the message body, over and above
- *                 the StateMachineMsgHeader.
- */
-static UInt16 actionStateMachineEventTasksAvailable (StateMachineEventTasksAvailableCnf *pSendMsgBody)
-{
-    UInt16 sendMsgSpecificsLength = 0;
-
-    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
-    
-    eventTasksAvailableRoboOne (&(pSendMsgBody->stateMachineMsgHeader));
-
-    return sendMsgSpecificsLength;
-}
-
-/*
- * Handle a NoTasksAvailable event.
- * 
- * pSendMsgBody    pointer to the relevant message
- *                 type to fill in with a response,
- *                 which will be overlaid over the
- *                 body of the response message.
- *                 The standard StateMachineMsgHeader
- *                 should already have been filled in
- *                 (though this function may modify
- *                 its contents).
- * 
- * @return         the length of any specifics added
- *                 to the message body, over and above
- *                 the StateMachineMsgHeader.
- */
-static UInt16 actionStateMachineEventNoTasksAvailable (StateMachineEventNoTasksAvailableCnf *pSendMsgBody)
-{
-    UInt16 sendMsgSpecificsLength = 0;
-
-    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
-    
-    eventNoTasksAvailableRoboOne (&(pSendMsgBody->stateMachineMsgHeader));
-
-    return sendMsgSpecificsLength;
-}
-
-/*
- * Handle a Mains Power Available event.
- * 
- * pSendMsgBody    pointer to the relevant message
- *                 type to fill in with a response,
- *                 which will be overlaid over the
- *                 body of the response message.
- *                 The standard StateMachineMsgHeader
- *                 should already have been filled in
- *                 (though this function may modify
- *                 its contents).
- * 
- * @return         the length of any specifics added
- *                 to the message body, over and above
- *                 the StateMachineMsgHeader.
- */
-static UInt16 actionStateMachineEventMainsPowerAvailable (StateMachineEventMainsPowerAvailableCnf *pSendMsgBody)
-{
-    UInt16 sendMsgSpecificsLength = 0;
-
-    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
-
-    eventMainsPowerAvailableRoboOne (&(pSendMsgBody->stateMachineMsgHeader));
-    
-    return sendMsgSpecificsLength;
-}
-
-/*
- * Handle an Insufficient Power event.
- * 
- * pSendMsgBody    pointer to the relevant message
- *                 type to fill in with a response,
- *                 which will be overlaid over the
- *                 body of the response message.
- *                 The standard StateMachineMsgHeader
- *                 should already have been filled in
- *                 (though this function may modify
- *                 its contents).
- * 
- * @return         the length of any specifics added
- *                 to the message body, over and above
- *                 the StateMachineMsgHeader.
- */
-static UInt16 actionStateMachineEventInsufficientPower (StateMachineEventInsufficientPowerCnf *pSendMsgBody)
-{
-    UInt16 sendMsgSpecificsLength = 0;
-
-    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
-    
-    eventInsufficientPowerRoboOne (&(pSendMsgBody->stateMachineMsgHeader));
-
-    return sendMsgSpecificsLength;
-}
-
-/*
- * Handle a Fully Charged event.
- * 
- * pSendMsgBody    pointer to the relevant message
- *                 type to fill in with a response,
- *                 which will be overlaid over the
- *                 body of the response message.
- *                 The standard StateMachineMsgHeader
- *                 should already have been filled in
- *                 (though this function may modify
- *                 its contents).
- * 
- * @return         the length of any specifics added
- *                 to the message body, over and above
- *                 the StateMachineMsgHeader.
- */
-static UInt16 actionStateMachineEventFullyCharged (StateMachineEventFullyChargedCnf *pSendMsgBody)
-{
-    UInt16 sendMsgSpecificsLength = 0;
-
-    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
-
-    eventFullyChargedRoboOne (&(pSendMsgBody->stateMachineMsgHeader));
-
-    return sendMsgSpecificsLength;
-}
-
-/*
- * Handle a Shutdown event.
- * 
- * pSendMsgBody    pointer to the relevant message
- *                 type to fill in with a response,
- *                 which will be overlaid over the
- *                 body of the response message.
- *                 The standard StateMachineMsgHeader
- *                 should already have been filled in
- *                 (though this function may modify
- *                 its contents).
- * 
- * @return         the length of any specifics added
- *                 to the message body, over and above
- *                 the StateMachineMsgHeader.
- */
-static UInt16 actionStateMachineEventShutdown (StateMachineEventShutdownCnf *pSendMsgBody)
-{
-    UInt16 sendMsgSpecificsLength = 0;
-
-    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
-    
-    eventShutdownRoboOne (&(pSendMsgBody->stateMachineMsgHeader));
-    
-    return sendMsgSpecificsLength;
+    return sendMsgBodyLength;
 }
 
 /*
@@ -341,19 +138,9 @@ static ServerReturnCode doAction (StateMachineMsgType receivedMsgType, UInt8 * p
     ASSERT_PARAM (pReceivedMsgBody != PNULL, (unsigned long) pReceivedMsgBody);
     ASSERT_PARAM (pSendMsg != PNULL, (unsigned long) pSendMsg);
     
+    /* Assume no response by default */
     pSendMsg->msgLength = 0;
 
-    /* We always respond with the same message type */
-    pSendMsg->msgType = (MsgType) receivedMsgType;
-    
-    /* Fill in the length so far, will make it right for each message later */
-    pSendMsg->msgLength += sizeof (pSendMsg->msgType);
-    
-    /* Add the initial version of the outgoing header, it can then be modified in-place by the action functions */
-    /* NOTE: this relies on the header being at the start of the msgBody */
-    memcpy (&(pSendMsg->msgBody[0]), pReceivedMsgBody, sizeof (StateMachineMsgHeader));
-    pSendMsg->msgLength += sizeof (StateMachineMsgHeader);
-    
     /* Now handle each message specifically */
     switch (receivedMsgType)
     {
@@ -362,13 +149,24 @@ static ServerReturnCode doAction (StateMachineMsgType receivedMsgType, UInt8 * p
          */
         case STATE_MACHINE_SERVER_START:
         {
+            pSendMsg->msgType = STATE_MACHINE_SERVER_START;
+            pSendMsg->msgLength += sizeof (pSendMsg->msgType);
             pSendMsg->msgLength += actionStateMachineServerStart ((StateMachineServerStartCnf *) &(pSendMsg->msgBody[0]));
         }
         break;
         case STATE_MACHINE_SERVER_STOP:
         {
+            pSendMsg->msgType = STATE_MACHINE_SERVER_STOP;
+            pSendMsg->msgLength += sizeof (pSendMsg->msgType);
             pSendMsg->msgLength += actionStateMachineServerStop ((StateMachineServerStopCnf *) &(pSendMsg->msgBody[0]));
             returnCode = SERVER_EXIT_NORMALLY;
+        }
+        break;
+        case STATE_MACHINE_SERVER_GET_CONTEXT:
+        {
+            pSendMsg->msgType = STATE_MACHINE_SERVER_GET_CONTEXT;
+            pSendMsg->msgLength += sizeof (pSendMsg->msgType);
+            pSendMsg->msgLength += actionStateMachineServerGetContext ((StateMachineServerGetContextCnf *) &(pSendMsg->msgBody[0]));
         }
         break;
         /*
@@ -376,47 +174,47 @@ static ServerReturnCode doAction (StateMachineMsgType receivedMsgType, UInt8 * p
          */
         case STATE_MACHINE_EVENT_INIT:
         {
-            pSendMsg->msgLength += actionStateMachineEventInit ((StateMachineEventInitCnf *) &(pSendMsg->msgBody[0]));
+            eventInitRoboOne (pgRoboOneContext);
         }
         break;
         case STATE_MACHINE_EVENT_INIT_FAILURE:
         {
-            pSendMsg->msgLength += actionStateMachineEventInitFailure ((StateMachineEventInitFailureCnf *) &(pSendMsg->msgBody[0]));
+            eventInitFailureRoboOne (pgRoboOneContext);
         }
         break;
         case STATE_MACHINE_EVENT_TIMER_EXPIRY:
         {
-            pSendMsg->msgLength += actionStateMachineEventTimerExpiry ((StateMachineEventTimerExpiryCnf *) &(pSendMsg->msgBody[0]));
+            eventTimerExpiryRoboOne (pgRoboOneContext);
         }
         break;
         case STATE_MACHINE_EVENT_TASKS_AVAILABLE:
         {
-            pSendMsg->msgLength += actionStateMachineEventTasksAvailable ((StateMachineEventTasksAvailableCnf *) &(pSendMsg->msgBody[0]));
+            eventTasksAvailableRoboOne (pgRoboOneContext);
         }
         break;
         case STATE_MACHINE_EVENT_NO_TASKS_AVAILABLE:
         {
-            pSendMsg->msgLength += actionStateMachineEventNoTasksAvailable ((StateMachineEventNoTasksAvailableCnf *) &(pSendMsg->msgBody[0]));
+            eventNoTasksAvailableRoboOne (pgRoboOneContext);
         }
         break;
         case STATE_MACHINE_EVENT_MAINS_POWER_AVAILABLE:
         {
-            pSendMsg->msgLength += actionStateMachineEventMainsPowerAvailable ((StateMachineEventMainsPowerAvailableCnf *) &(pSendMsg->msgBody[0]));
+            eventMainsPowerAvailableRoboOne (pgRoboOneContext);
         }
         break;
         case STATE_MACHINE_EVENT_INSUFFICIENT_POWER:
         {
-            pSendMsg->msgLength += actionStateMachineEventInsufficientPower ((StateMachineEventInsufficientPowerCnf *) &(pSendMsg->msgBody[0]));
+            eventInsufficientPowerRoboOne (pgRoboOneContext);
         }
         break;
         case STATE_MACHINE_EVENT_FULLY_CHARGED:
         {
-            pSendMsg->msgLength += actionStateMachineEventFullyCharged ((StateMachineEventFullyChargedCnf *) &(pSendMsg->msgBody[0]));
+            eventFullyChargedRoboOne (pgRoboOneContext);
         }
         break;
         case STATE_MACHINE_EVENT_SHUTDOWN:
         {
-            pSendMsg->msgLength += actionStateMachineEventShutdown ((StateMachineEventShutdownCnf *) &(pSendMsg->msgBody[0]));
+            eventShutdownRoboOne (pgRoboOneContext);
         }
         break;
         default:

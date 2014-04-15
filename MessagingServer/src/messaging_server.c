@@ -88,6 +88,8 @@ static ServerReturnCode handleSendReceive (UInt32 clientSocket)
                     UInt16 rawSendLength;
                     
                     rawSendLength = pSendMsg->msgLength + SIZE_OF_MSG_LENGTH;
+                    ASSERT_PARAM (rawSendLength <= MAX_MSG_LENGTH, rawSendLength);
+                    
                     if (send (clientSocket, pSendMsg, rawSendLength, 0) != rawSendLength)
                     {
                         returnCode = SERVER_ERR_FAILED_TO_SEND_RESPONSE_TO_CLIENT;

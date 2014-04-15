@@ -24,45 +24,54 @@
  */
 void eventInitRoboOne (RoboOneContext *pInstance)
 {
+    ASSERT_PARAM (pInstance != PNULL, (unsigned long) pInstance);
     pInstance->state.pEventInit (&(pInstance->state));
 }
 
 void eventInitFailureRoboOne (RoboOneContext *pInstance)
 {
+    ASSERT_PARAM (pInstance != PNULL, (unsigned long) pInstance);
     pInstance->state.pEventInitFailure (&(pInstance->state));
 }
 
 void eventTimerExpiryRoboOne (RoboOneContext *pInstance)
 {
+    ASSERT_PARAM (pInstance != PNULL, (unsigned long) pInstance);
     pInstance->state.pEventTimerExpiry (&(pInstance->state));
 }
 
 void eventTasksAvailableRoboOne (RoboOneContext *pInstance)
 {
+    ASSERT_PARAM (pInstance != PNULL, (unsigned long) pInstance);
     pInstance->state.pEventTasksAvailable (&(pInstance->state));
 }
 
 void eventNoTasksAvailableRoboOne (RoboOneContext *pInstance)
 {
+    ASSERT_PARAM (pInstance != PNULL, (unsigned long) pInstance);
     pInstance->state.pEventNoTasksAvailable (&(pInstance->state));
 }
 
 void eventMainsPowerAvailableRoboOne (RoboOneContext *pInstance)
 {
+    ASSERT_PARAM (pInstance != PNULL, (unsigned long) pInstance);
     pInstance->state.pEventMainsPowerAvailable (&(pInstance->state));
 }
 
 void eventInsufficientPowerRoboOne (RoboOneContext *pInstance)
 {
+    ASSERT_PARAM (pInstance != PNULL, (unsigned long) pInstance);
     pInstance->state.pEventMainsPowerAvailable (&(pInstance->state));
 }
 
 void eventFullyChargedRoboOne (RoboOneContext *pInstance)
 {
+    ASSERT_PARAM (pInstance != PNULL, (unsigned long) pInstance);
     pInstance->state.pEventFullyCharged (&(pInstance->state));
 }
 
 void eventShutdownRoboOne (RoboOneContext *pInstance)
 {
+    ASSERT_PARAM (pInstance != PNULL, (unsigned long) pInstance);
     pInstance->state.pEventShutdown (&(pInstance->state));
 }

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
@@ -8,6 +9,9 @@
 #include <menu.h>
 #include <state_machine_interface.h>
 #include <state_machine_public.h>
+#include <state_machine_server.h>
+#include <state_machine_msg_auto.h>
+#include <events.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -120,12 +124,6 @@ typedef struct WindowInfoTag
     WINDOW *pWin;
     Bool enabled;
 } WindowInfo;
-
-/*
- * EXTERN
- */
-
-extern RoboOneContext *gpRoboOneContext;
 
 /*
  * GLOBALS (prefixed with g)
@@ -648,16 +646,41 @@ static void initStateWindow (WINDOW *pWin)
  *          pressed, otherwise false.
  */
 static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
-{    
+{
+    Bool success;
+    StateMachineMsgType receivedMsgType = STATE_MACHINE_SERVER_NULL;
+    StateMachineServerGetContextCnf *pReceivedMsgBody;
+    
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
     
     /* Display the state */
     wmove (pWin, 0, 0);
     wclrtoeol (pWin);
-    if (gpRoboOneContext != PNULL)
+    
+    pReceivedMsgBody = malloc (sizeof (StateMachineServerGetContextCnf));
+    
+    if (pReceivedMsgBody != PNULL)
     {
-        wprintw (pWin, "%s", &(gpRoboOneContext->state.name[0]));
+        success = stateMachineServerSendReceive (STATE_MACHINE_SERVER_GET_CONTEXT, PNULL, 0, &receivedMsgType, (void *) pReceivedMsgBody);
+        if (success)
+        {
+            if (receivedMsgType == STATE_MACHINE_SERVER_GET_CONTEXT)
+            {
+                wprintw (pWin, "%s", &(pReceivedMsgBody->roboOneContext.state.name[0]));
+            }
+            else
+            {
+                wprintw (pWin, "No response");            
+            }
+        }
+        else
+        {
+            wprintw (pWin, "Error");
+        }
+        
         wnoutrefresh (pWin);
+        
+        free (pReceivedMsgBody);
     }
     
     return false;

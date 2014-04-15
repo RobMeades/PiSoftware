@@ -11,17 +11,15 @@
 /* Extract the message type from the list */
 #define STATE_MACHINE_MSG_DEF_TYPE(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER) mSGtYPE,
 
-/* Construct a full typedef for a REQ (incoming) message, putting the mandatory StateMachineMsgHeader at the start */
+/* Construct a full typedef for a REQ (incoming) message */
 #define MAKE_STATE_MACHINE_MSG_STRUCT_REQ(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER) typedef struct mSGsTRUCT##ReqTag            \
                                                                                                 {                                                \
-                                                                                                    StateMachineMsgHeader stateMachineMsgHeader; \
                                                                                                     rEQmSGmEMBER;                                \
                                                                                                 } mSGsTRUCT##Req;
 
-/* Construct a full typedef for a CNF (outgoing) message, putting the mandatory StateMachineMsgHeader at the start */
+/* Construct a full typedef for a CNF (outgoing) message */
 #define MAKE_STATE_MACHINE_MSG_STRUCT_CNF(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER) typedef struct mSGsTRUCT##CnfTag            \
                                                                                                 {                                                \
-                                                                                                    StateMachineMsgHeader stateMachineMsgHeader; \
                                                                                                     cNFmSGmEMBER;                                \
                                                                                                 } mSGsTRUCT##Cnf;
 

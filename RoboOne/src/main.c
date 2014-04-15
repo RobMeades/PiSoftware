@@ -44,7 +44,6 @@ extern int errno;
 
 SInt32 gOneWireServerPort = -1;
 SInt32 gStateMachineServerPort = -1;
-RoboOneContext *gpRoboOneContext = PNULL; /* This is ONLY used for the dashboard display */
 
 /*
  * STATIC FUNCTIONS
@@ -104,36 +103,59 @@ static Bool stopOneWireServer (SInt32 oneWireServerPort)
 /*
  * Send a message to start the state machine server.
  * 
- * pRoboOneContext pointer to the context data.
- * 
- * @return         true if successful, otherwise false.
+ * @return true if successful, otherwise false.
  */
-static Bool startStateMachineServer (RoboOneContext *pRoboOneContext)
+static Bool startStateMachineServer (void)
 {
-    Bool success;
+    Bool success = false;
+    StateMachineMsgType receivedMsgType = STATE_MACHINE_SERVER_NULL;
+    StateMachineServerStartCnf *pStateMachineServerStartCnf;
     
-    ASSERT_PARAM (pRoboOneContext != PNULL, (unsigned long) pRoboOneContext);
+    pStateMachineServerStartCnf = malloc (sizeof (StateMachineServerStartCnf));
     
-    success = stateMachineServerSendReceive (STATE_MACHINE_SERVER_START, pRoboOneContext, PNULL, 0, pRoboOneContext);
+    if (pStateMachineServerStartCnf != PNULL)
+    {   
+        pStateMachineServerStartCnf->success = false;
+        success = stateMachineServerSendReceive (STATE_MACHINE_SERVER_START, PNULL, 0, &receivedMsgType, pStateMachineServerStartCnf);
         
+        if ((receivedMsgType != STATE_MACHINE_SERVER_START) || !pStateMachineServerStartCnf->success)
+        {
+            success = false;
+        }
+        printf ("receivedMsgType %d, pStateMachineServerStartCnf->success %d", receivedMsgType, pStateMachineServerStartCnf->success);
+        
+        free (pStateMachineServerStartCnf);
+    }
+    
     return success;
 }
 
 /*
  * Send a message to stop the state machine server.
  * 
- * pRoboOneContext pointer to the context data.
- * 
- * @return         true if successful, otherwise false.
+ * @return true if successful, otherwise false.
  */
-static Bool stopStateMachineServer (RoboOneContext *pRoboOneContext)
+static Bool stopStateMachineServer (void)
 {
-    Bool success;
+    Bool success = false;
+    StateMachineMsgType receivedMsgType = STATE_MACHINE_SERVER_NULL;
+    StateMachineServerStopCnf *pStateMachineServerStopCnf;
     
-    ASSERT_PARAM (pRoboOneContext != PNULL, (unsigned long) pRoboOneContext);
+    pStateMachineServerStopCnf = malloc (sizeof (StateMachineServerStopCnf));
     
-    success = stateMachineServerSendReceive (STATE_MACHINE_SERVER_STOP, pRoboOneContext, PNULL, 0, pRoboOneContext);
-
+    if (pStateMachineServerStopCnf != PNULL)
+    {
+        pStateMachineServerStopCnf->success = false;
+        success = stateMachineServerSendReceive (STATE_MACHINE_SERVER_STOP, PNULL, 0, &receivedMsgType, pStateMachineServerStopCnf);
+        
+        if ((receivedMsgType != STATE_MACHINE_SERVER_STOP) || !pStateMachineServerStopCnf->success)
+        {
+            success = false;
+        }
+        
+        free (pStateMachineServerStopCnf);
+    }
+    
     return success;
 }
 
@@ -147,7 +169,6 @@ static Bool stopStateMachineServer (RoboOneContext *pRoboOneContext)
 int main (int argc, char **argv)
 {
     Bool  success = false;
-    RoboOneContext *pRoboOneContext = PNULL;
     pid_t serverPID;
     pid_t stateMachinePID;
     
@@ -205,29 +226,20 @@ int main (int argc, char **argv)
                         else
                         {   /* Parent process again */
                             /* Now setup the state machine */
-                            pRoboOneContext = malloc (sizeof (RoboOneContext));
-                             
-                            if (pRoboOneContext != PNULL)
+                            usleep (SERVER_START_DELAY_PI_US); /* Wait for the server to be ready before messaging it */
+                            success = startStateMachineServer();
+                            
+                            if (success)
                             {
-                                gpRoboOneContext = pRoboOneContext;
-                                usleep (SERVER_START_DELAY_PI_US); /* Wait for the server to be ready before messaging it */
-                                startStateMachineServer (pRoboOneContext);
-                                
                                 /* Finally, display the dashboard */
                                 success = runDashboard();
                                 
                                 printProgress ("\nDone.\n");
-                                
-                                /* When done, tidy up the state machine */
-                                stopStateMachineServer (pRoboOneContext);
-                                free (pRoboOneContext);
-                                gpRoboOneContext = PNULL;
-                                waitpid (stateMachinePID, 0, 0); /* wait for state machine to exit */
                             }
-                            else
-                            {
-                                success = false;
-                            }
+                            
+                            /* When done, tidy up the state machine */
+                            stopStateMachineServer();
+                            waitpid (stateMachinePID, 0, 0); /* wait for state machine to exit */
                         }
                     }
                 }
