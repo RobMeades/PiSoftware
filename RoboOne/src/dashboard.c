@@ -664,13 +664,13 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
         success = stateMachineServerSendReceive (STATE_MACHINE_SERVER_GET_CONTEXT, PNULL, 0, &receivedMsgType, (void *) pReceivedMsgBody);
         if (success)
         {
-            if (receivedMsgType == STATE_MACHINE_SERVER_GET_CONTEXT)
+            if ((receivedMsgType == STATE_MACHINE_SERVER_GET_CONTEXT) && pReceivedMsgBody->roboOneContextContainer.isValid)
             {
-                wprintw (pWin, "%s", &(pReceivedMsgBody->roboOneContext.state.name[0]));
+                wprintw (pWin, "%s", &(pReceivedMsgBody->roboOneContextContainer.roboOneContext.state.name[0]));
             }
             else
             {
-                wprintw (pWin, "No response");            
+                wprintw (pWin, "Invalid response");            
             }
         }
         else

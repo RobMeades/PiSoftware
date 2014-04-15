@@ -15,11 +15,15 @@
 /*
  * GENERAL MESSAGE TYPES
  */
-typedef RoboOneContext StateMachineMsgHeader;
 
 /*
  * TYPES FOR REQ MESSAGES
  */
+typedef struct RoboOneContextContainerTag
+{
+    Bool isValid;
+    RoboOneContext roboOneContext;
+} RoboOneContextContainer;
 
 /*
  * TYPES FOR CNF MESSAGES

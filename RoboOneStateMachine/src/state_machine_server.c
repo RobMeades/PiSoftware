@@ -109,10 +109,12 @@ static UInt16 actionStateMachineServerGetContext (StateMachineServerGetContextCn
 
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
     
+    pSendMsgBody->roboOneContextContainer.isValid = false;
     if (pgRoboOneContext != PNULL)
     {
-        memcpy (pSendMsgBody, pgRoboOneContext, sizeof (StateMachineServerGetContextCnf));
-        sendMsgBodyLength += sizeof (StateMachineServerGetContextCnf);
+        memcpy (&(pSendMsgBody->roboOneContextContainer.roboOneContext), pgRoboOneContext, sizeof (pSendMsgBody->roboOneContextContainer.roboOneContext));
+        pSendMsgBody->roboOneContextContainer.isValid = true;
+        sendMsgBodyLength += sizeof (pSendMsgBody->roboOneContextContainer);
     }    
     
     return sendMsgBodyLength;

@@ -49,12 +49,11 @@ extern SInt32 gStateMachineServerPort;
  * get the response back.
  * 
  * sendMsgType       the message type to send.
- * pSendMsgSpecifics pointer to the portion of the
+ * pSendMsgBody      pointer to the body of the
  *                   send REquest message beyond the
- *                   generic msgHeader part.  May be
- *                   PNULL.
- * specificsLength   the length of the bit that
- *                   pSendMsgSpecifics points to.
+ *                   May be PNULL.
+ * sendMsgBodyLength the length of the bit that
+ *                   pSendMsgBody points to.
  * pReceivedMsgType  pointer to a place to put the
  *                   received msg type.  May be
  *                   PNULL, in which case this
@@ -69,18 +68,17 @@ extern SInt32 gStateMachineServerPort;
  *                   message indicates success,
  *                   otherwise false.
  */
-Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSendMsgSpecifics, UInt16 specificsLength, StateMachineMsgType *pReceivedMsgType, void *pReceivedMsgBody)
+Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSendMsgBody, UInt16 sendMsgBodyLength, StateMachineMsgType *pReceivedMsgType, void *pReceivedMsgBody)
 {
     ClientReturnCode returnCode;
     Bool success = true;
     Msg *pSendMsg;
-    UInt16 sendMsgBodyLength = 0;
     Msg *pReceivedMsg = PNULL;
     UInt16 receivedMsgBodyLength = 0;
 
     ASSERT_PARAM (gStateMachineServerPort >= 0, gStateMachineServerPort);
     ASSERT_PARAM (sendMsgType < MAX_NUM_STATE_MACHINE_MSGS, (unsigned long) sendMsgType);
-    ASSERT_PARAM (specificsLength <= MAX_MSG_BODY_LENGTH - sizeof (StateMachineMsgHeader), specificsLength);
+    ASSERT_PARAM (sendMsgBodyLength <= MAX_MSG_BODY_LENGTH, sendMsgBodyLength);
 
     pSendMsg = malloc (sizeof (Msg));
     
@@ -108,10 +106,9 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
             pSendMsg->msgLength += sizeof (pSendMsg->msgType);
                         
             /* Put in the specifics */
-            if (pSendMsgSpecifics != PNULL)
+            if (pSendMsgBody != PNULL)
             {
-                memcpy (&pSendMsg->msgBody[0] + sendMsgBodyLength, pSendMsgSpecifics, specificsLength);
-                sendMsgBodyLength += specificsLength;
+                memcpy (&(pSendMsg->msgBody[0]), pSendMsgBody, sendMsgBodyLength);
             }
             pSendMsg->msgLength += sendMsgBodyLength;
             

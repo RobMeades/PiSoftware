@@ -9,4 +9,4 @@
 /*
  *  FUNCTION PROTOTYPES
  */
-Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSendMsgSpecifics, UInt16 specificsLength, StateMachineMsgType *pReceivedMsgType, void *pReceivedMsgBody);
+Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSendMsgBody, UInt16 sendMsgBodyLength, StateMachineMsgType *pReceivedMsgType, void *pReceivedMsgBody);
