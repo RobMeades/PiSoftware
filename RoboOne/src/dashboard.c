@@ -1,3 +1,7 @@
+/*
+ * Dashboard and event generator for RoboOne.
+ */ 
+ 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +21,7 @@
  * MANIFEST CONSTANTS
  */
 
-/* The shape of the windows.
+/* The shape of the dashboard windows.
  * Note that this is designed for a 55 row long terminal window. */
 /* The actual space used by a window doesn't include the heading,
  * that is added on the line above (so that if the window is
@@ -129,7 +133,7 @@ typedef struct WindowInfoTag
  * GLOBALS (prefixed with g)
  */
 
-/* Array of windows that are always displayed */
+/* Array of windows that can be displayed */
 WindowInfo gWindowList[] = {{"Output", {WIN_OUTPUT_HEIGHT, WIN_OUTPUT_WIDTH, WIN_OUTPUT_START_ROW, WIN_OUTPUT_START_COL}, initOutputWindow, updateOutputWindow, PNULL, true}, /* MUST be first in the list for the global pointer just below */
                             {"Pi/Rio", {WIN_RIO_HEIGHT, WIN_RIO_WIDTH, WIN_RIO_START_ROW, WIN_RIO_START_COL}, initRioWindow, updateRioWindow, PNULL, true},
                             {"Hindbrain", {WIN_O_HEIGHT, WIN_O_WIDTH, WIN_O_START_ROW, WIN_O_START_COL}, initOWindow, updateOWindow, PNULL, true},
@@ -661,6 +665,7 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
     
     if (pReceivedMsgBody != PNULL)
     {
+        pReceivedMsgBody->roboOneContextContainer.isValid = false;
         success = stateMachineServerSendReceive (STATE_MACHINE_SERVER_GET_CONTEXT, PNULL, 0, &receivedMsgType, (void *) pReceivedMsgBody);
         if (success)
         {

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <rob_system.h>
 #include <state_machine_interface.h>
+#include <actions.h>
 #include <shutdown_state.h>
 
 /*
@@ -26,8 +27,18 @@
 
 void transitionToShutdown (RoboOneState *pState)
 {
-    /* Fill in default handlers first */
+    /* Fill in default handlers and name first */
     defaultImplementation (pState);
     memcpy (&(pState->name[0]), SHUTDOWN_STATE_NAME, strlen (SHUTDOWN_STATE_NAME) + 1); /* +1 for terminator */
     printDebug ("Transitioning to %s state.\n", &(pState->name[0]));
+
+    /* There are no event handlers for this state */
+    
+    /* Do the entry actions */
+
+    switchOffHindbrain();
+
+    /* TODO: disable all relays */
+    /* TODO: put Pi to sleep/ */
+
 }

@@ -5,8 +5,10 @@
 #include <string.h>
 #include <rob_system.h>
 #include <state_machine_interface.h>
+#include <actions.h>
 #include <docked_state.h>
-
+#include <shutdown_state.h>
+#include <mobile_state.h>
 /*
  * MANIFEST CONSTANTS
  */
@@ -26,8 +28,21 @@
 
 void transitionToDocked (RoboOneState *pState)
 {
-    /* Fill in default handlers first */
+    /* Fill in default handlers and name first */
     defaultImplementation (pState);
     memcpy (&(pState->name[0]), DOCKED_STATE_NAME, strlen (DOCKED_STATE_NAME) + 1); /* +1 for terminator */
     printDebug ("Transitioning to %s state.\n", &(pState->name[0]));
+    
+    /* Now hook in the event handlers for this state */
+    pState->pEventTasksAvailable = transitionToMobile;
+    pState->pEventInsufficientPower = transitionToShutdown;
+    pState->pEventShutdown = transitionToShutdown;
+
+    /* Do the entry actions */
+
+    /* Switch Pi to 12V power - don't care about failure as this will be handled once insufficient power is available */
+    switchPiRioTo12VMainsPower();
+
+    /* Switch off the Hindbrain to save power - again, don't care about failure here */
+    switchOffHindbrain();
 }

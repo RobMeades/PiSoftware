@@ -1,5 +1,5 @@
 /*
- * Action functions for the state machine.
+ * Action functions, used by the state machine.
  */
 
 /*
@@ -8,9 +8,9 @@
 
 Bool switchOnHindbrain (void);
 Bool switchOffHindbrain (void);
-Bool switchRioToMainsPower (void);
-Bool switchRioToBatteryPower (void);
-Bool switchHindbrainToMainsPower (void);
+Bool switchPiRioTo12VMainsPower (void);
+Bool switchPiRioToBatteryPower (void);
+Bool switchHindbrainTo12VMainsPower (void);
 Bool switchHindbrainToBatteryPower (void);
 Bool startTimer (void);
 Bool stopTimer (void);
