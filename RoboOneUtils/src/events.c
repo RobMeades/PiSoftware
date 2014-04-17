@@ -13,9 +13,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <rob_system.h>
-#include <one_wire.h>
-#include <ow_bus.h>
-#include <hw_config.h>
 #include <messaging_server.h>
 #include <messaging_client.h>
 #include <state_machine_interface.h>
