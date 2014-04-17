@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>RoboOneShared</name>
+	<name>RoboOneHardware</name>
 	<comment></comment>
 	<projects>
 		<project>MessagingClient</project>
 		<project>MessagingServer</project>
-		<project>RoboOneStateMachine</project>
+		<project>OneWire</project>
+		<project>OneWireLibs</project>
+		<project>OneWireServer</project>
 		<project>shared</project>
 	</projects>
 	<buildSpec>
@@ -43,7 +45,7 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildLocation</key>
-					<value>${workspace_loc:/RoboOneShared}</value>
+					<value>${workspace_loc:/RoboOneHardware}</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.useDefaultBuildCmd</key>
@@ -86,12 +88,12 @@
 		<link>
 			<name>src</name>
 			<type>2</type>
-			<location>C:/Users/Rob Meades/workspace/RoboOneShared/src</location>
+			<location>C:/Users/Rob Meades/workspace/RoboOneHardware/src</location>
 		</link>
 		<link>
 			<name>obj</name>
 			<type>2</type>
-			<location>C:/Users/Rob Meades/workspace/RoboOneShared/obj</location>
+			<location>C:/Users/Rob Meades/workspace/RoboOneHardware/obj</location>
 		</link>
 	</linkedResources>
 </projectDescription>

@@ -8,7 +8,7 @@
 #include <state_machine_public.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
-#include <events.h>
+#include <utils.h>
 #include <actions.h>
 #include <mobile_state.h>
 #include <init_state.h>

@@ -151,10 +151,8 @@ typedef struct OwDevicesStaticConfigTag
 
 
 /*
- * EXTERN
+ * EXTERNS
  */
-
-extern SInt32 gOneWireServerPort;
 
 /*
  * GLOBALS (prefixed with g)
@@ -232,6 +230,8 @@ Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
                           "RELAY_PIO",
                           "GENERAL_PURPOSE_PIO"};
 SInt32 gPortNumber = -1;
+
+SInt32 gOneWireServerPort = -1;
 
 /*
  * STATIC FUNCTIONS

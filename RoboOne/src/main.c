@@ -21,7 +21,7 @@
 #include <state_machine_public.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
-#include <events.h>
+#include <utils.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -33,17 +33,16 @@
 #define STATE_MACHINE_SERVER_PORT_STRING "5235"
 
 /*
- * EXTERN
+ * EXTERNS
  */
 
 extern int errno;
+extern SInt32 gOneWireServerPort;
+extern SInt32 gStateMachineServerPort;
 
 /*
  * GLOBALS (prefixed with g)
  */
-
-SInt32 gOneWireServerPort = -1;
-SInt32 gStateMachineServerPort = -1;
 
 /*
  * STATIC FUNCTIONS

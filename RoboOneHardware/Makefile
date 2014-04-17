@@ -3,7 +3,7 @@ ifneq (,)
 This makefile requires GNU Make.
 endif
 
-PROGRAM = roboone_state_machine
+LIB = roboone_hardware.a
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
@@ -13,19 +13,17 @@ ONEWIRE_PRE = ../OneWire
 SERVER_PRE = ../MessagingServer
 CLIENT_PRE = ../MessagingClient
 ONEWIRESERVER_PRE = ../OneWireServer
-ROBOONEHARDWARE_PRE = ../RoboOneHardware
-ROBOONESHARED_PRE = ../RoboOneShared
 
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
 CC = $(GCC_PREFIX)gcc.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ONEWIRESERVER_PRE)/$(API_DIR) -I$(ROBOONEHARDWARE_PRE)/$(API_DIR) -I$(ROBOONESHARED_PRE)/$(API_DIR)
-LDFLAGS = $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(ONEWIRE_PRE)/$(OBJ_DIR)/one_wire.a $(OW_LIBS) $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a $(ROBOONEHARDWARE_PRE)/$(OBJ_DIR)/roboone_hardware.a $(ROBOONESHARED_PRE)/$(OBJ_DIR)/roboone_shared.a $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a 
+AR =  $(GCC_PREFIX)ar.exe
+CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ONEWIRESERVER_PRE)/$(API_DIR)
 
-all: $(PROGRAM)
+all: $(LIB)
 
-$(PROGRAM): .depend $(OBJS)
-	$(CC) $(OBJS) $(LDFLAGS) -o $(OBJ_DIR)/$(PROGRAM)
+$(LIB): .depend $(OBJS)
+	$(AR) r $(OBJ_DIR)/$(LIB) $(OBJS)
 
 depend: .depend
 
@@ -49,6 +47,6 @@ $(OBJ_DIR)/%.o:$(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
-	rm -f depend $(OBJ_DIR)/.depend $(OBJ_DIR)/*.o $(OBJ_DIR)/$(PROGRAM)
+	rm -f depend $(OBJ_DIR)/.depend $(OBJ_DIR)/*.o $(OBJ_DIR)/$(LIB)
 
 .PHONY: clean depend
