@@ -1,10 +1,5 @@
 /*
- * OneWire bus handling thread for RoboOne.
- * This file encapsulates all the knowledge of
- * what is conected to what on the OneWire bus
- * so that nothing outside here should need to
- * know the contents of hw_config.h or the bus
- * state.
+ * Utility functions.
  */ 
  
 #include <stdio.h>
