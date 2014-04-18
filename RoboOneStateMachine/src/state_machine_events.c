@@ -6,8 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <rob_system.h>
-#include <state_machine_interface.h>
-#include <state_machine_public.h>
+#include <state_machine_server.h>
 #include <state_machine_events.h>
 #include <init_state.h>
 

@@ -1,5 +1,5 @@
 /*
- * Utility functions.
+ * Access functions.
  */ 
  
 #include <stdio.h>
@@ -10,10 +10,9 @@
 #include <rob_system.h>
 #include <messaging_server.h>
 #include <messaging_client.h>
-#include <state_machine_interface.h>
-#include <state_machine_public.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
+#include <state_machine_public.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -24,10 +23,10 @@
  */
 
 /*
- * EXTERN
+ * GLOBALS - prefixed with g
  */
 
-extern SInt32 gStateMachineServerPort;
+SInt32 gStateMachineServerPort;
 
 /*
  * STATIC FUNCTIONS
@@ -36,6 +35,7 @@ extern SInt32 gStateMachineServerPort;
 /*
  * PUBLIC FUNCTIONS
  */
+
 /*
  * Send a message to the state machine server and
  * get the response back.

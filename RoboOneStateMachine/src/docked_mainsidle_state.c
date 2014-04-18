@@ -4,13 +4,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <rob_system.h>
-#include <state_machine_interface.h>
+#include <state_machine_server.h>
 #include <docked_mainsidle_state.h>
 
 /*
  * MANIFEST CONSTANTS
  */
-#define DOCKED_MAINSIDLE_STATE_NAME "Docked - MainsIdle" /* Not longer than STATE_NAME_STRING_LENGTH -1 characters */
+#define DOCKED_MAINSIDLE_STATE_NAME "Docked - MainsIdle" /* Not longer than STATE_NAME_STRING_LENGTH - 1 characters */
 
 /*
  * TYPES

@@ -4,11 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <rob_system.h>
-#include <state_machine_interface.h>
-#include <state_machine_public.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
-#include <utils.h>
+#include <state_machine_public.h>
 #include <actions.h>
 #include <orangutan.h>
 #include <init_state.h>
@@ -20,7 +18,7 @@
 /*
  * MANIFEST CONSTANTS
  */
-#define INIT_STATE_NAME "Init" /* Not longer than STATE_NAME_STRING_LENGTH -1 characters */
+#define INIT_STATE_NAME "Init" /* Not longer than STATE_NAME_STRING_LENGTH - 1 characters */
 
 /*
  * TYPES
@@ -63,13 +61,7 @@ void transitionToInit (RoboOneState *pState)
     {
         /* TODO: Initialise RIO AHRS (or check that it is initialised) */
         /* TODO: Check status of Wifi and camera */
-        
-        /* Save power if there's nothing to do */
-        success = switchOffHindbrain();
-        if (success)
-        {
-            /* TODO: Start inactivity timer */
-        }
+        /* TODO: Start inactivity timer */
     }
     
     if (!success)

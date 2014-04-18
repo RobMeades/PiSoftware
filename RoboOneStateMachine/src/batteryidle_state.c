@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <rob_system.h>
-#include <state_machine_interface.h>
+#include <state_machine_server.h>
 #include <actions.h>
 #include <batteryidle_state.h>
 #include <mobile_state.h>
@@ -14,7 +14,7 @@
 /*
  * MANIFEST CONSTANTS
  */
-#define BATTERYIDLE_STATE_NAME "BatteryIdle" /* Not longer than STATE_NAME_STRING_LENGTH -1 characters */
+#define BATTERYIDLE_STATE_NAME "BatteryIdle" /* Not longer than STATE_NAME_STRING_LENGTH - 1 characters */
 
 /*
  * TYPES

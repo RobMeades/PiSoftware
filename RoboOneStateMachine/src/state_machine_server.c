@@ -7,10 +7,9 @@
 #include <string.h>
 #include <rob_system.h>
 #include <messaging_server.h>
-#include <state_machine_interface.h>
-#include <state_machine_public.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
+#include <state_machine_public.h>
 #include <state_machine_events.h>
 #include <init_state.h>
 

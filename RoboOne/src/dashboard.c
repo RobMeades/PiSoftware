@@ -11,11 +11,9 @@
 #include <curses.h> /* Has to be ahead of rob_system.h in the list as it fiddles with bool */
 #include <ow_bus.h>
 #include <menu.h>
-#include <state_machine_interface.h>
-#include <state_machine_public.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
-#include <utils.h>
+#include <state_machine_public.h>
 
 /*
  * MANIFEST CONSTANTS

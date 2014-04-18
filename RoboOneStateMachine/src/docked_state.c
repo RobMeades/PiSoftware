@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <rob_system.h>
-#include <state_machine_interface.h>
+#include <state_machine_server.h>
 #include <actions.h>
 #include <docked_state.h>
 #include <shutdown_state.h>
@@ -12,7 +12,7 @@
 /*
  * MANIFEST CONSTANTS
  */
-#define DOCKED_STATE_NAME "Docked" /* Not longer than STATE_NAME_STRING_LENGTH -1 characters */
+#define DOCKED_STATE_NAME "Docked" /* Not longer than STATE_NAME_STRING_LENGTH - 1 characters */
 
 /*
  * TYPES

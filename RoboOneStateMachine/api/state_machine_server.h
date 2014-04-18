@@ -1,10 +1,12 @@
 /*
- *  Public stuff for the state machine server
+ * State machine, based on "Patterns in C - Part 2: STATE" by Adam Petersen
+ * http://www.adampetersen.se/Patterns%20in%20C%202,%20STATE.pdf
  */
 
 /*
  * MANIFEST CONSTANTS
  */
+#define STATE_NAME_STRING_LENGTH 25
 
 /*
  * TYPES
@@ -16,9 +18,29 @@
  * GENERAL MESSAGE TYPES
  */
 
+typedef struct RoboOneStateTag
+{
+    Char name[STATE_NAME_STRING_LENGTH];
+    void (*pEventInit) (struct RoboOneStateTag *pState);
+    void (*pEventInitFailure) (struct RoboOneStateTag *pState);
+    void (*pEventTimerExpiry) (struct RoboOneStateTag *pState);
+    void (*pEventTasksAvailable) (struct RoboOneStateTag *pState);
+    void (*pEventNoTasksAvailable) (struct RoboOneStateTag *pState);
+    void (*pEventMainsPowerAvailable) (struct RoboOneStateTag *pState);
+    void (*pEventInsufficientPower) (struct RoboOneStateTag *pState);
+    void (*pEventFullyCharged) (struct RoboOneStateTag *pState);
+    void (*pEventShutdown) (struct RoboOneStateTag *pState);
+} RoboOneState;
+
+typedef struct RoboOneContextTag
+{
+  RoboOneState state;
+} RoboOneContext;
+
 /*
  * TYPES FOR REQ MESSAGES
  */
+
 typedef struct RoboOneContextContainerTag
 {
     Bool isValid;
@@ -30,3 +52,9 @@ typedef struct RoboOneContextContainerTag
  */
 
 #pragma pack(pop) /* End of packing */ 
+
+/*
+ * FUNCTION PROTOTYPES
+ */
+
+void defaultImplementation (RoboOneState *pState);

@@ -4,14 +4,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <rob_system.h>
-#include <state_machine_interface.h>
+#include <state_machine_server.h>
+#include <state_machine_msg_auto.h>
+#include <state_machine_public.h>
 #include <actions.h>
 #include <shutdown_state.h>
 
 /*
  * MANIFEST CONSTANTS
  */
-#define SHUTDOWN_STATE_NAME "Shutdown" /* Not longer than STATE_NAME_STRING_LENGTH -1 characters */
+#define SHUTDOWN_STATE_NAME "Shutdown" /* Not longer than STATE_NAME_STRING_LENGTH - 1 characters */
 
 /*
  * TYPES

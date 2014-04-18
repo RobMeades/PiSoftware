@@ -17,11 +17,9 @@
 #include <messaging_client.h>
 #include <one_wire_server.h>
 #include <one_wire_msg_auto.h>
-#include <state_machine_interface.h>
-#include <state_machine_public.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
-#include <utils.h>
+#include <state_machine_public.h>
 
 /*
  * MANIFEST CONSTANTS
