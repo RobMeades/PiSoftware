@@ -14,12 +14,13 @@
 #include <unistd.h>
 #include <rob_system.h>
 #include <one_wire.h>
-#include <ow_bus.h>
-#include <hw_config.h>
+#include <one_wire_server.h> /* Should be removed */
 #include <messaging_server.h>
 #include <messaging_client.h>
-#include <one_wire_server.h>
-#include <one_wire_msg_auto.h>
+#include <hardware_server.h>
+#include <hardware_msg_auto.h>
+#include <ow_bus.h>
+#include <hw_config.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -28,6 +29,11 @@
 #define ONEWIRE_PORT_STRING    "/dev/USBSerial"
 #define MAX_NUM_DEVICES 8    /* This MUST be the same as the number of elements in the gDeviceStaticConfigList[] below */
 #define TOGGLE_DELAY_US 500000L  /* How long to toggle a set of pins from current state to opposite and back again */
+
+/* Maximum length of the string naming the serial port to use */
+#define MAX_SERIAL_PORT_NAME_LENGTH 80
+/* The maximum number of devices that oneWireFindAllDevices() can report */
+#define MAX_DEVICES_TO_FIND         10
 
 /* Enable current measurement, integrated current accummulator, charge/discharge
  * counting and shadowing of charge/discharge count to non-volatile storage */
@@ -149,11 +155,6 @@ typedef struct OwDevicesStaticConfigTag
     OwDeviceSpecifics specifics;
 } OwDevicesStaticConfig;
 
-
-/*
- * EXTERNS
- */
-
 /*
  * GLOBALS (prefixed with g)
  */
@@ -210,7 +211,7 @@ typedef struct OwDevicesStaticConfigTag
 /* ORDER IS IMPORTANT - the OwDeviceName enum is used to index into the
  * gDeviceStaticConfigList array */
 
-OwDevicesStaticConfig gDeviceStaticConfigList[] =
+static OwDevicesStaticConfig gDeviceStaticConfigList[] =
          {{OW_NAME_RIO_BATTERY_MONITOR, {{FAMILY_SBATTERY, 0xcf, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0x0b}}, {{RIO_BATTERY_MONITOR_CONFIG}}},
           {OW_NAME_O1_BATTERY_MONITOR, {{FAMILY_SBATTERY, 0x69, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0xe5}}, {{O1_BATTERY_MONITOR_CONFIG}}},
           {OW_NAME_O2_BATTERY_MONITOR, {{FAMILY_SBATTERY, 0x19, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0x7d}}, {{O2_BATTERY_MONITOR_CONFIG}}},
@@ -221,7 +222,7 @@ OwDevicesStaticConfig gDeviceStaticConfigList[] =
           {OW_NAME_GENERAL_PURPOSE_PIO, {{FAMILY_PIO, 0x02, 0x06, 0x0d, 0x00, 0x00, 0x00, 0x4c}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_SHADOW_MASK, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
 
 /* Obviously these need to be in the same order as the above */
-Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
+static Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
                           "O1_BATTERY_MONITOR",
                           "O2_BATTERY_MONITOR",
                           "O3_BATTERY_MONITOR",
@@ -229,9 +230,9 @@ Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
                           "DARLINGTON_PIO",
                           "RELAY_PIO",
                           "GENERAL_PURPOSE_PIO"};
-SInt32 gPortNumber = -1;
 
-SInt32 gOneWireServerPort = -1;
+/* This is the serial port number for the OneWire driver chip */
+static SInt32 gPortNumber = -1;
 
 /*
  * STATIC FUNCTIONS
@@ -273,7 +274,6 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSerialNumb
     Msg *pReceivedMsg;
     UInt16 receivedMsgBodyLength = 0;
 
-    ASSERT_PARAM (gOneWireServerPort >= 0, gOneWireServerPort);
     ASSERT_PARAM (msgType < MAX_NUM_ONE_WIRE_MSGS, (unsigned long) msgType);
     ASSERT_PARAM (((pSerialNumber != PNULL) || ((msgType == ONE_WIRE_SERVER_EXIT) || (msgType == ONE_WIRE_START_BUS) || (msgType == ONE_WIRE_STOP_BUS) || (msgType == ONE_WIRE_FIND_ALL_DEVICES))), (unsigned long) pSerialNumber);
     ASSERT_PARAM (specificsLength <= MAX_MSG_BODY_LENGTH - sizeof (sendMsgHeader), specificsLength);
@@ -316,7 +316,7 @@ static Bool oneWireServerSendReceive (OneWireMsgType msgType, UInt8 *pSerialNumb
     
             printDebug ("\nOW Client: sending message of type %d, length %d, hex dump:\n", pSendMsg->msgType, pSendMsg->msgLength);
             printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
-            returnCode = runMessagingClient (gOneWireServerPort, pSendMsg, pReceivedMsg);
+            returnCode = runMessagingClient ((SInt32) atoi (ONE_WIRE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
                     
             printDebug ("OW Client: message system returnCode: %d\n", returnCode);
             /* This code makes assumptions about packing (i.e. that it's '1' and that the
@@ -740,8 +740,8 @@ Bool startOneWireBus (void)
 {
     Bool success = true;
     
-    printProgress ("Opening port %s...", ONEWIRE_PORT_STRING);
     /* Open the serial port */
+    printProgress ("Opening port %s...", ONEWIRE_PORT_STRING);
 #ifdef DONT_USE_ONE_WIRE_SERVER    
     gPortNumber = oneWireStartBus (ONEWIRE_PORT_STRING);
 #else

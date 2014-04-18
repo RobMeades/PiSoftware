@@ -12,32 +12,6 @@
  * TYPES
  */
 
-/* The chargers in the system */
-typedef enum ChargerTag
-{
-    CHARGER_RIO = 0,
-    CHARGER_O1 = 1,
-    CHARGER_O2 = 2,
-    CHARGER_O3 = 3,
-    NUM_CHARGERS,
-    CHARGER_NULL
-} Charger;
-
-/* The state that a charger can be in */
-typedef enum ChargeStateTag
-{
-    CHARGE_STATE_NO_POWER = 0,
-    CHARGE_STATE_OFF = 1,
-    CHARGE_STATE_GREEN = 2,
-    CHARGE_STATE_FLASHING_GREEN = 3,
-    CHARGE_STATE_RED = 4,
-    CHARGE_STATE_FLASHING_RED = 5,
-    NUM_CHARGE_STATES,
-    CHARGE_STATE_UNKNOWN,
-    CHARGE_STATE_NULL,
-    CHARGE_STATE_BAD
-} ChargeState;
-
 /*
  *  FUNCTION PROTOTYPES
  */
@@ -55,7 +29,6 @@ Bool readOPwr (Bool *pIsOn);
 Bool toggleORst (void);
 Bool readORst (Bool *pIsOn);
 Bool togglePiRst (void);
-Bool readPiRst (Bool *pIsOn);
 Bool setRioPwr12VOn (void);
 Bool setRioPwr12VOff (void);
 Bool readRioPwr12V (Bool *pIsOn);
@@ -107,8 +80,8 @@ Bool readO3BattLifetimeChargeDischarge (UInt32 *pCharge, UInt32 *pDischarge);
 Bool performCalAllBatteryMonitors (void);
 Bool performCalRioBatteryMonitor (void);
 Bool performCalO1BatteryMonitor (void);
-Bool performCalO2BattMonitor (void);
-Bool performCalO3BattMonitor (void);
+Bool performCalO2BatteryMonitor (void);
+Bool performCalO3BatteryMonitor (void);
 Bool swapRioBattery (UInt32 systemTime, UInt16 remainingCapacity);
 Bool swapO1Battery (UInt32 systemTime, UInt16 remainingCapacity);
 Bool swapO2Battery (UInt32 systemTime, UInt16 remainingCapacity);

@@ -6,6 +6,9 @@
 /*
  * MANIFEST CONSTANTS
  */
+#define STATE_MACHINE_SERVER_EXE "./roboone_state_machine_server"
+#define STATE_MACHINE_SERVER_PORT_STRING "5235"
+
 #define STATE_NAME_STRING_LENGTH 25
 
 /*

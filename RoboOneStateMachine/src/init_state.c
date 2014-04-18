@@ -6,9 +6,8 @@
 #include <rob_system.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
-#include <state_machine_public.h>
+#include <state_machine_client.h>
 #include <actions.h>
-#include <orangutan.h>
 #include <init_state.h>
 #include <docked_state.h>
 #include <mobile_state.h>
@@ -41,6 +40,7 @@ void transitionToInit (RoboOneState *pState)
     memcpy (&(pState->name[0]), INIT_STATE_NAME, strlen (INIT_STATE_NAME) + 1); /* +1 for terminator */
     printDebug ("Transitioning to %s state.\n", &(pState->name[0]));
 
+#if 0    
     /* Now hook in the event handlers for this state */
     pState->pEventInitFailure = transitionToShutdown;
     pState->pEventTimerExpiry = transitionToBatteryIdle;
@@ -69,4 +69,5 @@ void transitionToInit (RoboOneState *pState)
         /* If we cannot initialise, send an InitFailure event */
         stateMachineServerSendReceive (STATE_MACHINE_EVENT_INIT_FAILURE, PNULL, 0, PNULL, PNULL);
     }
+#endif    
 }

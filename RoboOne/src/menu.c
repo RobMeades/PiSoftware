@@ -1,14 +1,16 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <termios.h>
 #include <unistd.h>
 #include <rob_system.h>
 #include <curses.h>
-#include <ow_bus.h>
 #include <menu.h>
 #include <dashboard.h>
-#include <orangutan.h>
+#include <hardware_server.h>
+#include <hardware_msg_auto.h>
+#include <hardware_client.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -26,7 +28,6 @@
 #define SWAP_BATTERY_STATE_PROMPT "Is the new battery fully charged (Y) (N if it is discharged)?: "
 #define SWAP_BATTERY_CNF_MSG "Battery data updated.\n"
 #define BATTERY_CAPACITY 2200
-#define O_STRING_MAX_LENGTH 50
 
 /*
  * STATIC FUNCTION PROTOTYPES
@@ -45,7 +46,33 @@ static Bool swapO1BatteryCnf (WINDOW *pWin);
 static Bool swapO2BatteryCnf (WINDOW *pWin);
 static Bool swapO3BatteryCnf (WINDOW *pWin);
 static Bool performCalAllBatteryMonitorsCnf (WINDOW *pWin);
+static Bool togglePiRst (void);
+static Bool toggleOPwr (void);
+static Bool toggleORst (void);
+static Bool setRioPwrBattOn (void);
+static Bool setRioPwrBattOff (void);
+static Bool setRioPwr12VOn (void);
+static Bool setRioPwr12VOff (void);
+static Bool setOPwrBattOn (void);
+static Bool setOPwrBattOff (void);
+static Bool setOPwr12VOn (void);
+static Bool setOPwr12VOff (void);
+static Bool setAllBatteryChargersOn (void);
+static Bool setAllBatteryChargersOff (void);
+static Bool setRioBatteryChargerOn (void);
+static Bool setRioBatteryChargerOff (void);
+static Bool setAllOChargersOn (void);
+static Bool setAllOChargersOff (void);
+static Bool setO1BatteryChargerOn (void);
+static Bool setO1BatteryChargerOff (void);
+static Bool setO2BatteryChargerOn (void);
+static Bool setO2BatteryChargerOff (void);
+static Bool setO3BatteryChargerOn (void);
+static Bool setO3BatteryChargerOff (void);
+static Bool enableAllRelays (void);
+static Bool disableAllRelays (void);
 static Bool sendOString(WINDOW *pWin);
+
 /*
  * TYPES
  */
@@ -234,16 +261,16 @@ static Bool displayCurrents (WINDOW *pWin)
     SInt16 o2Current;
     SInt16 o3Current;            
     
-    success = readRioBattCurrent (&rioCurrent);
+    success = hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_CURRENT, PNULL, 0, &rioCurrent);
     if (success)
     {
-        success = readO1BattCurrent (&o1Current);
+        success = hardwareServerSendReceive (HARDWARE_READ_O1_BATT_CURRENT, PNULL, 0, &o1Current);
         if (success)
         {
-            success = readO2BattCurrent (&o2Current);
+            success = hardwareServerSendReceive (HARDWARE_READ_O2_BATT_CURRENT, PNULL, 0, &o2Current);
             if (success)
             {
-                success = readO3BattCurrent (&o3Current);
+                success = hardwareServerSendReceive (HARDWARE_READ_O3_BATT_CURRENT, PNULL, 0, &o3Current);
             }
         }
     }
@@ -277,16 +304,16 @@ static Bool displayVoltages (WINDOW *pWin)
     UInt16 o2Voltage;
     UInt16 o3Voltage;            
     
-    success = readRioBattVoltage (&rioVoltage);
+    success = hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_VOLTAGE, PNULL, 0, &rioVoltage);
     if (success)
     {
-        success = readO1BattVoltage (&o1Voltage);
+        success = hardwareServerSendReceive (HARDWARE_READ_O1_BATT_VOLTAGE, PNULL, 0, &o1Voltage);
         if (success)
         {
-            success = readO2BattVoltage (&o2Voltage);
+            success = hardwareServerSendReceive (HARDWARE_READ_O2_BATT_VOLTAGE, PNULL, 0, &o2Voltage);
             if (success)
             {
-                success = readO3BattVoltage (&o3Voltage);
+                success = hardwareServerSendReceive (HARDWARE_READ_O3_BATT_VOLTAGE, PNULL, 0, &o3Voltage);
             }
         }
     }
@@ -320,16 +347,16 @@ static Bool displayRemainingCapacities (WINDOW *pWin)
     UInt16 o2RemainingCapacity;
     UInt16 o3RemainingCapacity;            
     
-    success = readRioRemainingCapacity (&rioRemainingCapacity);
+    success = hardwareServerSendReceive (HARDWARE_READ_RIO_REMAINING_CAPACITY, PNULL, 0, &rioRemainingCapacity);
     if (success)
     {
-        success = readO1RemainingCapacity (&o1RemainingCapacity);
+        success = hardwareServerSendReceive (HARDWARE_READ_O1_REMAINING_CAPACITY, PNULL, 0, &o1RemainingCapacity);
         if (success)
         {
-            success = readO2RemainingCapacity (&o2RemainingCapacity);
+            success = hardwareServerSendReceive (HARDWARE_READ_O2_REMAINING_CAPACITY, PNULL, 0, &o2RemainingCapacity);
             if (success)
             {
-                success = readO3RemainingCapacity (&o3RemainingCapacity);
+                success = hardwareServerSendReceive (HARDWARE_READ_O3_REMAINING_CAPACITY, PNULL, 0, &o3RemainingCapacity);
             }
         }
     }
@@ -358,33 +385,29 @@ static Bool displayRemainingCapacities (WINDOW *pWin)
 static Bool displayLifetimeChargesDischarges (WINDOW *pWin)
 {
     Bool success;
-    UInt32 rioLifetimeCharge;
-    UInt32 o1LifetimeCharge;
-    UInt32 o2LifetimeCharge;
-    UInt32 o3LifetimeCharge;            
-    UInt32 rioLifetimeDischarge;
-    UInt32 o1LifetimeDischarge;
-    UInt32 o2LifetimeDischarge;
-    UInt32 o3LifetimeDischarge;            
+    HardwareChargeDischarge  rioLifetime;
+    HardwareChargeDischarge  o1Lifetime;
+    HardwareChargeDischarge  o2Lifetime;
+    HardwareChargeDischarge  o3Lifetime;
     
-    success = readRioBattLifetimeChargeDischarge (&rioLifetimeCharge, &rioLifetimeDischarge);
+    success = hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &rioLifetime);
     if (success)
     {
-        success = readO1BattLifetimeChargeDischarge (&o1LifetimeCharge, &o1LifetimeDischarge);
+        success = hardwareServerSendReceive (HARDWARE_READ_O1_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &o1Lifetime);
         if (success)
         {
-            success = readO2BattLifetimeChargeDischarge (&o2LifetimeCharge, &o2LifetimeDischarge);
+            success = hardwareServerSendReceive (HARDWARE_READ_O2_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &o2Lifetime);
             if (success)
             {
-                success = readO2BattLifetimeChargeDischarge (&o3LifetimeCharge, &o3LifetimeDischarge);
+                success = hardwareServerSendReceive (HARDWARE_READ_O3_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &o3Lifetime);
             }
         }
     }
     
     if (success)
     {
-        printHelper (pWin, "Charge (mAhr):    Pi/RIO %lu, O1 %lu, O2 %lu, O3 %lu.\n", rioLifetimeCharge, o1LifetimeCharge, o2LifetimeCharge, o3LifetimeCharge);                
-        printHelper (pWin, "Discharge (mAhr): Pi/RIO %lu, O1 %lu, O2 %lu, O3 %lu.\n", rioLifetimeDischarge, o1LifetimeDischarge, o2LifetimeDischarge, o3LifetimeDischarge);                
+        printHelper (pWin, "Charge (mAhr):    Pi/RIO %lu, O1 %lu, O2 %lu, O3 %lu.\n", rioLifetime.charge, o1Lifetime.charge, o2Lifetime.charge, o3Lifetime.charge);                
+        printHelper (pWin, "Discharge (mAhr): Pi/RIO %lu, O1 %lu, O2 %lu, O3 %lu.\n", rioLifetime.discharge, o1Lifetime.discharge, o2Lifetime.discharge, o3Lifetime.discharge);                
     }
     else
     {
@@ -456,30 +479,30 @@ static Bool displayRelayStates (WINDOW *pWin)
  
     printHelper (pWin, "%s\n", RELAY_HEADING_STRING);
     
-    success = readRelaysEnabled (&relaysEnabled);
+    success = hardwareServerSendReceive (HARDWARE_READ_RELAYS_ENABLED, PNULL, 0, &relaysEnabled);
     if (!relaysEnabled)
     {
         printHelper (pWin, "[");
     }
-    success = readOPwr (&isOn);
+    success = hardwareServerSendReceive (HARDWARE_READ_O_PWR, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readORst (&isOn);
+    success = hardwareServerSendReceive (HARDWARE_READ_O_RST, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readRioPwr12V (&isOn);
+    success = hardwareServerSendReceive (HARDWARE_READ_RIO_PWR_12V, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readRioPwrBatt (&isOn);
+    success = hardwareServerSendReceive (HARDWARE_READ_RIO_PWR_BATT, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readOPwr12V (&isOn);
+    success = hardwareServerSendReceive (HARDWARE_READ_O_PWR_12V, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readOPwrBatt (&isOn);
+    success = hardwareServerSendReceive (HARDWARE_READ_O_PWR_BATT, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readRioBatteryCharger (&isOn);
+    success = hardwareServerSendReceive (HARDWARE_READ_RIO_BATTERY_CHARGER, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readO1BatteryCharger (&isOn);
+    success = hardwareServerSendReceive (HARDWARE_READ_O1_BATTERY_CHARGER, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readO2BatteryCharger (&isOn);
+    success = hardwareServerSendReceive (HARDWARE_READ_O2_BATTERY_CHARGER, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    success = readO3BatteryCharger (&isOn);
+    success = hardwareServerSendReceive (HARDWARE_READ_O3_BATTERY_CHARGER, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
     if (!relaysEnabled)
     {
@@ -509,7 +532,7 @@ static Bool displayGpios (WINDOW *pWin)
  
     printHelper (pWin, "%s\n", GPIO_HEADING_STRING);
     
-    success = readGeneralPurposeIOs (&pinsState);
+    success = hardwareServerSendReceive (HARDWARE_READ_GENERAL_PURPOSE_IOS, PNULL, 0, &pinsState);
     for (i = 0; i < 8; i++)
     {
         mask = 1 << i;
@@ -544,7 +567,7 @@ static Bool performCalAllBatteryMonitorsCnf (WINDOW *pWin)
     /* Prompt for input */
     if (getYesInput (pWin, "Are all the current measurements resistors shorted (Y/N)? "))
     {
-        success = performCalAllBatteryMonitors();
+        success = hardwareServerSendReceive (HARDWARE_PERFORM_CAL_ALL_BATTERY_MONITORS, PNULL, 0, PNULL);
         if (success)
         {
             printHelper (pWin, "Calibration completed, don't forget to remove the shorts.\n");
@@ -559,6 +582,258 @@ static Bool performCalAllBatteryMonitorsCnf (WINDOW *pWin)
 }
 
 /*
+ * Toggle Pi reset. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool togglePiRst (void)
+{
+    return hardwareServerSendReceive (HARDWARE_TOGGLE_PI_RST, PNULL, 0, PNULL);
+}
+
+/*
+ * Toggle power to the Orangutan, AKA Hindbrain. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool toggleOPwr (void)
+{
+    return hardwareServerSendReceive (HARDWARE_TOGGLE_O_PWR, PNULL, 0, PNULL);
+}
+
+/*
+ * Toggle reset to the Orangutan, AKA Hindbrain. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool toggleORst (void)
+{
+    return hardwareServerSendReceive (HARDWARE_TOGGLE_O_RST, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch RIO/Pi battery power on. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setRioPwrBattOn (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_RIO_PWR_BATT_ON, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch RIO/Pi battery power off. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setRioPwrBattOff (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_RIO_PWR_BATT_OFF, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch RIO/Pi 12V/mains power on. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setRioPwr12VOn (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_RIO_PWR_12V_ON, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch RIO/Pi 12V/mains power off. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setRioPwr12VOff (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_RIO_PWR_12V_OFF, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch Orangutan, AKA Hindbrain, battery power on. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setOPwrBattOn (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_O_PWR_BATT_ON, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch Orangutan, AKA Hindbrain, battery power off. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setOPwrBattOff (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_O_PWR_BATT_OFF, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch Orangutan, AKA Hindbrain, mains/12V power on. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setOPwr12VOn (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_O_PWR_12V_ON, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch Orangutan, AKA Hindbrain, mains/12V  power off. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setOPwr12VOff (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_O_PWR_12V_OFF, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch all battery chargers on. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setAllBatteryChargersOn (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_ALL_BATTERY_CHARGERS_ON, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch all battery chargers off. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setAllBatteryChargersOff (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_ALL_BATTERY_CHARGERS_OFF, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch RIO/Pi battery charger on. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setRioBatteryChargerOn (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_RIO_BATTERY_CHARGER_ON, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch RIO/Pi battery charger off. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setRioBatteryChargerOff (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_RIO_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch all the Orangutan/Hindbrain battery
+ * chargers on. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setAllOChargersOn (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_ALL_O_BATTERY_CHARGERS_ON, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch all the Orangutan/Hindbrain battery
+ * chargers off. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setAllOChargersOff (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_ALL_O_BATTERY_CHARGERS_OFF, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch O1 battery charger on. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setO1BatteryChargerOn (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_O1_BATTERY_CHARGER_ON, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch O1 battery charger off. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setO1BatteryChargerOff (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_O1_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch O2 battery charger on. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setO2BatteryChargerOn (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_O2_BATTERY_CHARGER_ON, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch O2 battery charger off. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setO2BatteryChargerOff (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_O2_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch O3 battery charger on. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setO3BatteryChargerOn (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_O3_BATTERY_CHARGER_ON, PNULL, 0, PNULL);
+}
+
+/*
+ * Switch O3 battery charger off. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setO3BatteryChargerOff (void)
+{
+    return hardwareServerSendReceive (HARDWARE_SET_O3_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);
+}
+
+/*
+ * Enable power to all relays. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool enableAllRelays (void)
+{
+    return hardwareServerSendReceive (HARDWARE_ENABLE_ALL_RELAYS, PNULL, 0, PNULL);
+}
+
+/*
+ * Disable power to all relays. 
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool disableAllRelays (void)
+{
+    return hardwareServerSendReceive (HARDWARE_DISABLE_ALL_RELAYS, PNULL, 0, PNULL);
+}
+
+/*
  * Send a string to the Orangutan.
  *
  * pWin     a window to send output to, may
@@ -569,36 +844,51 @@ static Bool performCalAllBatteryMonitorsCnf (WINDOW *pWin)
 static Bool sendOString (WINDOW *pWin)
 {
     Bool success = false;
-    Char buffer[O_STRING_MAX_LENGTH];
-    UInt32 bytesReceived = sizeof (buffer);
-    Char displayBuffer[O_STRING_MAX_LENGTH];
-    
-    if (getStringInput (pWin, "String: ", &buffer[0], sizeof (buffer)) != PNULL)
+    OInputString *pInputString;
+    OString *pOutputString;
+    Char displayBuffer[MAX_O_STRING_LENGTH];
+     
+    pInputString = malloc (sizeof (OInputString));
+    if (pInputString != PNULL)
     {
-        removeCtrlCharacters (&buffer[0], &displayBuffer[0]);
-        success = sendStringToOrangutan (&buffer[0], &buffer[0], &bytesReceived);
-        if (success)
+        pInputString->waitForResponse = true;
+        
+        pOutputString = malloc (sizeof (OString));
+        if (pOutputString != PNULL)
         {
-            printHelper (pWin, "\nSent '%s' successfully", &displayBuffer[0]);
-            if (bytesReceived > 1) /* There will always be a terminator, hence the 1 */
+            pOutputString->stringLength = 0;
+            if (getStringInput (pWin, "String: ", &(pInputString->string[0]), sizeof (pInputString->string)) != PNULL)
             {
-                removeCtrlCharacters (&buffer[0], &displayBuffer[0]);
-                printHelper (pWin, ", response: '%s'.\n", &displayBuffer[0]);                
+                pInputString->stringLength = strlen (&(pInputString->string[0])) + 1;
+                removeCtrlCharacters (&(pInputString->string[0]), &(displayBuffer[0]));
+                
+                /* Send the and look for a response */
+                success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, sizeof (OInputString), pOutputString);
+                if (success)
+                {
+                    printHelper (pWin, "\nSent '%s' successfully", &(displayBuffer[0]));
+                    if (pOutputString->stringLength > 1) /* There will always be a terminator, hence the 1 */
+                    {
+                        removeCtrlCharacters (&(pOutputString->string[0]), &(displayBuffer[0]));
+                        printHelper (pWin, ", response: '%s'.\n", &(displayBuffer[0]));                
+                    }
+                    else
+                    {
+                        printHelper (pWin, ", no response.\n");                                
+                    }
+                }
+                else
+                {
+                    printHelper (pWin, "\nSend failed.\n");
+                }
             }
-            else
-            {
-                printHelper (pWin, ", no response.\n");                                
-            }
+            free (pOutputString);
         }
-        else
-        {
-            printHelper (pWin, "\nSend failed.\n");
-        }
+        free (pInputString);
     }
-    
+     
     return success;
 }
-
 /*
  * Swap the battery connected to the RIO/Pi/5v.
  * This involves zeroing the accumulators, setting
@@ -614,11 +904,11 @@ static Bool sendOString (WINDOW *pWin)
 static Bool swapRioBatteryCnf (WINDOW *pWin)
 {
     Bool success = true;
-    UInt16 remainingCapacity = 0;
-    UInt32 timeTicks;
+    HardwareBatterySwapData batterySwapData;
     
-    timeTicks = getSystemTicks();
-    if (timeTicks != 0)
+    batterySwapData.remainingCapacity = 0;
+    batterySwapData.systemTime = getSystemTicks();
+    if (batterySwapData.systemTime != 0)
     {
         if (getYesInput (pWin, SWAP_BATTERY_PROMPT))
         {
@@ -626,12 +916,12 @@ static Bool swapRioBatteryCnf (WINDOW *pWin)
             /* Check that the new battery is fully charged */
             if (getYesInput (pWin, SWAP_BATTERY_STATE_PROMPT))
             {
-                remainingCapacity = BATTERY_CAPACITY;
+                batterySwapData.remainingCapacity = BATTERY_CAPACITY;
             }
             printHelper (pWin, "\n");
             
             /* Now do the swap */
-            success = swapRioBattery (timeTicks, remainingCapacity);
+            success = hardwareServerSendReceive (HARDWARE_SWAP_RIO_BATTERY, &batterySwapData, sizeof (batterySwapData), PNULL);
             
             if (success)
             {
@@ -666,11 +956,11 @@ static Bool swapRioBatteryCnf (WINDOW *pWin)
 static Bool swapO1BatteryCnf (WINDOW *pWin)
 {
     Bool success = true;
-    UInt16 remainingCapacity = 0;
-    UInt32 timeTicks;
+    HardwareBatterySwapData batterySwapData;
     
-    timeTicks = getSystemTicks();
-    if (timeTicks != 0)
+    batterySwapData.remainingCapacity = 0;
+    batterySwapData.systemTime = getSystemTicks();
+    if (batterySwapData.systemTime != 0)
     {
         if (getYesInput (pWin, SWAP_BATTERY_PROMPT))
         {
@@ -678,12 +968,12 @@ static Bool swapO1BatteryCnf (WINDOW *pWin)
             /* Check that the new battery is fully charged */
             if (getYesInput (pWin, SWAP_BATTERY_STATE_PROMPT))
             {
-                remainingCapacity = BATTERY_CAPACITY;
+                batterySwapData.remainingCapacity = BATTERY_CAPACITY;
             }
             printHelper (pWin, "\n");
             
             /* Now do the swap */
-            success = swapO1Battery (timeTicks, remainingCapacity);
+            success = hardwareServerSendReceive (HARDWARE_SWAP_O1_BATTERY, &batterySwapData, sizeof (batterySwapData), PNULL);
             
             if (success)
             {
@@ -718,11 +1008,11 @@ static Bool swapO1BatteryCnf (WINDOW *pWin)
 static Bool swapO2BatteryCnf (WINDOW *pWin)
 {
     Bool success = true;
-    UInt16 remainingCapacity = 0;
-    UInt32 timeTicks;
+    HardwareBatterySwapData batterySwapData;
     
-    timeTicks = getSystemTicks();
-    if (timeTicks != 0)
+    batterySwapData.remainingCapacity = 0;
+    batterySwapData.systemTime = getSystemTicks();
+    if (batterySwapData.systemTime != 0)
     {
         if (getYesInput (pWin, SWAP_BATTERY_PROMPT))
         {
@@ -730,12 +1020,12 @@ static Bool swapO2BatteryCnf (WINDOW *pWin)
             /* Check that the new battery is fully charged */
             if (getYesInput (pWin, SWAP_BATTERY_STATE_PROMPT))
             {
-                remainingCapacity = BATTERY_CAPACITY;
+                batterySwapData.remainingCapacity = BATTERY_CAPACITY;
             }
             printHelper (pWin, "\n");
             
             /* Now do the swap */
-            success = swapO2Battery (timeTicks, remainingCapacity);
+            success = hardwareServerSendReceive (HARDWARE_SWAP_O2_BATTERY, &batterySwapData, sizeof (batterySwapData), PNULL);
             
             if (success)
             {
@@ -770,11 +1060,11 @@ static Bool swapO2BatteryCnf (WINDOW *pWin)
 static Bool swapO3BatteryCnf (WINDOW *pWin)
 {
     Bool success = true;
-    UInt16 remainingCapacity = 0;
-    UInt32 timeTicks;
+    HardwareBatterySwapData batterySwapData;
     
-    timeTicks = getSystemTicks();
-    if (timeTicks != 0)
+    batterySwapData.remainingCapacity = 0;
+    batterySwapData.systemTime = getSystemTicks();
+    if (batterySwapData.systemTime != 0)
     {
         if (getYesInput (pWin, SWAP_BATTERY_PROMPT))
         {
@@ -782,12 +1072,12 @@ static Bool swapO3BatteryCnf (WINDOW *pWin)
             /* Check that the new battery is fully charged */
             if (getYesInput (pWin, SWAP_BATTERY_STATE_PROMPT))
             {
-                remainingCapacity = BATTERY_CAPACITY;
+                batterySwapData.remainingCapacity = BATTERY_CAPACITY;
             }
             printHelper (pWin, "\n");
             
             /* Now do the swap */
-            success = swapO3Battery (timeTicks, remainingCapacity);
+            success = hardwareServerSendReceive (HARDWARE_SWAP_O3_BATTERY, &batterySwapData, sizeof (batterySwapData), PNULL);
             
             if (success)
             {
@@ -803,7 +1093,7 @@ static Bool swapO3BatteryCnf (WINDOW *pWin)
     {
         success = false;
     }
-   
+
     return success;    
 }
 

@@ -3,10 +3,12 @@ ifneq (,)
 This makefile requires GNU Make.
 endif
 
-LIB = roboone_hardware.a
+PROGRAM = roboone_hardware_server
+LIB = roboone_hardware_client.a
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
+FLAGS = -DDONT_USE_ONE_WIRE_SERVER
 
 SHARED_PRE = ../shared
 ONEWIRE_PRE = ../OneWire
@@ -14,16 +16,27 @@ SERVER_PRE = ../MessagingServer
 CLIENT_PRE = ../MessagingClient
 ONEWIRESERVER_PRE = ../OneWireServer
 
+OW_LIBS_PRE = ../OneWireLibs
+OW_LIBS_FLAGS = -I $(OW_LIBS_PRE)/common -I $(OW_LIBS_PRE)/lib/userial/shared -I $(OW_LIBS_PRE)/lib/userial/link/Linux -DDEBUG
+OW_LIBS_OBJ_PRE = $(OW_LIBS_PRE)/builds/uLinuxGNU/obj
+OW_LIBS = $(OW_LIBS_OBJ_PRE)/owlinkobjs
+
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
+LIB_OBJ:= $(OBJ_DIR)/hardware_client.o
+EXE_OBJ:= $(OBJ_DIR)/main.o $(OBJ_DIR)/hardware_server.o $(OBJ_DIR)/orangutan.o $(OBJ_DIR)/ow_bus.o
 CC = $(GCC_PREFIX)gcc.exe
 AR =  $(GCC_PREFIX)ar.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ONEWIRESERVER_PRE)/$(API_DIR)
+CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ONEWIRESERVER_PRE)/$(API_DIR) $(OW_LIBS_FLAGS) $(FLAGS)
+LDFLAGS = $(SHARED_PRE)/$(OBJ_DIR)/shared.a  $(ONEWIRE_PRE)/$(OBJ_DIR)/one_wire.a  $(OW_LIBS) $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a
 
-all: $(LIB)
+all: $(PROGRAM)
+
+$(PROGRAM): $(LIB)
+	$(CC) $(EXE_OBJ) $(LDFLAGS) -o $(OBJ_DIR)/$(PROGRAM)
 
 $(LIB): .depend $(OBJS)
-	$(AR) r $(OBJ_DIR)/$(LIB) $(OBJS)
+	$(AR) r $(OBJ_DIR)/$(LIB) $(LIB_OBJ)
 
 depend: .depend
 
@@ -47,6 +60,6 @@ $(OBJ_DIR)/%.o:$(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
-	rm -f depend $(OBJ_DIR)/.depend $(OBJ_DIR)/*.o $(OBJ_DIR)/$(LIB)
+	rm -f depend $(OBJ_DIR)/.depend $(OBJ_DIR)/*.o $(OBJ_DIR)/$(LIB) $(OBJ_DIR)/$(PROGRAM)
 
 .PHONY: clean depend

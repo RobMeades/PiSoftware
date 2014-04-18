@@ -12,7 +12,7 @@
 #include <messaging_client.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
-#include <state_machine_public.h>
+#include <state_machine_client.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -25,8 +25,6 @@
 /*
  * GLOBALS - prefixed with g
  */
-
-SInt32 gStateMachineServerPort;
 
 /*
  * STATIC FUNCTIONS
@@ -68,7 +66,6 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
     Msg *pReceivedMsg = PNULL;
     UInt16 receivedMsgBodyLength = 0;
 
-    ASSERT_PARAM (gStateMachineServerPort >= 0, gStateMachineServerPort);
     ASSERT_PARAM (sendMsgType < MAX_NUM_STATE_MACHINE_MSGS, (unsigned long) sendMsgType);
     ASSERT_PARAM (sendMsgBodyLength <= MAX_MSG_BODY_LENGTH, sendMsgBodyLength);
 
@@ -106,7 +103,7 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
             
             printDebug ("\nSM Client: sending message of type %d, length %d, hex dump:\n", pSendMsg->msgType, pSendMsg->msgLength);
             printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
-            returnCode = runMessagingClient (gStateMachineServerPort, pSendMsg, pReceivedMsg);
+            returnCode = runMessagingClient ((SInt32) atoi (STATE_MACHINE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
                     
             printDebug ("SM Client: message system returnCode: %d\n", returnCode);
             /* This code makes assumptions about packing (i.e. that it's '1') so be careful */

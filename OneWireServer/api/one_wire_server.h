@@ -6,6 +6,9 @@
  * MANIFEST CONSTANTS
  */
 
+#define ONE_WIRE_SERVER_EXE "./one_wire_server"
+#define ONE_WIRE_SERVER_PORT_STRING "5234"
+
 /* Maximum length of the string naming the serial port to use */
 #define MAX_SERIAL_PORT_NAME_LENGTH 80
 /* The maximum number of devices that oneWireFindAllDevices() can report */

@@ -21,6 +21,14 @@
  */
 
 /*
+ * GLOBALS - prefixed with g
+ */
+
+/* Place to keep a copy of the serial port number that was last opened
+ * so that it can be passed to other interested parties */
+static SInt32 gSerialPortNumber = -1;
+
+/*
  * STATIC FUNCTIONS
  */
 
@@ -34,8 +42,8 @@
  *                   which will be overlaid over the
  *                   body of the response message.
  * 
- * @return       the length of the message body
- *               to send back.
+ * @return           the length of the message body
+ *                   to send back.
  */
 static UInt16 actionOneWireStartBus (Char *pSerialPortString, OneWireStartBusCnf *pSendMsgBody)
 {
@@ -47,6 +55,37 @@ static UInt16 actionOneWireStartBus (Char *pSerialPortString, OneWireStartBusCnf
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
     pSendMsgBody->serialPortNumber = serialPortNumber;
     sendMsgBodyLength += sizeof (pSendMsgBody->serialPortNumber);
+    
+    /* Also keep a copy for the function below */
+    gSerialPortNumber = serialPortNumber;
+    
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that retrieves the port that the
+ * OneWire bus is using.
+ * 
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ * 
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionOneWireGetPort (OneWireGetPortCnf *pSendMsgBody)
+{
+    UInt16 sendMsgBodyLength = 0;
+    
+    pSendMsgBody->success = false;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    if (gSerialPortNumber >= 0)
+    {
+        pSendMsgBody->success = true;
+        pSendMsgBody->serialPortNumber = gSerialPortNumber;
+        sendMsgBodyLength += sizeof (pSendMsgBody->serialPortNumber);
+    }
     
     return sendMsgBodyLength;
 }
@@ -73,6 +112,9 @@ static UInt16 actionOneWireStopBus (OneWireMsgHeader *pMsgHeader, OneWireStopBus
     oneWireStopBus (pMsgHeader->portNumber);
     pSendMsgBody->success = true;
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
+
+    /* Set the stored port number to invalid */
+    gSerialPortNumber = -1;
     
     return sendMsgBodyLength;
 }
@@ -1020,6 +1062,11 @@ static ServerReturnCode doAction (OneWireMsgType receivedMsgType, UInt8 * pRecei
         case ONE_WIRE_STOP_BUS:
         {
             pSendMsg->msgLength += actionOneWireStopBus (&oneWireMsgHeader, (OneWireStopBusCnf *) &(pSendMsg->msgBody[0]));
+        }
+        break;
+        case ONE_WIRE_GET_PORT:
+        {
+            pSendMsg->msgLength += actionOneWireGetPort ((OneWireGetPortCnf *) &(pSendMsg->msgBody[0]));
         }
         break;
         case ONE_WIRE_SERVER_EXIT:

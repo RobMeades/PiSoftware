@@ -9,11 +9,13 @@
 #include <unistd.h>
 #include <rob_system.h>
 #include <curses.h> /* Has to be ahead of rob_system.h in the list as it fiddles with bool */
-#include <ow_bus.h>
 #include <menu.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
-#include <state_machine_public.h>
+#include <state_machine_client.h>
+#include <hardware_server.h>
+#include <hardware_msg_auto.h>
+#include <hardware_client.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -224,15 +226,17 @@ static Bool updateRioWindow (WINDOW *pWin, UInt8 count)
     SInt16 current = 0;
     UInt16 voltage = 0;
     UInt16 remainingCapacity = 0;
-    UInt32 lifetimeCharge = 0;
-    UInt32 lifetimeDischarge = 0;
+    HardwareChargeDischarge chargeDischarge;
     UInt8 row = 0;
     UInt8 col = 0;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
 
-    readRioBattCurrent (&current);
-    readRioBattVoltage (&voltage);
+    chargeDischarge.charge = 0;
+    chargeDischarge.discharge = 0;
+
+    hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_CURRENT, PNULL, 0, &current);
+    hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_VOLTAGE, PNULL, 0, &voltage);
     wmove (pWin, row, col);
     wclrtoeol (pWin);
     wprintw (pWin, "%d mA, %u mV", current, voltage);
@@ -240,15 +244,15 @@ static Bool updateRioWindow (WINDOW *pWin, UInt8 count)
 
     if (count % SLOW_UPDATE_BACKOFF == 0)
     {
-        readRioRemainingCapacity (&remainingCapacity);
-        readRioBattLifetimeChargeDischarge (&lifetimeCharge, &lifetimeDischarge);
+        hardwareServerSendReceive (HARDWARE_READ_RIO_REMAINING_CAPACITY, PNULL, 0, &remainingCapacity);
+        hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(chargeDischarge.discharge));
         wmove (pWin, row, col);
         wclrtoeol (pWin);
         wprintw (pWin, "%u mAhr(s) remain", remainingCapacity);
         row++;
         wmove (pWin, row, col);
         wclrtoeol (pWin);
-        wprintw (pWin, "lifetime -%lu/%lu mAhr", lifetimeDischarge, lifetimeCharge);
+        wprintw (pWin, "lifetime -%lu/%lu mAhr", chargeDischarge.discharge, chargeDischarge.charge);
         row++;
     }
     else
@@ -289,19 +293,23 @@ static Bool updateOWindow (WINDOW *pWin, UInt8 count)
     SInt16 current[3];
     UInt16 voltage[3];
     UInt16 remainingCapacity[3];
-    UInt32 lifetimeCharge[3];
-    UInt32 lifetimeDischarge[3];
+    HardwareChargeDischarge chargeDischarge[3];
     UInt8 row = 0;
     UInt8 col = 0;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
-    
-    readO1BattCurrent (&current[0]);
-    readO2BattCurrent (&current[1]);
-    readO3BattCurrent (&current[2]);
-    readO1BattVoltage (&voltage[0]);
-    readO2BattVoltage (&voltage[1]);
-    readO3BattVoltage (&voltage[2]);
+   
+    memset (&current, 0, sizeof (current));
+    memset (&voltage, 0, sizeof (voltage));
+    memset (&remainingCapacity, 0, sizeof (remainingCapacity));
+    memset (&chargeDischarge, 0, sizeof (chargeDischarge));
+
+    hardwareServerSendReceive (HARDWARE_READ_O1_BATT_CURRENT, PNULL, 0, &current[0]);
+    hardwareServerSendReceive (HARDWARE_READ_O2_BATT_CURRENT, PNULL, 0, &current[1]);
+    hardwareServerSendReceive (HARDWARE_READ_O3_BATT_CURRENT, PNULL, 0, &current[2]);
+    hardwareServerSendReceive (HARDWARE_READ_O1_BATT_VOLTAGE, PNULL, 0, &voltage[0]);
+    hardwareServerSendReceive (HARDWARE_READ_O2_BATT_VOLTAGE, PNULL, 0, &voltage[1]);
+    hardwareServerSendReceive (HARDWARE_READ_O3_BATT_VOLTAGE, PNULL, 0, &voltage[2]);
     wmove (pWin, row, col);
     wclrtoeol (pWin);
     wprintw (pWin, "%d/%d/%d mA, %u/%u/%u mV", current[0], current[1], current[2], voltage[0], voltage[1], voltage[2]);
@@ -309,19 +317,19 @@ static Bool updateOWindow (WINDOW *pWin, UInt8 count)
     
     if (count % SLOWER_UPDATE_BACKOFF == 0)
     {
-        readO1RemainingCapacity (&remainingCapacity[0]);
-        readO2RemainingCapacity (&remainingCapacity[1]);
-        readO3RemainingCapacity (&remainingCapacity[2]);
-        readO1BattLifetimeChargeDischarge (&lifetimeCharge[0], &lifetimeDischarge[0]);
-        readO2BattLifetimeChargeDischarge (&lifetimeCharge[1], &lifetimeDischarge[1]);
-        readO3BattLifetimeChargeDischarge (&lifetimeCharge[2], &lifetimeDischarge[2]);
+        hardwareServerSendReceive (HARDWARE_READ_O1_REMAINING_CAPACITY, PNULL, 0, &remainingCapacity[0]);
+        hardwareServerSendReceive (HARDWARE_READ_O2_REMAINING_CAPACITY, PNULL, 0, &remainingCapacity[1]);
+        hardwareServerSendReceive (HARDWARE_READ_O3_REMAINING_CAPACITY, PNULL, 0, &remainingCapacity[2]);
+        hardwareServerSendReceive (HARDWARE_READ_O1_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &chargeDischarge[0]);
+        hardwareServerSendReceive (HARDWARE_READ_O2_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &chargeDischarge[1]);
+        hardwareServerSendReceive (HARDWARE_READ_O3_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &chargeDischarge[2]);
         wmove (pWin, row, col);
         wclrtoeol (pWin);
         wprintw (pWin, "%u mAhr(s) remain", remainingCapacity[0] + remainingCapacity[1] + remainingCapacity[2]);
         row++;
         wmove (pWin, row, col);
         wclrtoeol (pWin);
-        wprintw (pWin, "lifetime -%lu/%lu mAhr", lifetimeDischarge[0] + lifetimeDischarge[1] + lifetimeDischarge[2], lifetimeCharge[0] + lifetimeCharge[1] + lifetimeCharge[2]);
+        wprintw (pWin, "lifetime -%lu/%lu mAhr", chargeDischarge[0].discharge + chargeDischarge[1].discharge + chargeDischarge[2].discharge, chargeDischarge[0].charge + chargeDischarge[1].charge + chargeDischarge[2].charge);
         row++;
     }
     else
@@ -379,7 +387,7 @@ static Bool updatePowerWindow (WINDOW *pWin, UInt8 count)
         wclrtoeol (pWin);
         
         /* First print the state of 12V power presence */
-        success = readMains12VPin (&mains12VPresent);
+        success = hardwareServerSendReceive (HARDWARE_READ_MAINS_12V, PNULL, 0, &mains12VPresent);
         if (success)
         {
             if (mains12VPresent)
@@ -398,19 +406,19 @@ static Bool updatePowerWindow (WINDOW *pWin, UInt8 count)
         
         /* Then print how each of the Pi and the Hindbrain
          * are powered. */
-        success = readRelaysEnabled (&relaysEnabled);
+        success = hardwareServerSendReceive (HARDWARE_READ_RELAYS_ENABLED, PNULL, 0, &relaysEnabled);
         if (success)
         {
-            success = readRioPwr12V (&is12V);
+            success = hardwareServerSendReceive (HARDWARE_READ_RIO_PWR_12V, PNULL, 0, &is12V);
             if (success)
             {
-                success = readRioPwrBatt (&isBatt);
+                success = hardwareServerSendReceive (HARDWARE_READ_RIO_PWR_BATT, PNULL, 0, &isBatt);
             }
             displayPowerStatesHelper (pWin, success, relaysEnabled, is12V, isBatt);
-            success = readOPwr12V (&is12V);
+            success = hardwareServerSendReceive (HARDWARE_READ_O_PWR_12V, PNULL, 0, &is12V);
             if (success)
             {
-                success = readOPwrBatt (&isBatt);
+                success = hardwareServerSendReceive (HARDWARE_READ_O_PWR_BATT, PNULL, 0, &isBatt);
             }
             displayPowerStatesHelper (pWin, success, relaysEnabled, is12V, isBatt);
         }
@@ -464,8 +472,8 @@ static Bool updateMuxWindow (WINDOW *pWin, UInt8 count)
         wclrtoeol (pWin);
         for (i = 0; i < 8; i++)
         {
-            setAnalogueMuxInput (i);
-            readAnalogueMux (&voltage);
+            hardwareServerSendReceive (HARDWARE_SET_ANALOGUE_MUX_INPUT, &i, sizeof (i), PNULL);
+            hardwareServerSendReceive (HARDWARE_READ_ANALOGUE_MUX, PNULL, 0, &voltage);
             wprintw (pWin, "%d: %u ", i, voltage);
         }
         wprintw (pWin, "mV");
@@ -509,26 +517,29 @@ static void initChgWindow (WINDOW *pWin)
 static Bool updateChgWindow (WINDOW *pWin, UInt8 count)
 {
     Bool success;
-    ChargeState state[NUM_CHARGERS];
-    Bool flashDetectPossible;
+    HardwareReadChargerState chargerState;
     UInt8 row = 0;
     UInt8 col = 0;
     UInt8 i;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
 
+    memset (&(chargerState.state[0]), 0, sizeof (chargerState.state));
+    chargerState.flashDetectPossible = false;
+    
     wmove (pWin, row, col);
     wclrtoeol (pWin);        
     wprintw (pWin, "  Pi   O1   O2   O3");
     row++;
-    success = readChargerState (&state[0], &flashDetectPossible);
-    if (success && flashDetectPossible)
+    
+    success = hardwareServerSendReceive (HARDWARE_READ_CHARGER_STATE, PNULL, 0, &chargerState);
+    if (success && chargerState.flashDetectPossible)
     {
         wmove (pWin, row, col);
         wclrtoeol (pWin);        
         for (i = 0; i < NUM_CHARGERS; i++)
         {
-            wprintw (pWin, "%s", gChargeStrings[state[i]]);
+            wprintw (pWin, "%s", gChargeStrings[chargerState.state[i]]);
         }
     }
     row++;

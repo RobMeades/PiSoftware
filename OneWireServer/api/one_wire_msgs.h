@@ -21,6 +21,7 @@
 ONE_WIRE_MSG_DEF (ONE_WIRE_SERVER_EXIT, OneWireServerExit, oneWireServerExit, ONE_WIRE_EMPTY, ONE_WIRE_EMPTY)
 ONE_WIRE_MSG_DEF (ONE_WIRE_START_BUS, OneWireStartBus, oneWireStartBus, Char serialPortString[MAX_SERIAL_PORT_NAME_LENGTH], SInt32 serialPortNumber)
 ONE_WIRE_MSG_DEF (ONE_WIRE_STOP_BUS, OneWireStopBus, oneWireStopBus, SInt32 portNumber, ONE_WIRE_EMPTY)
+ONE_WIRE_MSG_DEF (ONE_WIRE_GET_PORT, OneWireGetPort, oneWireGetPort, ONE_WIRE_EMPTY, SInt32 serialPortNumber)
 ONE_WIRE_MSG_DEF (ONE_WIRE_FIND_ALL_DEVICES, OneWireFindAllDevices, oneWireFindAllDevices, ONE_WIRE_EMPTY, DeviceList deviceList)
 ONE_WIRE_MSG_DEF (ONE_WIRE_ACCESS_DEVICE, OneWireAccessDevice, oneWireAccessDevice, ONE_WIRE_EMPTY, ONE_WIRE_EMPTY)
 

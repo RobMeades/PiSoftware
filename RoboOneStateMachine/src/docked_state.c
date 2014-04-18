@@ -45,4 +45,6 @@ void transitionToDocked (RoboOneState *pState)
 
     /* Switch off the Hindbrain to save power - again, don't care about failure here */
     switchOffHindbrain();
+    
+    /* TODO: enter the relevant sub-state */
 }
