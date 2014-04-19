@@ -659,7 +659,7 @@ UInt8 findAllDevices ()
     UInt8 *pPos;
     
     /* Grab work space for enough addresses */
-    pDeviceList = malloc (sizeof (DeviceList));
+    pDeviceList = malloc (sizeof (*pDeviceList));
     
     if (pDeviceList != PNULL)
     {

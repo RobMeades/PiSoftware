@@ -54,4 +54,5 @@ typedef union StateMachineMsgUnionCnfTag
 #define STATE_MACHINE_MSG_DEF MAKE_STATE_MACHINE_UNION_MEMBER_CNF
 #include <state_machine_msgs.h>
 } StateMachineMsgUnionCnf;
+
 #pragma pack(pop) /* End of packing */ 

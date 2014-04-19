@@ -21,7 +21,7 @@
 HARDWARE_MSG_DEF (HARDWARE_SERVER_EXIT, HardwareServerExit, hardwareServerExit, HARDWARE_EMPTY, HARDWARE_EMPTY)
 HARDWARE_MSG_DEF (HARDWARE_READ_MAINS_12V, HardwareReadMains12V, hardwareReadMains12V, HARDWARE_EMPTY, Bool mains12VIsPresent)
 HARDWARE_MSG_DEF (HARDWARE_READ_CHARGER_STATE_PINS, HardwareReadChargerStatePins, hardwareReadChargerStatePins, HARDWARE_EMPTY, UInt8 pinsState)
-HARDWARE_MSG_DEF (HARDWARE_READ_CHARGER_STATE, HardwareReadChargerState, hardwareReadChargerState, HARDWARE_EMPTY, HardwareReadChargerState chargerState)
+HARDWARE_MSG_DEF (HARDWARE_READ_CHARGER_STATE, HardwareReadChargerState, hardwareReadChargerState, HARDWARE_EMPTY, HardwareChargeState chargeState)
 HARDWARE_MSG_DEF (HARDWARE_TOGGLE_O_PWR, HardwareToggleOPwr, hardwareToggleOPwr, HARDWARE_EMPTY, HARDWARE_EMPTY)
 HARDWARE_MSG_DEF (HARDWARE_READ_O_PWR, HardwareReadOPwr, hardwareReadOPwr, HARDWARE_EMPTY, Bool isOn)
 HARDWARE_MSG_DEF (HARDWARE_TOGGLE_O_RST, HardwareToggleORst, hardwareToggleORst, HARDWARE_EMPTY, HARDWARE_EMPTY)
@@ -86,5 +86,5 @@ HARDWARE_MSG_DEF (HARDWARE_SWAP_O2_BATTERY, HardwareSwapO2Battery, hardwareSwapO
 HARDWARE_MSG_DEF (HARDWARE_SWAP_O3_BATTERY, HardwareSwapO3Battery, hardwareSwapO3Battery, HardwareBatterySwapData batterySwapData, HARDWARE_EMPTY)
 HARDWARE_MSG_DEF (HARDWARE_SET_ANALOGUE_MUX_INPUT, HardwareSetAnalogueMuxInput, hardwareSetAnalogueMuxInput, UInt8 input, HARDWARE_EMPTY)
 HARDWARE_MSG_DEF (HARDWARE_READ_ANALOGUE_MUX, HardwareReadAnalogueMux, hardwareReadAnalogueMux, HARDWARE_EMPTY, UInt16 voltage)
-HARDWARE_MSG_DEF (HARDWARE_SEND_O_STRING, HardwareSendOString, hardwareSendOString, OInputString string, OString string)
+HARDWARE_MSG_DEF (HARDWARE_SEND_O_STRING, HardwareSendOString, hardwareSendOString, OInputString string, OResponseString string)
 

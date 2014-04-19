@@ -148,9 +148,11 @@ ServerReturnCode runMessagingServer (UInt16 serverPort)
     SockAddrIn messagingClient;
 
     /* Create the TCP socket */
+    suspendDebug(); /* Switch the detail off 'cos it gets annoying */
     serverSocket = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (serverSocket >= 0)
     {
+        printDebug ("Messaging Server %d: created socket %d.\n", serverPort, serverSocket);
         /* Construct the server SockAddrIn structure */
         memset (&messagingServer, 0, sizeof (messagingServer));  
         messagingServer.sin_family = AF_INET;                     /* Internet/IP */
@@ -162,12 +164,15 @@ ServerReturnCode runMessagingServer (UInt16 serverPort)
          * TIME_WAIT */
         if (setsockopt (serverSocket, SOL_SOCKET, SO_REUSEADDR, &serverSocketOptionValue, sizeof (serverSocketOptionValue)) >= 0)
         {
+            printDebug ("Messaging Server %d: has set socket options.\n", serverPort);
             /* Bind the server socket */
             if (bind (serverSocket, (SockAddr *) &messagingServer, sizeof (messagingServer)) >= 0)
             {
+                printDebug ("Messaging Server %d: bound to socket %d.\n", serverPort, serverSocket);
                 /* Listen on the server socket */
                 if (listen (serverSocket, MAXPENDING) >= 0)
                 {
+                    printDebug ("Messaging Server %d: listening on socket %d, maxpending %d.\n", serverPort, serverSocket, MAXPENDING);
                     /* Run until error or exit */
                     while (returnCode == SERVER_SUCCESS_KEEP_RUNNING)
                     {
@@ -176,13 +181,17 @@ ServerReturnCode runMessagingServer (UInt16 serverPort)
                         /* Wait for a client to connect */
                         if ((clientSocket = accept (serverSocket, (SockAddr *) &messagingClient, &clientLength)) >= 0)
                         {
+                            printDebug ("Messaging Server %d: a client connected on client socket %d.\n", serverPort, clientSocket);
                             /* fprintf (stdout, "Client connected: %s\n", inet_ntoa (messagingClient.sin_addr)); */
                             
                             /* Exchange messages */
+                            resumeDebug();
                             returnCode = handleSendReceive (clientSocket);
+                            suspendDebug();
                             
                             /* Close the socket again */
                             close (clientSocket);                    
+                            printDebug ("Messaging Server %d: closed client socket %d.\n", serverPort, clientSocket);
                         }
                         else
                         {
@@ -214,6 +223,7 @@ ServerReturnCode runMessagingServer (UInt16 serverPort)
         returnCode = SERVER_ERR_FAILED_TO_CREATE_SOCKET;
         fprintf (stderr, "Failed to create socket on port %d, error: %s.\n", serverPort, strerror (errno));
     }
+    resumeDebug();
     
     return returnCode;
 }

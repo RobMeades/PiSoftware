@@ -46,7 +46,7 @@
 Bool hardwareServerSendReceive (HardwareMsgType msgType, void *pSendMsgBody, UInt16 sendMsgBodyLength, void *pReceivedMsgSpecifics)
 {
     ClientReturnCode returnCode;
-    Bool success = true;
+    Bool success = false;
     Msg *pSendMsg;
     Msg *pReceivedMsg;
     UInt16 receivedMsgBodyLength = 0;
@@ -54,11 +54,11 @@ Bool hardwareServerSendReceive (HardwareMsgType msgType, void *pSendMsgBody, UIn
     ASSERT_PARAM (msgType < MAX_NUM_HARDWARE_MSGS, (unsigned long) msgType);
     ASSERT_PARAM (sendMsgBodyLength <= MAX_MSG_BODY_LENGTH, sendMsgBodyLength);
 
-    pSendMsg = malloc (sizeof (Msg));
+    pSendMsg = malloc (sizeof (*pSendMsg));
     
     if (pSendMsg != PNULL)
     {
-        pReceivedMsg = malloc (sizeof (Msg));
+        pReceivedMsg = malloc (sizeof (*pReceivedMsg));
         
         if (pReceivedMsg != PNULL)
         {
@@ -88,43 +88,24 @@ Bool hardwareServerSendReceive (HardwareMsgType msgType, void *pSendMsgBody, UIn
                 /* Check the Bool 'success' at the start of the message body */
                 receivedMsgBodyLength = pReceivedMsg->msgLength - sizeof (pReceivedMsg->msgType);
                 printDebug ("HW Client: receivedMsgBodyLength: %d\n", receivedMsgBodyLength);
+                printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);
                 if (receivedMsgBodyLength >= sizeof (Bool))
                 {
                     printDebug ("HW Client: success field: %d\n", (Bool) pReceivedMsg->msgBody[0]);
                     if ((Bool) pReceivedMsg->msgBody[0])
                     {
-                        printDebug ("HW Client: received message type %d, hex dump:\n", pReceivedMsg->msgType);
-                        printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);
-
+                        success = true;
                         if (pReceivedMsgSpecifics != PNULL)
                         {
                             /* Copy out the bits beyond the success field for passing back */
                             memcpy (pReceivedMsgSpecifics, &pReceivedMsg->msgBody[0] + sizeof (Bool), receivedMsgBodyLength - sizeof (Bool));
                         }
                     }
-                    else
-                    {
-                        success = false;                
-                    }                    
-                }
-                else
-                {
-                    success = false;                
                 }
             }
-            else
-            {
-                success = false;                
-            }
+            free (pReceivedMsg);
         }
-        else
-        {
-            success = false;            
-        }
-    }
-    else
-    {
-        success = false;
+        free (pSendMsg);
     }
 
     return success;

@@ -37,10 +37,11 @@ void transitionToShutdown (RoboOneState *pState)
     /* There are no event handlers for this state */
     
     /* Do the entry actions */
-
-    switchOffHindbrain();
-
-    /* TODO: disable all relays */
+    
+    /* Switch off Hindbrain to save power */
+    actionSwitchOffHindbrain();
+    actionDisableAllRelays();
+    
     /* TODO: put Pi to sleep/ */
 
 }

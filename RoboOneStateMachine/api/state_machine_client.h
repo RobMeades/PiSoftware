@@ -6,6 +6,9 @@
  * MANIFEST CONSTANTS
  */
 
+/* Suggested 500ms delay before state machine server is ready */
+#define STATE_MACHINE_SERVER_START_DELAY_PI_US 500000L
+
 /*
  * TYPES
  */

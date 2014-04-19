@@ -59,7 +59,7 @@
 Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSendMsgBody, UInt16 sendMsgBodyLength, StateMachineMsgType *pReceivedMsgType, void *pReceivedMsgBody)
 {
     ClientReturnCode returnCode;
-    Bool success = true;
+    Bool success = false;
     Msg *pSendMsg;
     Msg *pReceivedMsg = PNULL;
     UInt16 receivedMsgBodyLength = 0;
@@ -67,25 +67,21 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
     ASSERT_PARAM (sendMsgType < MAX_NUM_STATE_MACHINE_MSGS, (unsigned long) sendMsgType);
     ASSERT_PARAM (sendMsgBodyLength <= MAX_MSG_BODY_LENGTH, sendMsgBodyLength);
 
-    pSendMsg = malloc (sizeof (Msg));
+    pSendMsg = malloc (sizeof (*pSendMsg));
     
     if (pSendMsg != PNULL)
     {
         if (pReceivedMsgType != PNULL)
         {
-            /* The caller wants the body of the reply so make space for the message */
-            pReceivedMsg = malloc (sizeof (Msg));
+            /* The caller wants a reply so make space for the message */
+            pReceivedMsg = malloc (sizeof (*pReceivedMsg));
             if (pReceivedMsg != PNULL)
             {
                 pReceivedMsg->msgLength = 0;
             }
-            else
-            {
-                success = false;
-            }
         }
         
-        if (success)
+        if ((pSendMsg != PNULL) && (pReceivedMsgType == PNULL || pReceivedMsg != PNULL))
         {
             /* Put in the bit before the body */
             pSendMsg->msgLength = 0;
@@ -107,12 +103,13 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
             /* This code makes assumptions about packing (i.e. that it's '1') so be careful */
             if (returnCode == CLIENT_SUCCESS)
             {
-                if (pReceivedMsg->msgLength >= sizeof (pReceivedMsg->msgType))
-                { 
-                    /* Pass back the message type */
-                    *pReceivedMsgType = pReceivedMsg->msgType;
-                    if (pReceivedMsg != PNULL)
-                    {
+                if (pReceivedMsg != PNULL)
+                {
+                    if (pReceivedMsg->msgLength >= sizeof (pReceivedMsg->msgType))
+                    { 
+                        success = true;
+                        /* Pass back the message type */
+                        *pReceivedMsgType = pReceivedMsg->msgType;
                         /* Pass back the body of the message */
                         receivedMsgBodyLength = pReceivedMsg->msgLength - sizeof (pReceivedMsg->msgType);
                         printDebug ("SM Client: received message type %d, receivedMsgBodyLength: %d\n", pReceivedMsg->msgType, receivedMsgBodyLength);
@@ -121,33 +118,23 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
                         
                         if ((pReceivedMsgBody != PNULL) && (receivedMsgBodyLength > 0))
                         {
-                            printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);        
                             /* Copy out the body */
                             memcpy (pReceivedMsgBody, &(pReceivedMsg->msgBody[0]), receivedMsgBodyLength);
+                            printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);        
                         }
                     }
-                    else
-                    {
-                        printDebug ("SM Client not bothering to wait for a reply.\n");                
-                    }
+                    /* Free the space for the received message */
+                    free (pReceivedMsg);
                 }
                 else
                 {
-                    success = false;                
+                    success = true;
+                    printDebug ("SM Client not bothering to wait for a reply.\n");                
                 }
             }
-            else
-            {
-                success = false;                
-            }
-            
-            /* Free the space for the message */
-            free (pReceivedMsg);
         }
-    }
-    else
-    {
-        success = false;
+        /* Free the space for the sent message */
+        free (pSendMsg);
     }
 
     return success;

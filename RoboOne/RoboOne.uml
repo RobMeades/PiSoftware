@@ -38,13 +38,17 @@
 <XPD:REF name="Incomings[2]">1RJsHay9nEGJqX3us/kGOAAA</XPD:REF>
 <XPD:REF name="Incomings[3]">nwdVkCbNEEiadsf8iAq0MwAA</XPD:REF>
 <XPD:REF name="Incomings[4]">ADPwa8moGkK4xR7nu3+rsQAA</XPD:REF>
-<XPD:ATTR name="#EntryActions" type="integer">2</XPD:ATTR>
+<XPD:ATTR name="#EntryActions" type="integer">3</XPD:ATTR>
 <XPD:OBJ name="EntryActions[0]" type="UMLUninterpretedAction" guid="mbDFJv3UXUqoaDsKMusMqQAA">
 <XPD:ATTR name="Name" type="string">Switch Pi to 12 V power from battery power</XPD:ATTR>
 <XPD:REF name="EntryState">SCunKcaLWEyUZh/AhshyfAAA</XPD:REF>
 </XPD:OBJ>
 <XPD:OBJ name="EntryActions[1]" type="UMLUninterpretedAction" guid="K9S1ZNT7VkOaR0K+DbUO5AAA">
 <XPD:ATTR name="Name" type="string">Switch off Hindbrain</XPD:ATTR>
+<XPD:REF name="EntryState">SCunKcaLWEyUZh/AhshyfAAA</XPD:REF>
+</XPD:OBJ>
+<XPD:OBJ name="EntryActions[2]" type="UMLUninterpretedAction" guid="d44gQuFumE6UQ0ah4isa+gAA">
+<XPD:ATTR name="Name" type="string">Switch Hindbrain to 12 V power from battery power</XPD:ATTR>
 <XPD:REF name="EntryState">SCunKcaLWEyUZh/AhshyfAAA</XPD:REF>
 </XPD:OBJ>
 <XPD:ATTR name="#ExitActions" type="integer">3</XPD:ATTR>

@@ -41,10 +41,13 @@ void transitionToDocked (RoboOneState *pState)
     /* Do the entry actions */
 
     /* Switch Pi to 12V power - don't care about failure as this will be handled once insufficient power is available */
-    switchPiRioTo12VMainsPower();
+    actionSwitchPiRioTo12VMainsPower();
+
+    /* Switch Hindbrain to 12V power - again, don't care about faiure */
+    actionSwitchHindbrainTo12VMainsPower();
 
     /* Switch off the Hindbrain to save power - again, don't care about failure here */
-    switchOffHindbrain();
+    actionSwitchOffHindbrain();
     
     /* TODO: enter the relevant sub-state */
 }

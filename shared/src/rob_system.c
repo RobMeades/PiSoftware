@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <time.h>
 #include <rob_system.h>
 
@@ -14,7 +15,9 @@
  */
 
 static Bool gDebugPrintsAreOn = false;
+static FILE *pgDebugPrintsStream = PNULL;
 static Bool gProgressPrintsAreOn = true;
+static Bool gSuspendDebug = false;
 
 /*
  * Assert function for debugging (should be called via the macros in rob_system.c).
@@ -66,7 +69,49 @@ void setDebugPrintsOn (void)
 void setDebugPrintsOff (void)
 {
     gDebugPrintsAreOn = false;
+    if (pgDebugPrintsStream != PNULL)
+    {
+        fclose (pgDebugPrintsStream);
+        pgDebugPrintsStream = PNULL;
+    }
 }
+
+/*
+ * Suspend debug
+ */
+void suspendDebug (void)
+{
+    gSuspendDebug = true;
+}
+
+/*
+ * Resume debug
+ */
+void resumeDebug (void)
+{
+    gSuspendDebug = false;
+}
+
+/*
+ * Set debug prints on and to file
+ */
+void setDebugPrintsOnToFile (Char * pFilename)
+{
+    ASSERT_PARAM (pFilename != PNULL, (unsigned long) pFilename);
+    
+    if (pgDebugPrintsStream != PNULL)
+    {
+        fclose (pgDebugPrintsStream);        
+    }
+    
+    pgDebugPrintsStream = fopen (pFilename, "w"); 
+  
+    if (pgDebugPrintsStream != PNULL)
+    {
+        gDebugPrintsAreOn = true;
+    }
+}
+
 /*
  * Progress printing function (that can be stubbed out if necessary)
  */
@@ -86,11 +131,17 @@ void printProgress (const Char * pFormat, ...)
  */
 void printDebug (const Char * pFormat, ...)
 {
-    if (gDebugPrintsAreOn)
+    FILE *pStream = stdout;
+    
+    if (gDebugPrintsAreOn && !gSuspendDebug)
     {
         va_list args;
+        if (pgDebugPrintsStream != PNULL)
+        {
+            pStream = pgDebugPrintsStream;
+        }
         va_start (args, pFormat);
-        vprintf (pFormat, args);
+        vfprintf (pStream, pFormat, args);
         va_end (args);
     }
 }
@@ -101,12 +152,19 @@ void printDebug (const Char * pFormat, ...)
 void printHexDump (const UInt8 * pMemory, UInt16 size)
 {
     UInt8 i;
+    FILE *pStream = stdout;
     
-    if (gDebugPrintsAreOn)
+    if (gDebugPrintsAreOn && !gSuspendDebug)
     {
+        if (pgDebugPrintsStream != PNULL)
+        {
+            pStream = pgDebugPrintsStream;
+        }
+
+        fprintf (pStream, "Printing at least %d bytes:\n", size);
         for (i = 0; i < size; i +=8)
         {
-            printf ("0x%.8lx: 0x%.2x 0x%.2x 0x%.2x 0x%.2x : 0x%.2x 0x%.2x 0x%.2x 0x%.2x\n", (unsigned long) pMemory, *pMemory, *(pMemory + 1), *(pMemory + 2), *(pMemory + 3), *(pMemory + 4), *(pMemory + 5), *(pMemory + 6), *(pMemory + 7));
+            fprintf (pStream, "0x%.8lx: 0x%.2x 0x%.2x 0x%.2x 0x%.2x : 0x%.2x 0x%.2x 0x%.2x 0x%.2x\n", (unsigned long) pMemory, *pMemory, *(pMemory + 1), *(pMemory + 2), *(pMemory + 3), *(pMemory + 4), *(pMemory + 5), *(pMemory + 6), *(pMemory + 7));
             pMemory +=8;
         }
     }

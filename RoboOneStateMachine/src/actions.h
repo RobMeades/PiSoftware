@@ -3,14 +3,21 @@
  */
 
 /*
+ * MANIFEST CONSTANTS
+ */
+
+/*
  * FUNCTION PROTOTYPES
  */
 
-Bool switchOnHindbrain (void);
-Bool switchOffHindbrain (void);
-Bool switchPiRioTo12VMainsPower (void);
-Bool switchPiRioToBatteryPower (void);
-Bool switchHindbrainTo12VMainsPower (void);
-Bool switchHindbrainToBatteryPower (void);
-Bool startTimer (void);
-Bool stopTimer (void);
+Bool actionEnableAllRelays (void);
+Bool actionDisableAllRelays (void);
+Bool actionIsMains12VAvailable (void);
+Bool actionSwitchOnHindbrain (void);
+Bool actionSwitchOffHindbrain (void);
+Bool actionSwitchPiRioTo12VMainsPower (void);
+Bool actionSwitchPiRioToBatteryPower (void);
+Bool actionSwitchHindbrainTo12VMainsPower (void);
+Bool actionSwitchHindbrainToBatteryPower (void);
+Bool actionStartTimer (void);
+Bool actionStopTimer (void);

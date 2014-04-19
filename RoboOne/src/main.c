@@ -60,7 +60,7 @@ static Bool startStateMachineServer (void)
     StateMachineMsgType receivedMsgType = STATE_MACHINE_SERVER_NULL;
     StateMachineServerStartCnf *pStateMachineServerStartCnf;
     
-    pStateMachineServerStartCnf = malloc (sizeof (StateMachineServerStartCnf));
+    pStateMachineServerStartCnf = malloc (sizeof (*pStateMachineServerStartCnf));
     
     if (pStateMachineServerStartCnf != PNULL)
     {   
@@ -89,7 +89,7 @@ static Bool stopStateMachineServer (void)
     StateMachineMsgType receivedMsgType = STATE_MACHINE_SERVER_NULL;
     StateMachineServerStopCnf *pStateMachineServerStopCnf;
     
-    pStateMachineServerStopCnf = malloc (sizeof (StateMachineServerStopCnf));
+    pStateMachineServerStopCnf = malloc (sizeof (*pStateMachineServerStopCnf));
     
     if (pStateMachineServerStopCnf != PNULL)
     {
@@ -117,15 +117,15 @@ static Bool stopStateMachineServer (void)
 int main (int argc, char **argv)
 {
     Bool   success = false;
-    pid_t  serverPID;
-    pid_t  stateMachinePID;
+    pid_t  hwServerPID;
+    pid_t  smServerPID;
     
-    setDebugPrintsOn();
+    setDebugPrintsOnToFile ("roboone.txt");
     setProgressPrintsOn();
 
     /* Spawn a child that will become the Hardware server. */
-    serverPID = fork();
-    if (serverPID == 0)
+    hwServerPID = fork();
+    if (hwServerPID == 0)
     {
         /* Start OneWire server process on a given port */
         static char *argv1[] = {HARDWARE_SERVER_EXE, HARDWARE_SERVER_PORT_STRING, PNULL};
@@ -135,18 +135,18 @@ int main (int argc, char **argv)
     }
     else
     {
-        if (serverPID < 0)
+        if (hwServerPID < 0)
         {
             printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", HARDWARE_SERVER_EXE, strerror (errno));
         }
         else
         {   /* Parent process */
             /* Wait for the server to start */
-            usleep (SERVER_START_DELAY_PI_US);
+            usleep (HARDWARE_SERVER_START_DELAY_PI_US);
 
             /* Spawn a child that will become the RoboOne state machine. */
-            stateMachinePID = fork();
-            if (stateMachinePID == 0)
+            smServerPID = fork();
+            if (smServerPID == 0)
             {
                 /* Start RoboOne state machine process */
                 static char *argv2[] = {STATE_MACHINE_SERVER_EXE, STATE_MACHINE_SERVER_PORT_STRING, PNULL};
@@ -156,14 +156,14 @@ int main (int argc, char **argv)
             }
             else
             {
-                if (stateMachinePID < 0)
+                if (smServerPID < 0)
                 {
                     printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", STATE_MACHINE_SERVER_EXE, strerror (errno));
                 }
                 else
                 {   /* Parent process again */
                     /* Now setup the state machine */
-                    usleep (SERVER_START_DELAY_PI_US); /* Wait for the server to be ready before messaging it */
+                    usleep (STATE_MACHINE_SERVER_START_DELAY_PI_US); /* Wait for the server to be ready before messaging it */
                     success = startStateMachineServer();
                     
                     if (success)
@@ -176,7 +176,7 @@ int main (int argc, char **argv)
                     
                     /* When done, tidy up the state machine */
                     stopStateMachineServer();
-                    waitpid (stateMachinePID, 0, 0); /* wait for state machine to exit */
+                    waitpid (smServerPID, 0, 0); /* wait for state machine to exit */
                 }
             }
             if (!success)
@@ -186,10 +186,12 @@ int main (int argc, char **argv)
                 
             /* Shut the hardware gracefully */
             stopHardwareServer();
-            waitpid (serverPID, 0, 0); /* wait for server to exit */
+            waitpid (hwServerPID, 0, 0); /* wait for server to exit */
         }
     }
     
+    setDebugPrintsOff();
+
     if (!success)
     {
         exit (-1);

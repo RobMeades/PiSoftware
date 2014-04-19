@@ -49,12 +49,14 @@ ClientReturnCode runMessagingClient (UInt16 serverPort, Msg *pSendMsg, Msg *pRec
     SockAddrIn messagingServer;
     UInt16 rawSendLength;
     
+    suspendDebug(); /* Switch the detail off 'cos it gets annoying */
     if (pSendMsg != PNULL)
     {
         /* Create the TCP socket */
         serverSocket = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (serverSocket >= 0)
         {
+            printDebug ("Messaging Client %d: created socket %d.\n", serverPort, serverSocket);
             /* Construct the server sockaddr_in structure */
             memset (&messagingServer, 0, sizeof (messagingServer)); 
             messagingServer.sin_family = AF_INET;                      /* Internet/IP */
@@ -64,14 +66,16 @@ ClientReturnCode runMessagingClient (UInt16 serverPort, Msg *pSendMsg, Msg *pRec
             /* Establish connection */
             if (connect (serverSocket, (SockAddr *) &messagingServer, sizeof (messagingServer)) >= 0)
             {
+                printDebug ("Messaging Client %d: connected to server on socket.\n", serverPort, serverSocket);
                 /* Send the message to the server */
                 rawSendLength = pSendMsg->msgLength + SIZE_OF_MSG_LENGTH;
                 if (send (serverSocket, pSendMsg, rawSendLength, 0) == rawSendLength)
                 {
+                    printDebug ("Messaging Client %d: sent %d bytes to server on socket.\n", serverPort, rawSendLength, serverSocket);
                     if (pReceivedMsg != PNULL)
                     {
                         UInt16 rawReceivedLength = 0;
-                        SInt16 rawBytesReceived;                        
+                        SInt16 rawBytesReceived = 0;                        
                         MsgLength *pReceivedMsgLength;
                         
                         pReceivedMsgLength = &(pReceivedMsg->msgLength);
@@ -82,9 +86,15 @@ ClientReturnCode runMessagingClient (UInt16 serverPort, Msg *pSendMsg, Msg *pRec
                         while ((rawReceivedLength < *pReceivedMsgLength + SIZE_OF_MSG_LENGTH) && (rawReceivedLength < MAX_MSG_LENGTH + SIZE_OF_MSG_LENGTH) && (rawBytesReceived >= 0) && *pReceivedMsgLength > 0)
                         {
                             rawBytesReceived = recv (serverSocket, pReceivedMsg, *pReceivedMsgLength + SIZE_OF_MSG_LENGTH, 0);
-                            if (rawBytesReceived > 0)
+                            if (rawBytesReceived >= 0)
                             {
+                                printDebug ("Messaging Client %d: received %d bytes from server so far.\n", serverPort, rawBytesReceived);
                                 rawReceivedLength += rawBytesReceived;
+                            }
+                            else
+                            {
+                                returnCode = CLIENT_ERR_FAILED_ON_RECV;
+                                fprintf (stderr, "Failure returned by recv() (value %d), error: %s.\n", rawBytesReceived, strerror (errno));
                             }
                         }
                         
@@ -93,6 +103,14 @@ ClientReturnCode runMessagingClient (UInt16 serverPort, Msg *pSendMsg, Msg *pRec
                             returnCode = CLIENT_ERR_MESSAGE_FROM_SERVER_INCOMPLETE_OR_TOO_LONG;
                             fprintf (stderr, "Message from server incomplete or too long (%d bytes received, %d bytes needed), error: %s.\n", rawReceivedLength, *pReceivedMsgLength + SIZE_OF_MSG_LENGTH, strerror (errno));
                         }
+                        else
+                        {
+                            printDebug ("Messaging Client %d: received %d bytes from server on socket.\n", serverPort, rawReceivedLength, serverSocket);
+                        }
+                    }
+                    else
+                    {
+                        printDebug ("Messaging Client %d: not waiting for a response.\n", serverPort);                        
                     }
                 }
                 else
@@ -108,6 +126,7 @@ ClientReturnCode runMessagingClient (UInt16 serverPort, Msg *pSendMsg, Msg *pRec
             }
             
             close (serverSocket);
+            printDebug ("Messaging Client %d: closed socket.\n", serverPort, serverSocket);
         }
         else
         {
@@ -120,6 +139,7 @@ ClientReturnCode runMessagingClient (UInt16 serverPort, Msg *pSendMsg, Msg *pRec
         returnCode = CLIENT_ERR_SEND_MESSAGE_IS_PNULL;
         fprintf (stderr, "Send message is PNULL.\n");   
     }
+    resumeDebug();
 
     return returnCode;
 }

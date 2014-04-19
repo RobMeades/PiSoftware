@@ -23,7 +23,10 @@ bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 pa
 void setProgressPrintsOn (void);
 void setProgressPrintsOff (void);
 void setDebugPrintsOn (void);
+void setDebugPrintsOnToFile (Char * pFilename);
 void setDebugPrintsOff (void);
+void suspendDebug (void);
+void resumeDebug (void);
 void printProgress (const Char * pFormat, ...);
 void printDebug (const Char * pFormat, ...);
 void printHexDump (const UInt8 * pMemory, UInt16 size);

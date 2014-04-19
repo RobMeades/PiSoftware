@@ -18,7 +18,7 @@
 
 #pragma pack(push, 1) /* Force GCC to pack everything from here on as tightly as possible */
 
-/* The state that a charger can be in */
+/* The states of charge that a charger can be in */
 typedef enum ChargeStateTag
 {
     CHARGE_STATE_NO_POWER = 0,
@@ -51,7 +51,8 @@ typedef struct HardwareBatterySwapDataTag
  * TYPES FOR CNF MESSAGES
  */
 
-/* The chargers in the system */
+/* The chargers in the system.  Don't mess with these as the values are used
+ * to index into arrays. */
 typedef enum ChargerTag
 {
     CHARGER_RIO = 0,
@@ -62,11 +63,11 @@ typedef enum ChargerTag
     CHARGER_NULL
 } Charger;
 
-typedef struct HardwareReadChargerStateTag
+typedef struct HardwareChargeStateTag
 {
-    ChargeState state[NUM_CHARGERS];
     Bool flashDetectPossible;
-} HardwareReadChargerState;
+    ChargeState state[NUM_CHARGERS];
+} HardwareChargeState;
 
 typedef struct HardwareChargeDischargeTag
 {
@@ -74,16 +75,16 @@ typedef struct HardwareChargeDischargeTag
     UInt32 discharge;
 } HardwareChargeDischarge;
 
-typedef struct OStringTag
+typedef struct OResponseStringTag
 {
     Char   string[MAX_O_STRING_LENGTH];
     UInt32 stringLength; /* including the terminator which MUST be present */
-} OString;
+} OResponseString;
 
 typedef struct OInputStringTag
 {
-    Char   string[MAX_O_STRING_LENGTH]; /* Must have a null terminator */
     Bool   waitForResponse;
+    Char   string[MAX_O_STRING_LENGTH]; /* Must have a null terminator */
 } OInputString;
 
 #pragma pack(pop) /* End of packing */ 

@@ -64,7 +64,7 @@
 Bool oneWireServerSendReceive (OneWireMsgType msgType, SInt32 portNumber, UInt8 *pSerialNumber, void *pSendMsgSpecifics, UInt16 specificsLength, void *pReceivedMsgSpecifics)
 {
     ClientReturnCode returnCode;
-    Bool success = true;
+    Bool success = false;
     Msg *pSendMsg;
     OneWireMsgHeader sendMsgHeader;
     UInt16 sendMsgBodyLength = 0;
@@ -126,6 +126,7 @@ Bool oneWireServerSendReceive (OneWireMsgType msgType, SInt32 portNumber, UInt8 
                     printDebug ("OW Client: success field: %d\n", (Bool) pReceivedMsg->msgBody[0]);
                     if ((Bool) pReceivedMsg->msgBody[0])
                     {
+                        success = true;
                         printDebug ("OW Client: received message type %d, hex dump:\n", pReceivedMsg->msgType);
                         printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);
 
@@ -135,29 +136,11 @@ Bool oneWireServerSendReceive (OneWireMsgType msgType, SInt32 portNumber, UInt8 
                             memcpy (pReceivedMsgSpecifics, &pReceivedMsg->msgBody[0] + sizeof (Bool), receivedMsgBodyLength - sizeof (Bool));
                         }
                     }
-                    else
-                    {
-                        success = false;                
-                    }                    
-                }
-                else
-                {
-                    success = false;                
                 }
             }
-            else
-            {
-                success = false;                
-            }
+            free (pReceivedMsg);
         }
-        else
-        {
-            success = false;            
-        }
-    }
-    else
-    {
-        success = false;
+        free (pSendMsg);
     }
 
     return success;

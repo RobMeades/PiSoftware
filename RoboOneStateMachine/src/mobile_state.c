@@ -54,17 +54,17 @@ void transitionToMobile (RoboOneState *pState)
     /* Do the entry actions */
 
     /* Switch Pi to battery power */
-    success = switchPiRioToBatteryPower();
+    success = actionSwitchPiRioToBatteryPower();
     
     if (success)
     {
         /* Switch Hindbrain to battery power */
-        success = switchHindbrainToBatteryPower ();
+        success = actionSwitchHindbrainToBatteryPower ();
         
         if (success)
         {
             /* Switch on Hindbrain */
-            success = switchOnHindbrain ();
+            success = actionSwitchOnHindbrain ();
         }
     }
     

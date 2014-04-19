@@ -98,17 +98,18 @@ static UInt16 actionReadChargerState (HardwareReadChargerStateCnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
-    HardwareReadChargerState chargerState;
+    HardwareChargeState chargeState;
     
-    chargerState.flashDetectPossible = false;
-    memset ((void *) &(chargerState.state[0]), 0, sizeof (chargerState.state));
+    chargeState.flashDetectPossible = false;
+    memset (&chargeState.state, 0, sizeof (chargeState.state));
     
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
     
-    success = readChargerState (&(chargerState.state[0]), &chargerState.flashDetectPossible);
+    success = readChargerState (&(chargeState.state[0]), &chargeState.flashDetectPossible);
     pSendMsgBody->success = success;
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
-    sendMsgBodyLength += sizeof (pSendMsgBody->chargerState);            
+    memcpy (&(pSendMsgBody->chargeState), &chargeState, sizeof (pSendMsgBody->chargeState));
+    sendMsgBodyLength += sizeof (pSendMsgBody->chargeState);
     
     return sendMsgBodyLength;
 }
@@ -859,29 +860,29 @@ static UInt16 actionSetAnalogueMuxInput (UInt8 input, HardwareSetAnalogueMuxInpu
  * @return          the length of the message body
  *                  to send back.
  */
-static UInt16 actionSendOString (Char *pString, Bool waitForResponse, HardwareSendOStringCnf *pSendMsgBody)
+static UInt16 actionSendOString (Char *pInputString, Bool waitForResponse, HardwareSendOStringCnf *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
-    Char *pReceiveString = PNULL;
-    UInt32 *pReceiveStringLength = PNULL;
+    Char *pResponseString = PNULL;
+    UInt32 *pResponseStringLength = PNULL;
     
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
-    ASSERT_PARAM (pString != PNULL, (unsigned long) pString);
+    ASSERT_PARAM (pInputString != PNULL, (unsigned long) pInputString);
 
-    pReceiveStringLength = &(pSendMsgBody->string.stringLength); 
-    *pReceiveStringLength = 0;
+    pResponseStringLength = &(pSendMsgBody->string.stringLength); 
+    *pResponseStringLength = 0;
     
     if (waitForResponse)
     {
-        pReceiveString = &(pSendMsgBody->string.string[0]);
-        *pReceiveStringLength = MAX_O_STRING_LENGTH;
+        pResponseString = &(pSendMsgBody->string.string[0]);
+        *pResponseStringLength = MAX_O_STRING_LENGTH;
     }
     
-    success = sendStringToOrangutan (pString, pReceiveString, pReceiveStringLength);
+    success = sendStringToOrangutan (pInputString, pResponseString, pResponseStringLength);
     pSendMsgBody->success = success;
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
-    sendMsgBodyLength += *pReceiveStringLength + sizeof (*pReceiveStringLength); /* Assumes packing of 1 */
+    sendMsgBodyLength += *pResponseStringLength + sizeof (*pResponseStringLength); /* Assumes packing of 1 */
     
     return sendMsgBodyLength;
 }
@@ -924,12 +925,12 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
         break;
         case HARDWARE_READ_CHARGER_STATE_PINS:
         {
-            pSendMsg->msgLength += actionReadChargerStatePins ((HardwareReadChargerStatePinsCnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadChargerStatePins ((HardwareReadChargerStatePinsCnf *) &(pSendMsg->msgBody[0]));
         }
         break;
         case HARDWARE_READ_CHARGER_STATE:
         {
-            pSendMsg->msgLength += actionReadChargerState ((HardwareReadChargerStateCnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadChargerState ((HardwareReadChargerStateCnf *) &(pSendMsg->msgBody[0]));
         }
         break;
         case HARDWARE_READ_MAINS_12V:
@@ -945,7 +946,7 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
         case HARDWARE_READ_O3_BATTERY_CHARGER:
         case HARDWARE_READ_RELAYS_ENABLED:
         {
-            pSendMsg->msgLength += actionReadBool (receivedMsgType, &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadBool (receivedMsgType, &(pSendMsg->msgBody[0]));
         }
         break;
         case HARDWARE_TOGGLE_O_PWR:
@@ -977,12 +978,12 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
         case HARDWARE_PERFORM_CAL_O2_BATTERY_MONITOR:
         case HARDWARE_PERFORM_CAL_O3_BATTERY_MONITOR:
         {
-            pSendMsg->msgLength += actionSetBool (receivedMsgType, &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionSetBool (receivedMsgType, &(pSendMsg->msgBody[0]));
         }
         break;
         case HARDWARE_READ_GENERAL_PURPOSE_IOS:
         {
-            pSendMsg->msgLength += actionReadGeneralPurposeIOs ((HardwareReadGeneralPurposeIOsCnf *) &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadGeneralPurposeIOs ((HardwareReadGeneralPurposeIOsCnf *) &(pSendMsg->msgBody[0]));
         }
         break;
         case HARDWARE_READ_RIO_BATT_CURRENT:
@@ -990,7 +991,7 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
         case HARDWARE_READ_O2_BATT_CURRENT:
         case HARDWARE_READ_O3_BATT_CURRENT:
         {
-            pSendMsg->msgLength += actionReadCurrent (receivedMsgType, &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadCurrent (receivedMsgType, &(pSendMsg->msgBody[0]));
         }
         break;
         case HARDWARE_READ_RIO_BATT_VOLTAGE:
@@ -999,7 +1000,7 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
         case HARDWARE_READ_O3_BATT_VOLTAGE:
         case HARDWARE_READ_ANALOGUE_MUX:
         {
-            pSendMsg->msgLength += actionReadVoltage (receivedMsgType, &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadVoltage (receivedMsgType, &(pSendMsg->msgBody[0]));
         }
         break;
         case HARDWARE_READ_RIO_REMAINING_CAPACITY:
@@ -1007,7 +1008,7 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
         case HARDWARE_READ_O2_REMAINING_CAPACITY:
         case HARDWARE_READ_O3_REMAINING_CAPACITY:
         {
-            pSendMsg->msgLength += actionReadRemainingCapacity (receivedMsgType, &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadRemainingCapacity (receivedMsgType, &(pSendMsg->msgBody[0]));
         }
         break;
         case HARDWARE_READ_RIO_BATT_LIFETIME_CHARGE_DISCHARGE:
@@ -1015,7 +1016,7 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
         case HARDWARE_READ_O2_BATT_LIFETIME_CHARGE_DISCHARGE:
         case HARDWARE_READ_O3_BATT_LIFETIME_CHARGE_DISCHARGE:
         {
-            pSendMsg->msgLength += actionReadChargeDischarge (receivedMsgType, &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionReadChargeDischarge (receivedMsgType, &(pSendMsg->msgBody[0]));
         }
         break;
         case HARDWARE_SWAP_RIO_BATTERY:
@@ -1023,20 +1024,20 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
         case HARDWARE_SWAP_O2_BATTERY:
         case HARDWARE_SWAP_O3_BATTERY:
         {
-            pSendMsg->msgLength += actionSwapBattery (receivedMsgType, pReceivedMsgBody, &pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionSwapBattery (receivedMsgType, pReceivedMsgBody, &(pSendMsg->msgBody[0]));
         }
         break;
         case HARDWARE_SET_ANALOGUE_MUX_INPUT:
         {
             UInt8 input = ((HardwareSetAnalogueMuxInputReq *) pReceivedMsgBody)->input;
-            pSendMsg->msgLength += actionSetAnalogueMuxInput (input, (HardwareSetAnalogueMuxInputCnf *) &pSendMsg->msgBody[0]);            
+            pSendMsg->msgLength += actionSetAnalogueMuxInput (input, (HardwareSetAnalogueMuxInputCnf *) &(pSendMsg->msgBody[0]));            
         }
         break;
         case HARDWARE_SEND_O_STRING:
         {
             Char *pString = &(((HardwareSendOStringReq *) pReceivedMsgBody)->string.string[0]);
             Bool waitForResponse = ((HardwareSendOStringReq *) pReceivedMsgBody)->string.waitForResponse;
-            pSendMsg->msgLength += actionSendOString (pString, waitForResponse, (HardwareSendOStringCnf *) &pSendMsg->msgBody[0]);                        
+            pSendMsg->msgLength += actionSendOString (pString, waitForResponse, (HardwareSendOStringCnf *) &(pSendMsg->msgBody[0]));                        
         }
         break;
         default:
@@ -1075,8 +1076,10 @@ ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
     /* Check the type */
     ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_HARDWARE_MSGS, pReceivedMsg->msgType);
     
+    printDebug ("HW Server received message type %d, length %d.\n", pReceivedMsg->msgType, pReceivedMsg->msgLength);
     /* Do the thang */
     returnCode = doAction ((HardwareMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
+    printDebug ("HW Server responding with message type %d, length %d.\n", pSendMsg->msgType, pSendMsg->msgLength);
         
     return returnCode;
 }

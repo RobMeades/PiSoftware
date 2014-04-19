@@ -44,5 +44,5 @@ void transitionToBatteryIdle (RoboOneState *pState)
     /* Do the entry actions */
 
     /* Save power since there's nothing to do */
-    switchOffHindbrain();
+    actionSwitchOffHindbrain();
 }

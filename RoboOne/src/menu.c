@@ -320,7 +320,7 @@ static Bool displayVoltages (WINDOW *pWin)
     
     if (success)
     {
-        printHelper (pWin, "Voltage (mV): Pi/RIO %u, O1 %u, O2 %u, O3 %4u.\n", rioVoltage, o1Voltage, o2Voltage, o3Voltage);                
+        printHelper (pWin, "Voltage (mV): Pi/RIO %u, O1 %u, O2 %u, O3 %u.\n", rioVoltage, o1Voltage, o2Voltage, o3Voltage);                
     }
     else
     {
@@ -845,30 +845,30 @@ static Bool sendOString (WINDOW *pWin)
 {
     Bool success = false;
     OInputString *pInputString;
-    OString *pOutputString;
+    OResponseString *pResponseString;
     Char displayBuffer[MAX_O_STRING_LENGTH];
      
-    pInputString = malloc (sizeof (OInputString));
+    pInputString = malloc (sizeof (*pInputString));
     if (pInputString != PNULL)
     {
         pInputString->waitForResponse = true;
         
-        pOutputString = malloc (sizeof (OString));
-        if (pOutputString != PNULL)
+        pResponseString = malloc (sizeof (*pResponseString));
+        if (pResponseString != PNULL)
         {
-            pOutputString->stringLength = 0;
+            pResponseString->stringLength = sizeof (pResponseString->string);
             if (getStringInput (pWin, "String: ", &(pInputString->string[0]), sizeof (pInputString->string)) != PNULL)
             {
                 removeCtrlCharacters (&(pInputString->string[0]), &(displayBuffer[0]));
                 
                 /* Send the and look for a response */
-                success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, sizeof (OInputString), pOutputString);
+                success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, sizeof (*pInputString), pResponseString);
                 if (success)
                 {
                     printHelper (pWin, "\nSent '%s' successfully", &(displayBuffer[0]));
-                    if (pOutputString->stringLength > 1) /* There will always be a terminator, hence the 1 */
+                    if (pResponseString->stringLength > 1) /* There will always be a terminator, hence the 1 */
                     {
-                        removeCtrlCharacters (&(pOutputString->string[0]), &(displayBuffer[0]));
+                        removeCtrlCharacters (&(pResponseString->string[0]), &(displayBuffer[0]));
                         printHelper (pWin, ", response: '%s'.\n", &(displayBuffer[0]));                
                     }
                     else
@@ -881,7 +881,7 @@ static Bool sendOString (WINDOW *pWin)
                     printHelper (pWin, "\nSend failed.\n");
                 }
             }
-            free (pOutputString);
+            free (pResponseString);
         }
         free (pInputString);
     }

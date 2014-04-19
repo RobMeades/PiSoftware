@@ -49,10 +49,10 @@ static UInt16 actionStateMachineServerStart (StateMachineServerStartCnf *pSendMs
 
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
 
-    pgRoboOneContext = malloc (sizeof (RoboOneContext));
-    
     pSendMsgBody->success = false;
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    
+    pgRoboOneContext = malloc (sizeof (*pgRoboOneContext));
     
     if (pgRoboOneContext != PNULL)
     {
@@ -79,6 +79,7 @@ static UInt16 actionStateMachineServerStop (StateMachineServerStopCnf *pSendMsgB
     UInt16 sendMsgBodyLength = 0;
 
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+    ASSERT_PARAM (pgRoboOneContext != PNULL, (unsigned long) pgRoboOneContext);
     
     free (pgRoboOneContext);
     pgRoboOneContext = PNULL;
@@ -107,6 +108,7 @@ static UInt16 actionStateMachineServerGetContext (StateMachineServerGetContextCn
     UInt16 sendMsgBodyLength = 0;
 
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+    ASSERT_PARAM (pgRoboOneContext != PNULL, (unsigned long) pgRoboOneContext);
     
     pSendMsgBody->roboOneContextContainer.isValid = false;
     if (pgRoboOneContext != PNULL)
@@ -257,6 +259,10 @@ ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
     printDebug ("SM Server received message type %d, length %d.\n", pReceivedMsg->msgType, pReceivedMsg->msgLength);
     /* Do the thang */
     returnCode = doAction ((StateMachineMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
+    if (pSendMsg->msgLength > 0)
+    {
+        printDebug ("SM Server responding with message type %d, length %d.\n", pSendMsg->msgType, pSendMsg->msgLength);
+    }
         
     return returnCode;
 }

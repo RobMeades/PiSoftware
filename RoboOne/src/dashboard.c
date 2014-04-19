@@ -371,6 +371,7 @@ static Bool updatePowerWindow (WINDOW *pWin, UInt8 count)
     Bool success;
     Bool relaysEnabled;
     Bool mains12VPresent;
+    static Bool previousMains12VPresent = false;
     Bool is12V;
     Bool isBatt;
 
@@ -393,11 +394,16 @@ static Bool updatePowerWindow (WINDOW *pWin, UInt8 count)
             if (mains12VPresent)
             {
                 wprintw (pWin, " present  ");
+                if (!previousMains12VPresent)
+                {
+                    stateMachineServerSendReceive (STATE_MACHINE_EVENT_MAINS_POWER_AVAILABLE, PNULL, 0, PNULL, PNULL);
+                }
             }
             else
             {
-                wprintw (pWin, "   ---    ");                
+                wprintw (pWin, "   ---    ");
             }
+            previousMains12VPresent = mains12VPresent;
         }
         else
         {
@@ -517,29 +523,31 @@ static void initChgWindow (WINDOW *pWin)
 static Bool updateChgWindow (WINDOW *pWin, UInt8 count)
 {
     Bool success;
-    HardwareReadChargerState chargerState;
+    HardwareChargeState chargeState;
     UInt8 row = 0;
     UInt8 col = 0;
     UInt8 i;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
 
-    memset (&(chargerState.state[0]), 0, sizeof (chargerState.state));
-    chargerState.flashDetectPossible = false;
+    memset (&chargeState.state, 0, sizeof (chargeState.state));
+    chargeState.flashDetectPossible = false;
     
     wmove (pWin, row, col);
     wclrtoeol (pWin);        
     wprintw (pWin, "  Pi   O1   O2   O3");
     row++;
     
-    success = hardwareServerSendReceive (HARDWARE_READ_CHARGER_STATE, PNULL, 0, &chargerState);
-    if (success && chargerState.flashDetectPossible)
+    success = hardwareServerSendReceive (HARDWARE_READ_CHARGER_STATE, PNULL, 0, &chargeState);
+    
+    if (success && chargeState.flashDetectPossible)
     {
         wmove (pWin, row, col);
         wclrtoeol (pWin);        
         for (i = 0; i < NUM_CHARGERS; i++)
         {
-            wprintw (pWin, "%s", gChargeStrings[chargerState.state[i]]);
+            ASSERT_PARAM (chargeState.state[i] < (sizeof (gChargeStrings)/sizeof (Char *)), chargeState.state[i]);
+            wprintw (pWin, "%s", gChargeStrings[chargeState.state[i]]);
         }
     }
     row++;
