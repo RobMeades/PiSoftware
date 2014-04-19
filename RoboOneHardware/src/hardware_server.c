@@ -105,7 +105,7 @@ static UInt16 actionReadChargerState (HardwareReadChargerStateCnf *pSendMsgBody)
     
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
     
-    success = readChargerState (&(chargerState.state[0]), &(chargerState.flashDetectPossible));
+    success = readChargerState (&(chargerState.state[0]), &chargerState.flashDetectPossible);
     pSendMsgBody->success = success;
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
     sendMsgBodyLength += sizeof (pSendMsgBody->chargerState);            
@@ -284,7 +284,7 @@ static UInt16 actionSetBool (HardwareMsgType msgType, UInt8 *pSendMsgBody)
     
     /* Note that the following assumes that the header on
      * the returned message body is always the succes
-     * Bool and that it is completely packed */
+     * Bool and that packing is 1 */
     *((Bool *) pSendMsgBody) = success;
     sendMsgBodyLength += sizeof (Bool);
     
@@ -678,7 +678,8 @@ static UInt16 actionReadRemainingCapacity (HardwareMsgType msgType, UInt8 *pSend
 }
 
 /*
- * Handle a message that reads charge/discharge.
+ * Handle a message that reads lifetime
+ * charge/discharge.
  * 
  * msgType       the msgType, extracted from the
  *               received mesage.
@@ -770,8 +771,8 @@ static UInt16 actionSwapBattery (HardwareMsgType msgType, UInt8 *pReceivedMsgBod
     UInt16 sendMsgBodyLength = 0;
     HardwareBatterySwapData *pBatterySwapData = PNULL;
     
-    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
     ASSERT_PARAM (pReceivedMsgBody != PNULL, (unsigned long) pReceivedMsgBody);
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
 
     switch (msgType)
     {
@@ -846,7 +847,7 @@ static UInt16 actionSetAnalogueMuxInput (UInt8 input, HardwareSetAnalogueMuxInpu
 
 /*
  * Handle a message that sends a string to the 
- * Orangutan AKA Hindbrain.
+ * Orangutan, AKA Hindbrain.
  * 
  * pString          the null terminated string to send.
  * waitForResponse  true if a response is required.
@@ -880,7 +881,7 @@ static UInt16 actionSendOString (Char *pString, Bool waitForResponse, HardwareSe
     success = sendStringToOrangutan (pString, pReceiveString, pReceiveStringLength);
     pSendMsgBody->success = success;
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
-    sendMsgBodyLength += *pReceiveStringLength;
+    sendMsgBodyLength += *pReceiveStringLength + sizeof (*pReceiveStringLength); /* Assumes packing of 1 */
     
     return sendMsgBodyLength;
 }
@@ -920,6 +921,7 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
             pSendMsg->msgLength += actionHardwareServerExit ((HardwareServerExitCnf *) &(pSendMsg->msgBody[0]));
             returnCode = SERVER_EXIT_NORMALLY;
         }
+        break;
         case HARDWARE_READ_CHARGER_STATE_PINS:
         {
             pSendMsg->msgLength += actionReadChargerStatePins ((HardwareReadChargerStatePinsCnf *) &pSendMsg->msgBody[0]);
@@ -1036,6 +1038,7 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
             Bool waitForResponse = ((HardwareSendOStringReq *) pReceivedMsgBody)->string.waitForResponse;
             pSendMsg->msgLength += actionSendOString (pString, waitForResponse, (HardwareSendOStringCnf *) &pSendMsg->msgBody[0]);                        
         }
+        break;
         default:
         {
             ASSERT_ALWAYS_PARAM (receivedMsgType);   

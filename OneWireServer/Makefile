@@ -4,7 +4,7 @@ This makefile requires GNU Make.
 endif
 
 PROGRAM = one_wire_server
-LIB = one_wire_server.a
+LIB = one_wire_client.a
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
@@ -13,6 +13,7 @@ FLAGS =
 SHARED_PRE = ../shared
 ONEWIRE_PRE = ../OneWire
 SERVER_PRE = ../MessagingServer
+CLIENT_PRE = ../MessagingClient
 
 OW_LIBS_PRE = ../OneWireLibs
 OW_LIBS_FLAGS = -I $(OW_LIBS_PRE)/common -I $(OW_LIBS_PRE)/lib/userial/shared -I $(OW_LIBS_PRE)/lib/userial/link/Linux -DDEBUG
@@ -21,18 +22,17 @@ OW_LIBS = $(OW_LIBS_OBJ_PRE)/owlinkobjs
 
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
-LIB_OBJ:= $(OBJ_DIR)/one_wire_server.o
-TST_OBJ:= $(OBJ_DIR)/main.o
+LIB_OBJ:= $(OBJ_DIR)/one_wire_client.o
+EXE_OBJ:= $(OBJ_DIR)/main.o $(OBJ_DIR)/one_wire_server.o
 CC =  $(GCC_PREFIX)gcc.exe
 AR =  $(GCC_PREFIX)ar.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) $(OW_LIBS_FLAGS) $(FLAGS)
-# In the line below $(LIB_OBJ) should be $(OBJ_DIR)/$(LIB) (to use the library) but for some reason this doesn't work (even though the library does work elsewher)
-LDFLAGS = $(LIB_OBJ) $(SHARED_PRE)/$(OBJ_DIR)/shared.a  $(ONEWIRE_PRE)/$(OBJ_DIR)/one_wire.a  $(OW_LIBS) $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a
+CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) $(OW_LIBS_FLAGS) $(FLAGS)
+LDFLAGS = $(SHARED_PRE)/$(OBJ_DIR)/shared.a  $(ONEWIRE_PRE)/$(OBJ_DIR)/one_wire.a  $(OW_LIBS) $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a
 
 all: $(PROGRAM)
 
 $(PROGRAM): $(LIB)
-	$(CC) $(TST_OBJ) $(LDFLAGS) -o $(OBJ_DIR)/$(PROGRAM)
+	$(CC) $(EXE_OBJ) $(LDFLAGS) -o $(OBJ_DIR)/$(PROGRAM)
 
 $(LIB): .depend $(OBJS)
 	$(AR) r $(OBJ_DIR)/$(LIB) $(LIB_OBJ) 

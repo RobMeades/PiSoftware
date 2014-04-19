@@ -859,7 +859,6 @@ static Bool sendOString (WINDOW *pWin)
             pOutputString->stringLength = 0;
             if (getStringInput (pWin, "String: ", &(pInputString->string[0]), sizeof (pInputString->string)) != PNULL)
             {
-                pInputString->stringLength = strlen (&(pInputString->string[0])) + 1;
                 removeCtrlCharacters (&(pInputString->string[0]), &(displayBuffer[0]));
                 
                 /* Send the and look for a response */

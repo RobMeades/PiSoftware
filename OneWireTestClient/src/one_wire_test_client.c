@@ -20,7 +20,6 @@
  * MANIFEST CONSTANTS
  */
 #define ONEWIRE_PORT_STRING    "/dev/USBSerial"
-#define ONE_WIRE_SERVER_PORT   5000
 
 /*
  * TYPES
@@ -53,7 +52,7 @@ int main (int argc, char **argv)
         pReceivedMsg = malloc (sizeof (Msg));
         if (pReceivedMsg != PNULL)
         {
-            returnCode = runMessagingClient (ONE_WIRE_SERVER_PORT, pSendMsg, pReceivedMsg);
+            returnCode = runMessagingClient ((SInt32) atoi (ONE_WIRE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
             
             if ((returnCode == CLIENT_SUCCESS) && (pReceivedMsg->msgLength > 0))
             {

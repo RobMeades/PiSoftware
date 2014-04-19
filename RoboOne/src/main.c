@@ -71,7 +71,6 @@ static Bool startStateMachineServer (void)
         {
             success = false;
         }
-        printf ("receivedMsgType %d, pStateMachineServerStartCnf->success %d", receivedMsgType, pStateMachineServerStartCnf->success);
         
         free (pStateMachineServerStartCnf);
     }
@@ -124,7 +123,7 @@ int main (int argc, char **argv)
     setDebugPrintsOn();
     setProgressPrintsOn();
 
-    /* Spawn a child that will become the One Wire server. */
+    /* Spawn a child that will become the Hardware server. */
     serverPID = fork();
     if (serverPID == 0)
     {

@@ -44,7 +44,6 @@ Bool switchOnHindbrain (void)
     if (pInputString != PNULL)
     {
         memcpy (&(pInputString->string[0]), PING_STRING, strlen (PING_STRING) + 1); /* +1 to copy the terminator */
-        pInputString->stringLength = strlen (PING_STRING) + 1;
         pInputString->waitForResponse = true;
         
         pOutputString = malloc (sizeof (OString));
@@ -55,11 +54,11 @@ Bool switchOnHindbrain (void)
             for (i = 0; !success && (i < 2); i++)
             {
                 /* Toggle the power */
-                success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_12V_OFF, PNULL, 0, PNULL);
+                success = hardwareServerSendReceive (HARDWARE_TOGGLE_O_PWR, PNULL, 0, PNULL);
                 if (success)
                 {
                     /* Send the ping string and check for an OK response */
-                    success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, sizeof (OInputString), pOutputString);
+                    success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, strlen (&(pInputString->string[0])) + 1, pOutputString);
                     if (success)
                     {
                        if (O_CHECK_OK_STRING (pOutputString))
@@ -96,7 +95,6 @@ Bool switchOffHindbrain (void)
     if (pInputString != PNULL)
     {
         memcpy (&(pInputString->string[0]), PING_STRING, strlen (PING_STRING) + 1); /* +1 to copy the terminator */
-        pInputString->stringLength = strlen (PING_STRING) + 1;
         pInputString->waitForResponse = false;
         
         /* Do this twice in case the Hindbrain is already off and the first toggle switches it on */
@@ -106,8 +104,8 @@ Bool switchOffHindbrain (void)
             success = hardwareServerSendReceive (HARDWARE_TOGGLE_O_PWR, PNULL, 0, PNULL);
             if (success)
             {
-                /* Send the ping string - it should fail to send */
-                if (hardwareServerSendReceive (HARDWARE_TOGGLE_O_PWR, pInputString, sizeof (OInputString), PNULL));
+                /* Send the ping string - it should *fail* to send */
+                if (hardwareServerSendReceive (HARDWARE_TOGGLE_O_PWR, pInputString, strlen (&(pInputString->string[0])) + 1, PNULL));
                 {
                     success = false;
                 }
@@ -160,8 +158,8 @@ Bool switchPiRioToBatteryPower (void)
 }
 
 /*
- * Switch the Hindbrain (AKA Orangutan)
- * to mains/12V power.
+ * Switch the Hindbrain (AKA Orangutan) to
+ * mains/12V power.
  * 
  * @return  true if successful, otherwise false.
  */
@@ -175,7 +173,6 @@ Bool switchHindbrainTo12VMainsPower (void)
     if (pInputString != PNULL)
     {
         memcpy (&(pInputString->string[0]), PING_STRING, strlen (PING_STRING) + 1); /* +1 to copy the terminator */
-        pInputString->stringLength = strlen (PING_STRING) + 1;
         pInputString->waitForResponse = true;
         
         pOutputString = malloc (sizeof (OString));
@@ -191,13 +188,10 @@ Bool switchHindbrainTo12VMainsPower (void)
                 if (success)
                 {
                     /* Send the ping string and check for an OK response */
-                    success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, sizeof (OInputString), pOutputString);
-                    if (success)
+                    success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, sizeof (&(pInputString->string[0])), pOutputString);
+                    if (success && !O_CHECK_OK_STRING (pOutputString))
                     {
-                       if (!O_CHECK_OK_STRING (pOutputString))
-                       {
-                           success = false;
-                       }
+                        success = false;
                     }
                 }
             }
@@ -225,7 +219,6 @@ Bool switchHindbrainToBatteryPower (void)
     if (pInputString != PNULL)
     {
         memcpy (&(pInputString->string[0]), PING_STRING, strlen (PING_STRING) + 1); /* +1 to copy the terminator */
-        pInputString->stringLength = strlen (PING_STRING) + 1;
         pInputString->waitForResponse = true;
         
         pOutputString = malloc (sizeof (OString));
@@ -241,13 +234,10 @@ Bool switchHindbrainToBatteryPower (void)
                 if (success)
                 {
                     /* Send the ping string and check for an OK response */
-                    success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, sizeof (OInputString), pOutputString);
-                    if (success)
+                    success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, sizeof (&(pInputString->string[0])), pOutputString);
+                    if (success && !O_CHECK_OK_STRING (pOutputString))
                     {
-                        if (!O_CHECK_OK_STRING (pOutputString))
-                        {
-                            success = false;
-                        }
+                        success = false;
                     }
                 }
             }

@@ -187,7 +187,7 @@
 <XPD:REF name="Incomings[4]">V7Sf8vuob0q+kaZ1M+AHlwAA</XPD:REF>
 <XPD:REF name="Incomings[5]">USA7xNdvmUyPfpdGZq+zQwAA</XPD:REF>
 <XPD:REF name="Incomings[6]">ZsVZI967AU+Ds7UCzXUoUgAA</XPD:REF>
-<XPD:ATTR name="#EntryActions" type="integer">10</XPD:ATTR>
+<XPD:ATTR name="#EntryActions" type="integer">9</XPD:ATTR>
 <XPD:OBJ name="EntryActions[0]" type="UMLUninterpretedAction" guid="dZ8OmTh4B0mpCF81WVI9WgAA">
 <XPD:ATTR name="Name" type="string">Initialise Pi</XPD:ATTR>
 <XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
@@ -220,11 +220,7 @@
 <XPD:ATTR name="Name" type="string">Check status of other peripheral devices (Wifi, camera)</XPD:ATTR>
 <XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
 </XPD:OBJ>
-<XPD:OBJ name="EntryActions[8]" type="UMLUninterpretedAction" guid="RFfa7Qn5xUiQXtfTPh+GSQAA">
-<XPD:ATTR name="Name" type="string">Switch off Hindbrain</XPD:ATTR>
-<XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
-</XPD:OBJ>
-<XPD:OBJ name="EntryActions[9]" type="UMLUninterpretedAction" guid="7hhKnXkuwkq3AuFS2dfgpgAA">
+<XPD:OBJ name="EntryActions[8]" type="UMLUninterpretedAction" guid="7hhKnXkuwkq3AuFS2dfgpgAA">
 <XPD:ATTR name="Name" type="string">Start inactivity timer</XPD:ATTR>
 <XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
 </XPD:OBJ>

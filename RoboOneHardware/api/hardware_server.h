@@ -82,8 +82,7 @@ typedef struct OStringTag
 
 typedef struct OInputStringTag
 {
-    Char   string[MAX_O_STRING_LENGTH];
-    UInt32 stringLength; /* including the terminator which MUST be present */
+    Char   string[MAX_O_STRING_LENGTH]; /* Must have a null terminator */
     Bool   waitForResponse;
 } OInputString;
 

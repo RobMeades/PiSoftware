@@ -4,14 +4,9 @@
  */
 
 #include <stdio.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <netinet/in.h>
 #include <rob_system.h>
-#include <one_wire.h>
 #include <messaging_server.h>
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
@@ -54,16 +49,7 @@ int main (int argc, char **argv)
                 hardwareServerPort = atoi (argv[1]);
                 printProgress ("HardwareServer listening on port %d.\n", hardwareServerPort);
 
-                returnCode = runMessagingServer (hardwareServerPort);
-                
-                if (returnCode == SERVER_EXIT_NORMALLY)
-                {
-                    printProgress ("HardwareServer exiting normally.\n");            
-                }
-                else
-                {
-                    printProgress ("HardwareServer exiting with returnCode %d.\n", returnCode);                        
-                }            
+                returnCode = runMessagingServer (hardwareServerPort);                
             }
             else
             {
@@ -74,6 +60,15 @@ int main (int argc, char **argv)
             /* Shut the OneWire stuff down gracefully */
             stopOneWireBus ();
         }
+        
+        if (returnCode == SERVER_EXIT_NORMALLY)
+        {
+            printProgress ("HardwareServer exiting normally.\n");            
+        }
+        else
+        {
+            printProgress ("HardwareServer exiting with returnCode %d.\n", returnCode);                        
+        }        
     }    
     else
     {

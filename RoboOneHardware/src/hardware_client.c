@@ -10,17 +10,10 @@
 #include <messaging_client.h>
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
-#include <ow_bus.h>
 
 /*
  * MANIFEST CONSTANTS
  */
-
-#define ORANGUTAN_PORT_STRING             "/dev/OrangutanUSB"
-#define ORANGUTAN_BAUD_RATE               B9600
-#define ORANGUTAN_WAIT_TIMEOUT_TENTHS_SEC 20
-#define ORANGUTAN_RESPONSE_TERMINATOR     '\r' /* CR */
-#define ORANGUTAN_BUFFER_SIZE             255
 
 /*
  * STATIC FUNCTIONS
