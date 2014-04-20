@@ -676,7 +676,6 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
     StateMachineMsgType receivedMsgType = STATE_MACHINE_SERVER_NULL;
     StateMachineServerGetContextCnf *pReceivedMsgBody;
     OInputString *pInputString;
-    OResponseString *pResponseString;
     
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
     
@@ -711,23 +710,17 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
         if (pInputString != PNULL)
         {
             memcpy (&(pInputString->string[0]), PING_STRING, strlen (PING_STRING) + 1); /* +1 to copy the terminator */
-            pInputString->waitForResponse = true;
+            pInputString->waitForResponse = false;
             
-            pResponseString = malloc (sizeof (*pResponseString));
-            if (pResponseString != PNULL)
+            /* Send the ping string but don't bother waiting for a response (if a send succeeds the Hindbrain is there) */
+            success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, strlen (&(pInputString->string[0])) + 1, PNULL);
+            if (success)
             {
-                pResponseString->stringLength = sizeof (pResponseString->string);
-                /* Send the ping string and check for an OK response */
-                success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, strlen (&(pInputString->string[0])) + 1, pResponseString);
-                if (success)
-                {
-                   wprintw (pWin, " [Hindbrain ON]");            
-                }
-                else
-                {
-                    wprintw (pWin, " [Hindbrain OFF]");                                
-                }
-                free (pResponseString);
+               wprintw (pWin, " [Hindbrain ON]");            
+            }
+            else
+            {
+                wprintw (pWin, " [Hindbrain OFF]");                                
             }
             free (pInputString);
         }
