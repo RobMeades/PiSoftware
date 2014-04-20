@@ -31,7 +31,7 @@ int main (int argc, char **argv)
     ServerReturnCode returnCode = SERVER_ERR_GENERAL_FAILURE;
     UInt16 hardwareServerPort;
 
-    setDebugPrintsOnToFile ("roboonehardware.txt");
+    setDebugPrintsOnToFile ("roboonehardware.log");
     setProgressPrintsOn();
 
     if (argc == 2)

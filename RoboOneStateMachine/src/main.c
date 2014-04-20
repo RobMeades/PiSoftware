@@ -33,7 +33,7 @@ int main (int argc, char **argv)
     ServerReturnCode returnCode = SERVER_ERR_GENERAL_FAILURE;
     UInt16 stateMachineServerPort;
 
-    setDebugPrintsOnToFile ("roboonestatemachine.txt");
+    setDebugPrintsOnToFile ("roboonestatemachine.log");
     setProgressPrintsOn();
 
     if (argc == 2)

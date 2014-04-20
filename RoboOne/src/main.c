@@ -120,7 +120,7 @@ int main (int argc, char **argv)
     pid_t  hwServerPID;
     pid_t  smServerPID;
     
-    setDebugPrintsOnToFile ("roboone.txt");
+    setDebugPrintsOnToFile ("roboone.log");
     setProgressPrintsOn();
 
     /* Spawn a child that will become the Hardware server. */

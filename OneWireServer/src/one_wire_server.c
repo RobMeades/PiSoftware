@@ -21,6 +21,11 @@
  */
 
 /*
+ * EXTERNS
+ */
+extern Char *pgOneWireMessageNames[];
+
+/*
  * GLOBALS - prefixed with g
  */
 
@@ -1275,8 +1280,10 @@ ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
     /* Check the type */
     ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_ONE_WIRE_MSGS, pReceivedMsg->msgType);
     
+    printDebug ("OW Server received message %s, length %d.\n", pgOneWireMessageNames[pReceivedMsg->msgType], pReceivedMsg->msgLength);    
     /* Do the thang */
     returnCode = doAction ((OneWireMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
+    printDebug ("OW Server responding with message %s, length %d.\n", pgOneWireMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
         
     return returnCode;
 }

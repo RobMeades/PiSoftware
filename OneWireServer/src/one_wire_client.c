@@ -22,6 +22,11 @@
  */
 
 /*
+ * EXTERNS
+ */
+extern Char *pgOneWireMessageNames[];
+
+/*
  * GLOBALS - prefixed with g
  */
 
@@ -109,7 +114,7 @@ Bool oneWireServerSendReceive (OneWireMsgType msgType, SInt32 portNumber, UInt8 
             
             pReceivedMsg->msgLength = 0;
     
-            printDebug ("\nOW Client: sending message of type %d, length %d, hex dump:\n", pSendMsg->msgType, pSendMsg->msgLength);
+            printDebug ("\nOW Client: sending message %s, length %d, hex dump:\n", pgOneWireMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
             printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
             returnCode = runMessagingClient ((SInt32) atoi (ONE_WIRE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
                     
@@ -127,7 +132,7 @@ Bool oneWireServerSendReceive (OneWireMsgType msgType, SInt32 portNumber, UInt8 
                     if ((Bool) pReceivedMsg->msgBody[0])
                     {
                         success = true;
-                        printDebug ("OW Client: received message type %d, hex dump:\n", pReceivedMsg->msgType);
+                        printDebug ("OW Client: received message %s, hex dump:\n", pgOneWireMessageNames[pReceivedMsg->msgType]);
                         printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);
 
                         if (pReceivedMsgSpecifics != PNULL)
