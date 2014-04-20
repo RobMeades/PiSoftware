@@ -8,13 +8,11 @@ LIB = roboone_hardware_client.a
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
-FLAGS = -DDONT_USE_ONE_WIRE_SERVER
 
 SHARED_PRE = ../shared
 ONEWIRE_PRE = ../OneWire
 SERVER_PRE = ../MessagingServer
 CLIENT_PRE = ../MessagingClient
-ONEWIRESERVER_PRE = ../OneWireServer
 
 OW_LIBS_PRE = ../OneWireLibs
 OW_LIBS_FLAGS = -I $(OW_LIBS_PRE)/common -I $(OW_LIBS_PRE)/lib/userial/shared -I $(OW_LIBS_PRE)/lib/userial/link/Linux -DDEBUG
@@ -27,7 +25,7 @@ LIB_OBJ:= $(OBJ_DIR)/hardware_client.o $(OBJ_DIR)/hardware_msg_names.o
 EXE_OBJ:= $(OBJ_DIR)/main.o $(OBJ_DIR)/hardware_server.o $(OBJ_DIR)/orangutan.o $(OBJ_DIR)/ow_bus.o $(OBJ_DIR)/hardware_msg_names.o
 CC = $(GCC_PREFIX)gcc.exe
 AR =  $(GCC_PREFIX)ar.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ONEWIRESERVER_PRE)/$(API_DIR) $(OW_LIBS_FLAGS) $(FLAGS)
+CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) $(OW_LIBS_FLAGS)
 LDFLAGS = $(SHARED_PRE)/$(OBJ_DIR)/shared.a  $(ONEWIRE_PRE)/$(OBJ_DIR)/one_wire.a  $(OW_LIBS) $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a
 
 all: $(PROGRAM)

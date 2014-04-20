@@ -100,7 +100,7 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
             }
             pSendMsg->msgLength += sendMsgBodyLength;
             
-            printDebug ("\nSM Client: sending message %s, length %d, hex dump:\n",  pgStateMachineMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
+            printDebug ("SM Client: sending message %s, length %d, hex dump:\n",  pgStateMachineMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
             printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
             returnCode = runMessagingClient ((SInt32) atoi (STATE_MACHINE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
                     

@@ -127,6 +127,12 @@ void printProgress (const Char * pFormat, ...)
         /* If debug is printing to file, put the progress prints there also */
         if (gDebugPrintsAreOn && !gSuspendDebug && (pgDebugPrintsStream != PNULL))
         {
+            /* But remove any initial line feeds for neatness */
+            if (*pFormat == '\n')
+            {
+                pFormat++;
+            }
+            fprintf (pgDebugPrintsStream, "%.10lu: ", getSystemTicks());
             vfprintf (pgDebugPrintsStream, pFormat, args);
         }
         va_end (args);
@@ -148,6 +154,7 @@ void printDebug (const Char * pFormat, ...)
             pStream = pgDebugPrintsStream;
         }
         va_start (args, pFormat);
+        fprintf (pStream, "%.10lu: ", getSystemTicks());
         vfprintf (pStream, pFormat, args);
         va_end (args);
     }
@@ -159,19 +166,22 @@ void printDebug (const Char * pFormat, ...)
 void printHexDump (const UInt8 * pMemory, UInt16 size)
 {
     UInt8 i;
+    UInt32 time;
     FILE *pStream = stdout;
     
     if (gDebugPrintsAreOn && !gSuspendDebug)
     {
+        time = getSystemTicks();
         if (pgDebugPrintsStream != PNULL)
         {
             pStream = pgDebugPrintsStream;
         }
 
+        fprintf (pStream, "%.10lu: ", time);
         fprintf (pStream, "Printing at least %d bytes:\n", size);
         for (i = 0; i < size; i +=8)
         {
-            fprintf (pStream, "0x%.8lx: 0x%.2x 0x%.2x 0x%.2x 0x%.2x : 0x%.2x 0x%.2x 0x%.2x 0x%.2x\n", (unsigned long) pMemory, *pMemory, *(pMemory + 1), *(pMemory + 2), *(pMemory + 3), *(pMemory + 4), *(pMemory + 5), *(pMemory + 6), *(pMemory + 7));
+            fprintf (pStream, "%.10lu: 0x%.8lx: 0x%.2x 0x%.2x 0x%.2x 0x%.2x : 0x%.2x 0x%.2x 0x%.2x 0x%.2x\n", time, (unsigned long) pMemory, *pMemory, *(pMemory + 1), *(pMemory + 2), *(pMemory + 3), *(pMemory + 4), *(pMemory + 5), *(pMemory + 6), *(pMemory + 7));
             pMemory +=8;
         }
     }

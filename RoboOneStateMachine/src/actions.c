@@ -33,7 +33,7 @@
  */
 Bool actionEnableExternalRelays (void)
 {
-    printDebug ("\nACTION: enabling external relays.\n");
+    printDebug ("ACTION: enabling external relays.\n");
     return hardwareServerSendReceive (HARDWARE_ENABLE_EXTERNAL_RELAYS, PNULL, 0, PNULL);
 }
 
@@ -44,7 +44,7 @@ Bool actionEnableExternalRelays (void)
  */
 Bool actionDisableExternalRelays (void)
 {
-    printDebug ("\nACTION: disabling external relays.\n");
+    printDebug ("ACTION: disabling external relays.\n");
     return hardwareServerSendReceive (HARDWARE_DISABLE_EXTERNAL_RELAYS, PNULL, 0, PNULL);
 }
 
@@ -55,7 +55,7 @@ Bool actionDisableExternalRelays (void)
  */
 Bool actionEnableOnPCBRelays (void)
 {
-    printDebug ("\nACTION: enabling on-PCB relays.\n");
+    printDebug ("ACTION: enabling on-PCB relays.\n");
     return hardwareServerSendReceive (HARDWARE_ENABLE_ON_PCB_RELAYS, PNULL, 0, PNULL);
 }
 
@@ -66,7 +66,7 @@ Bool actionEnableOnPCBRelays (void)
  */
 Bool actionDisableOnPCBRelays (void)
 {
-    printDebug ("\nACTION: disabling on-PCB relays.\n");
+    printDebug ("ACTION: disabling on-PCB relays.\n");
     return hardwareServerSendReceive (HARDWARE_DISABLE_ON_PCB_RELAYS, PNULL, 0, PNULL);
 }
 
@@ -79,7 +79,7 @@ Bool actionIsMains12VAvailable (void)
 {
     Bool isOn = false;
     
-    printDebug ("\nACTION: checking for 12V/mains.\n");
+    printDebug ("ACTION: checking for 12V/mains.\n");
     hardwareServerSendReceive (HARDWARE_READ_MAINS_12V, PNULL, 0, &isOn);
     
     return isOn; 
@@ -111,12 +111,12 @@ Bool actionSwitchOnHindbrain (void)
             for (i = 0; !success && (i < 2); i++)
             {
                 /* Toggle the power */
-                printDebug ("\nACTION: toggling power to Hindbrain with the aim of switching ON.\n");
+                printDebug ("ACTION: toggling power to Hindbrain with the aim of switching ON.\n");
                 success = hardwareServerSendReceive (HARDWARE_TOGGLE_O_PWR, PNULL, 0, PNULL);
                 if (success)
                 {
                     usleep (O_START_DELAY_US);
-                    printDebug ("\nACTION: Pinging Hindbrain.\n");
+                    printDebug ("ACTION: Pinging Hindbrain.\n");
                     /* Send the ping string and check for an OK response */
                     success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, strlen (&(pInputString->string[0])) + 1, pResponseString);
                     if (success)
@@ -162,11 +162,11 @@ Bool actionSwitchOffHindbrain (void)
         for (i = 0; hindbrainOn && (i < 2); i++)
         {
             /* Toggle the power */
-            printDebug ("\nACTION: toggling power to Hindbrain with the aim of switching OFF.\n");
+            printDebug ("ACTION: toggling power to Hindbrain with the aim of switching OFF.\n");
             success = hardwareServerSendReceive (HARDWARE_TOGGLE_O_PWR, PNULL, 0, PNULL);
             if (success)
             {
-                printDebug ("\nACTION: Pinging Hindbrain.\n");
+                printDebug ("ACTION: Pinging Hindbrain.\n");
                 /* Send the ping string - it should *fail* to send */
                 hindbrainOn = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, strlen (&(pInputString->string[0])) + 1, PNULL);
             }
@@ -187,12 +187,12 @@ Bool actionSwitchPiRioTo12VMainsPower (void)
     Bool success;
 
     /* Switch 12V/mains power on to RIO/Pi */
-    printDebug ("\nACTION: switching on 12V/mains power to RIO/Pi.\n");
+    printDebug ("ACTION: switching on 12V/mains power to RIO/Pi.\n");
     success = hardwareServerSendReceive (HARDWARE_SET_RIO_PWR_12V_ON, PNULL, 0, PNULL);
     if (success)
     {
         /* Switch battery power off to RIO/Pi */
-        printDebug ("\nACTION: switching off battery power to RIO/Pi.\n");
+        printDebug ("ACTION: switching off battery power to RIO/Pi.\n");
         success = hardwareServerSendReceive (HARDWARE_SET_RIO_PWR_BATT_OFF, PNULL, 0, PNULL);
     }
     
@@ -209,12 +209,12 @@ Bool actionSwitchPiRioToBatteryPower (void)
     Bool success;
     
     /* Switch battery power on to Rio/Pi */
-    printDebug ("\nACTION: switching on battery power to RIO/Pi.\n");
+    printDebug ("ACTION: switching on battery power to RIO/Pi.\n");
     success = hardwareServerSendReceive (HARDWARE_SET_RIO_PWR_BATT_ON, PNULL, 0, PNULL);
     if (success)
     {
         /* Switch 12V/mains power off to Rio/Pi */
-        printDebug ("\nACTION: switching off 12V/mains power to RIO/Pi.\n");
+        printDebug ("ACTION: switching off 12V/mains power to RIO/Pi.\n");
         success = hardwareServerSendReceive (HARDWARE_SET_RIO_PWR_12V_OFF, PNULL, 0, PNULL);
     }
 
@@ -244,17 +244,17 @@ Bool actionSwitchHindbrainTo12VMainsPower (void)
         {
             pResponseString->stringLength = sizeof (pResponseString->string);
             /* Switch 12V/mains power on to the Hindbrain */
-            printDebug ("\nACTION: switching on 12V/mains power to Hindbrain.\n");
+            printDebug ("ACTION: switching on 12V/mains power to Hindbrain.\n");
             success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_12V_ON, PNULL, 0, PNULL);
             if (success)
             {
                 /* Switch battery power off to the Hindbrain */
-                printDebug ("\nACTION: switching off battery power to Hindbrain.\n");
+                printDebug ("ACTION: switching off battery power to Hindbrain.\n");
                 success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_BATT_OFF, PNULL, 0, PNULL);    
                 if (success)
                 {
                     /* Send the ping string and check for an OK response */
-                    printDebug ("\nACTION: Pinging Hindbrain.\n");
+                    printDebug ("ACTION: Pinging Hindbrain.\n");
                     success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, strlen (&(pInputString->string[0])) + 1, pResponseString);
                     if (success && !O_CHECK_OK_STRING (pResponseString))
                     {
@@ -293,12 +293,12 @@ Bool actionSwitchHindbrainToBatteryPower (void)
         {
             pResponseString->stringLength = sizeof (pResponseString->string);
             /* Switch battery power on to the Hindbrain */
-            printDebug ("\nACTION: switching on battery power to Hindbrain.\n");
+            printDebug ("ACTION: switching on battery power to Hindbrain.\n");
             success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_BATT_ON, PNULL, 0, PNULL);
             if (success)
             {
                 /* Switch 12V/mains power off to the Hindbrain */
-                printDebug ("\nACTION: switching off 12V/mains power to Hindbrain.\n");
+                printDebug ("ACTION: switching off 12V/mains power to Hindbrain.\n");
                 success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_12V_OFF, PNULL, 0, PNULL);    
                 if (success)
                 {
@@ -328,7 +328,7 @@ Bool actionStartTimer (void)
 {
     Bool success = false;
 
-    printDebug ("\nACTION: starting timer.\n");
+    printDebug ("ACTION: starting timer.\n");
     
     return success;
 }
@@ -342,7 +342,7 @@ Bool actionStopTimer (void)
 {
     Bool success = false;
     
-    printDebug ("\nACTION: stopping timer.\n");
+    printDebug ("ACTION: stopping timer.\n");
 
     return success;
 }
