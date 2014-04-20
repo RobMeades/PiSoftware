@@ -38,16 +38,20 @@
 <XPD:REF name="Incomings[2]">1RJsHay9nEGJqX3us/kGOAAA</XPD:REF>
 <XPD:REF name="Incomings[3]">nwdVkCbNEEiadsf8iAq0MwAA</XPD:REF>
 <XPD:REF name="Incomings[4]">ADPwa8moGkK4xR7nu3+rsQAA</XPD:REF>
-<XPD:ATTR name="#EntryActions" type="integer">3</XPD:ATTR>
-<XPD:OBJ name="EntryActions[0]" type="UMLUninterpretedAction" guid="mbDFJv3UXUqoaDsKMusMqQAA">
+<XPD:ATTR name="#EntryActions" type="integer">4</XPD:ATTR>
+<XPD:OBJ name="EntryActions[0]" type="UMLUninterpretedAction" guid="GrUHu3CLSE+fns/jZazLugAA">
+<XPD:ATTR name="Name" type="string">Enable external relays</XPD:ATTR>
+<XPD:REF name="EntryState">SCunKcaLWEyUZh/AhshyfAAA</XPD:REF>
+</XPD:OBJ>
+<XPD:OBJ name="EntryActions[1]" type="UMLUninterpretedAction" guid="mbDFJv3UXUqoaDsKMusMqQAA">
 <XPD:ATTR name="Name" type="string">Switch Pi to 12 V power from battery power</XPD:ATTR>
 <XPD:REF name="EntryState">SCunKcaLWEyUZh/AhshyfAAA</XPD:REF>
 </XPD:OBJ>
-<XPD:OBJ name="EntryActions[1]" type="UMLUninterpretedAction" guid="K9S1ZNT7VkOaR0K+DbUO5AAA">
+<XPD:OBJ name="EntryActions[2]" type="UMLUninterpretedAction" guid="K9S1ZNT7VkOaR0K+DbUO5AAA">
 <XPD:ATTR name="Name" type="string">Switch off Hindbrain</XPD:ATTR>
 <XPD:REF name="EntryState">SCunKcaLWEyUZh/AhshyfAAA</XPD:REF>
 </XPD:OBJ>
-<XPD:OBJ name="EntryActions[2]" type="UMLUninterpretedAction" guid="d44gQuFumE6UQ0ah4isa+gAA">
+<XPD:OBJ name="EntryActions[3]" type="UMLUninterpretedAction" guid="d44gQuFumE6UQ0ah4isa+gAA">
 <XPD:ATTR name="Name" type="string">Switch Hindbrain to 12 V power from battery power</XPD:ATTR>
 <XPD:REF name="EntryState">SCunKcaLWEyUZh/AhshyfAAA</XPD:REF>
 </XPD:OBJ>
@@ -191,7 +195,7 @@
 <XPD:REF name="Incomings[4]">V7Sf8vuob0q+kaZ1M+AHlwAA</XPD:REF>
 <XPD:REF name="Incomings[5]">USA7xNdvmUyPfpdGZq+zQwAA</XPD:REF>
 <XPD:REF name="Incomings[6]">ZsVZI967AU+Ds7UCzXUoUgAA</XPD:REF>
-<XPD:ATTR name="#EntryActions" type="integer">9</XPD:ATTR>
+<XPD:ATTR name="#EntryActions" type="integer">10</XPD:ATTR>
 <XPD:OBJ name="EntryActions[0]" type="UMLUninterpretedAction" guid="dZ8OmTh4B0mpCF81WVI9WgAA">
 <XPD:ATTR name="Name" type="string">Initialise Pi</XPD:ATTR>
 <XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
@@ -204,27 +208,31 @@
 <XPD:ATTR name="Name" type="string">Initialise OneWire bus devices</XPD:ATTR>
 <XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
 </XPD:OBJ>
-<XPD:OBJ name="EntryActions[3]" type="UMLUninterpretedAction" guid="hhVlNOKXYUaNdBNFlzN7oQAA">
+<XPD:OBJ name="EntryActions[3]" type="UMLUninterpretedAction" guid="AbZCdW+hWESbw+aLpIJyTQAA">
+<XPD:ATTR name="Name" type="string">Enable on-PCB relays</XPD:ATTR>
+<XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
+</XPD:OBJ>
+<XPD:OBJ name="EntryActions[4]" type="UMLUninterpretedAction" guid="hhVlNOKXYUaNdBNFlzN7oQAA">
 <XPD:ATTR name="Name" type="string">Switch on Hindbrain</XPD:ATTR>
 <XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
 </XPD:OBJ>
-<XPD:OBJ name="EntryActions[4]" type="UMLUninterpretedAction" guid="n+oBG/Uplk6ZRH4Lt5bfGQAA">
+<XPD:OBJ name="EntryActions[5]" type="UMLUninterpretedAction" guid="n+oBG/Uplk6ZRH4Lt5bfGQAA">
 <XPD:ATTR name="Name" type="string">Ask Hindbrain to initialises IR direction finder</XPD:ATTR>
 <XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
 </XPD:OBJ>
-<XPD:OBJ name="EntryActions[5]" type="UMLUninterpretedAction" guid="9z+X15XOG0iF4yFId4TmdQAA">
+<XPD:OBJ name="EntryActions[6]" type="UMLUninterpretedAction" guid="9z+X15XOG0iF4yFId4TmdQAA">
 <XPD:ATTR name="Name" type="string">Ask Hindbrain to initialise IR range finders</XPD:ATTR>
 <XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
 </XPD:OBJ>
-<XPD:OBJ name="EntryActions[6]" type="UMLUninterpretedAction" guid="BHpDsXuLVkeeXG7k0Gem5QAA">
+<XPD:OBJ name="EntryActions[7]" type="UMLUninterpretedAction" guid="BHpDsXuLVkeeXG7k0Gem5QAA">
 <XPD:ATTR name="Name" type="string">Iniitalise RIO AHRS</XPD:ATTR>
 <XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
 </XPD:OBJ>
-<XPD:OBJ name="EntryActions[7]" type="UMLUninterpretedAction" guid="1Qa0yXyyS0mEV0ohRIc1XgAA">
+<XPD:OBJ name="EntryActions[8]" type="UMLUninterpretedAction" guid="1Qa0yXyyS0mEV0ohRIc1XgAA">
 <XPD:ATTR name="Name" type="string">Check status of other peripheral devices (Wifi, camera)</XPD:ATTR>
 <XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
 </XPD:OBJ>
-<XPD:OBJ name="EntryActions[8]" type="UMLUninterpretedAction" guid="7hhKnXkuwkq3AuFS2dfgpgAA">
+<XPD:OBJ name="EntryActions[9]" type="UMLUninterpretedAction" guid="7hhKnXkuwkq3AuFS2dfgpgAA">
 <XPD:ATTR name="Name" type="string">Start inactivity timer</XPD:ATTR>
 <XPD:REF name="EntryState">SERRztfxP0KenZP+DNtaVgAA</XPD:REF>
 </XPD:OBJ>

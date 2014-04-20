@@ -55,19 +55,33 @@
 #define RELAY_IO_CONFIG               DEFAULT_DS2408_CONFIG
 #define GENERAL_PURPOSE_IO_CONFIG     DEFAULT_DS2408_CONFIG
 
+/* Which pins are inputs (1 for an input, 0 for an output) */
+#ifdef ALL_PINS_UNDRIVEN_DS2408
+#    define CHARGER_STATE_IO_PIN_INPUTS   0xFF
+#    define DARLINGTON_IO_PIN_INPUTS      0xFF
+#    define RELAY_IO_PIN_INPUTS           0xFF
+#    define GENERAL_PURPOSE_IO_PIN_INPUTS 0xFF
+#else
+#    define CHARGER_STATE_IO_PIN_INPUTS   0xFF
+#    define DARLINGTON_IO_PIN_INPUTS      0x00
+#    define RELAY_IO_PIN_INPUTS           RELAY_12V_DETECT
+#    define GENERAL_PURPOSE_IO_PIN_INPUTS 0xFF
+#endif
+
 /* Pins generally low to begin with apart from charger state which is allowed to float as an input,
  * and the Darlington pins which are disabled anyway by setting DARLINGTON_ENABLE_BAR high,
- * the 12V detect pin on the Relay PIO set as an input and RELAY_ENABLE_BAR high */
+ * the 12V detect pin on the Relay PIO set as an input and RELAY_ENABLE_BAR high.
+ * Note: it doesn't actually matter what input pins are set to but 1 is used for consistency. */
 #ifdef ALL_PINS_UNDRIVEN_DS2408
-#    define CHARGER_STATE_IO_PIN_CONFIG   0xFF
-#    define DARLINGTON_IO_PIN_CONFIG      0xFF
-#    define RELAY_IO_PIN_CONFIG           0xFF
-#    define GENERAL_PURPOSE_IO_PIN_CONFIG 0xFF
+#    define CHARGER_STATE_IO_PIN_INITIAL_STATE   0xFF
+#    define DARLINGTON_IO_PIN_INITIAL_STATE      0xFF
+#    define RELAY_IO_PIN_INITIAL_STATE           0xFF
+#    define GENERAL_PURPOSE_IO_PIN_INITIAL_STATE 0xFF
 #else
-#    define CHARGER_STATE_IO_PIN_CONFIG   0xFF
-#    define DARLINGTON_IO_PIN_CONFIG      (UInt8) (~(DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON | DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE) | DARLINGTON_ENABLE_BAR)
-#    define RELAY_IO_PIN_CONFIG           RELAY_12V_DETECT | RELAY_ENABLE_BAR
-#    define GENERAL_PURPOSE_IO_PIN_CONFIG 0x00
+#    define CHARGER_STATE_IO_PIN_INITIAL_STATE   0xFF
+#    define DARLINGTON_IO_PIN_INITIAL_STATE      (UInt8) (~(DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON | DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE) | DARLINGTON_ENABLE_BAR)
+#    define RELAY_IO_PIN_INITIAL_STATE           RELAY_12V_DETECT | RELAY_ENABLE_BAR
+#    define GENERAL_PURPOSE_IO_PIN_INITIAL_STATE 0xFF
 #endif
 
 /* Which pin positions should have their state tracked through
@@ -111,18 +125,21 @@ typedef enum OwDeviceTypeTag
 typedef struct OwDS2408Tag
 {
     UInt8 config;
-    UInt8 shadowMask; /* If a bit is set to 1 then for that pin the
-                         corresponding bit position in pinsState
-                         represents the current state of the pin, if set
-                         a bit is set to 0 then the port can be read
-                         to determine that bit's current state.  This is
-                         useful if the thing connected to the IO port
-                         switches at a relatively low voltage (e.g. if it
-                         is 3.3V/5V compatible) so the read-back would
-                         think that the device is always off even when it
-                         is actually switched on */
+    UInt8 readShadowMask; /* If a bit is set to 1 then for that pin the
+                             corresponding bit position in pinsState
+                             represents the current state of the pin, if set
+                             a bit is set to 0 then the port can be read
+                             to determine that bit's current state.  This is
+                             useful if the thing connected to the IO port
+                             switches at a relatively low voltage (e.g. if it
+                             is 3.3V/5V compatible) so the read-back would
+                             think that the device is always off even when it
+                             is actually switched on. */
+    UInt8 inputMask; /* If a bit is set to 1 then that pin is an input
+                        pin and so will always be written to as a 1
+                        to keep it that way. */
     UInt8 pinsState; /* A 1 at a bit position means the transistor floats and 
-                        the pin can be an input, a 0 at a bit position 
+                        so is either 1 or an input, a 0 at a bit position 
                         means the transistor is switched on, so the pin is
                         dragged to ground and this is definitely an output. */ 
 } OwDS2408;
@@ -215,10 +232,10 @@ static OwDevicesStaticConfig gDeviceStaticConfigList[] =
           {OW_NAME_O1_BATTERY_MONITOR, {{FAMILY_SBATTERY, 0x69, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0xe5}}, {{O1_BATTERY_MONITOR_CONFIG}}},
           {OW_NAME_O2_BATTERY_MONITOR, {{FAMILY_SBATTERY, 0x19, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0x7d}}, {{O2_BATTERY_MONITOR_CONFIG}}},
           {OW_NAME_O3_BATTERY_MONITOR, {{FAMILY_SBATTERY, 0x53, 0x20, 0xb3, 0x01, 0x00, 0x00, 0x5c}}, {{O3_BATTERY_MONITOR_CONFIG}}},
-          {OW_NAME_CHARGER_STATE_PIO, {{FAMILY_PIO, 0xbc, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0xa3}}, {{CHARGER_STATE_IO_CONFIG, CHARGER_STATE_IO_SHADOW_MASK, CHARGER_STATE_IO_PIN_CONFIG}}},
-          {OW_NAME_DARLINGTON_PIO, {{FAMILY_PIO, 0xaf, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0xa1}}, {{DARLINGTON_IO_CONFIG, DARLINGTON_IO_SHADOW_MASK, DARLINGTON_IO_PIN_CONFIG}}},
-          {OW_NAME_RELAY_PIO, {{FAMILY_PIO, 0xbd, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0x94}}, {{RELAY_IO_CONFIG, RELAY_IO_SHADOW_MASK, RELAY_IO_PIN_CONFIG}}},
-          {OW_NAME_GENERAL_PURPOSE_PIO, {{FAMILY_PIO, 0x02, 0x06, 0x0d, 0x00, 0x00, 0x00, 0x4c}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_SHADOW_MASK, GENERAL_PURPOSE_IO_PIN_CONFIG}}}};
+          {OW_NAME_CHARGER_STATE_PIO, {{FAMILY_PIO, 0xbc, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0xa3}}, {{CHARGER_STATE_IO_CONFIG, CHARGER_STATE_IO_SHADOW_MASK, CHARGER_STATE_IO_PIN_INPUTS, CHARGER_STATE_IO_PIN_INITIAL_STATE}}},
+          {OW_NAME_DARLINGTON_PIO, {{FAMILY_PIO, 0xaf, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0xa1}}, {{DARLINGTON_IO_CONFIG, DARLINGTON_IO_SHADOW_MASK, DARLINGTON_IO_PIN_INPUTS, DARLINGTON_IO_PIN_INITIAL_STATE}}},
+          {OW_NAME_RELAY_PIO, {{FAMILY_PIO, 0xbd, 0xc1, 0x0e, 0x00, 0x00, 0x00, 0x94}}, {{RELAY_IO_CONFIG, RELAY_IO_SHADOW_MASK, RELAY_IO_PIN_INPUTS, RELAY_IO_PIN_INITIAL_STATE}}},
+          {OW_NAME_GENERAL_PURPOSE_PIO, {{FAMILY_PIO, 0x02, 0x06, 0x0d, 0x00, 0x00, 0x00, 0x4c}}, {{GENERAL_PURPOSE_IO_CONFIG, GENERAL_PURPOSE_IO_SHADOW_MASK, GENERAL_PURPOSE_IO_PIN_INPUTS, GENERAL_PURPOSE_IO_PIN_INITIAL_STATE}}}};
 
 /* Obviously these need to be in the same order as the above */
 static Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
@@ -313,15 +330,22 @@ static OwDeviceType getDeviceType (const UInt8 *pAddress)
  */
 static Bool readPins (OwDeviceName deviceName, UInt8 *pPinsState)
 {
-    Bool  success = true;
+    Bool  success;
     
     /* Read the last state of the pins */
+    printDebug ("Reading from %s.\n", deviceNameList[deviceName]);
 #ifdef DONT_USE_ONE_WIRE_SERVER
     success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], pPinsState);
 #else
     success = oneWireServerSendReceive (READ_PIO_LOGIC_STATE_DS2408, &gDeviceStaticConfigList[deviceName].address.value[0], PNULL, 0, pPinsState);
 #endif
-    
+    if (!success)
+    {
+        printDebug ("Read failed.\n");
+    }
+
+    debugPrintPinsState();
+        
     return success;
 }
 
@@ -335,9 +359,10 @@ static Bool readPins (OwDeviceName deviceName, UInt8 *pPinsState)
  */
 static Bool readAndResetRisingEdgePins (OwDeviceName deviceName, UInt8 *pPinsState)
 {
-    Bool  success = true;
+    Bool  success;
     
     /* Read the activity state of the pins and then reset it for the next time */
+    printDebug ("Reading latch register from %s.\n", deviceNameList[deviceName]);
 #ifdef DONT_USE_ONE_WIRE_SERVER
     success = readPIOActivityLatchStateRegisterDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], pPinsState);
 #else
@@ -351,8 +376,18 @@ static Bool readAndResetRisingEdgePins (OwDeviceName deviceName, UInt8 *pPinsSta
 #else
         success = oneWireServerSendReceive (RESET_ACTIVITY_LATCHES_DS2408, &gDeviceStaticConfigList[deviceName].address.value[0], PNULL, 0, PNULL);
 #endif
+        if (!success)
+        {
+            printDebug ("Latch reset failed.\n");
+        }
+    }
+    else
+    {
+        printDebug ("Read failed.\n");        
     }
     
+    debugPrintPinsState();
+
     return success;
 }
 
@@ -374,7 +409,7 @@ static UInt8 accountForShadow (OwDeviceName deviceName, UInt8 pinsState)
     mask = 1;
     for (i = 0; i < 8; i++)
     {            
-        if (gDeviceStaticConfigList[deviceName].specifics.ds2408.shadowMask & mask)
+        if (gDeviceStaticConfigList[deviceName].specifics.ds2408.readShadowMask & mask)
         {
             if (gDeviceStaticConfigList[deviceName].specifics.ds2408.pinsState & mask)
             {
@@ -402,9 +437,10 @@ static UInt8 accountForShadow (OwDeviceName deviceName, UInt8 pinsState)
  */
 static Bool readPinsWithShadow (OwDeviceName deviceName, UInt8 *pPinsState)
 {
-    Bool success = true;
+    Bool success;
     
     /* Read the last state of the pins */
+    printDebug ("Reading from %s.\n", deviceNameList[deviceName]);
 #ifdef DONT_USE_ONE_WIRE_SERVER
     success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], pPinsState);
 #else
@@ -414,6 +450,10 @@ static Bool readPinsWithShadow (OwDeviceName deviceName, UInt8 *pPinsState)
     {
         /* Now check against the shadow mask and for those pins use pinsState instead of the read-back state */
         *pPinsState = accountForShadow (deviceName, *pPinsState);
+    }
+    else
+    {
+        printDebug ("Read failed.\n");        
     }
 
     debugPrintPinsState();
@@ -435,9 +475,10 @@ static Bool readPinsWithShadow (OwDeviceName deviceName, UInt8 *pPinsState)
  */
 static Bool setPinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask, Bool setPinsTo5Volts)
 {
-    Bool  success = true;
+    Bool  success;
     UInt8 pinsState;
     UInt8 pinsStateToWrite;
+    Char buffer[BINARY_STRING_BUFFER_SIZE];
     
     /* Read the last state of the pins, taking shadow state into account */
     success = readPinsWithShadow (deviceName, &pinsState);
@@ -451,10 +492,12 @@ static Bool setPinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask, Bool set
     {
         pinsState &=~ pinsMask;
     }
+    pinsState |= gDeviceStaticConfigList[deviceName].specifics.ds2408.inputMask; /* Write 1's to input pins */
     
     /* Take a copy of the new intended state 'cos channelAccessWriteDS2408 will read back the written
      * state which might not be what we want since we may be shadowing some pins */
     pinsStateToWrite = pinsState;
+    printDebug ("Writing %s to %s.\n", binaryString (pinsStateToWrite, &(buffer[0])), deviceNameList[deviceName]);
 #ifdef DONT_USE_ONE_WIRE_SERVER
     success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsStateToWrite);
 #else
@@ -465,6 +508,10 @@ static Bool setPinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask, Bool set
     if (success)
     {
         gDeviceStaticConfigList[deviceName].specifics.ds2408.pinsState = pinsState;
+    }
+    else
+    {
+        printDebug ("Write failed.\n");            
     }
 
     debugPrintPinsState();
@@ -489,6 +536,7 @@ static Bool togglePinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask)
     UInt8 pinsState;
     UInt8 pinsStateToWrite;
     UInt8 i;
+    Char buffer[BINARY_STRING_BUFFER_SIZE];
 
     /* Read the last state of the pins, taking shadow state into account */
     success = readPinsWithShadow (deviceName, &pinsState);
@@ -506,10 +554,12 @@ static Bool togglePinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask)
         {
             pinsState |= pinsMask;
         }
+        pinsState |= gDeviceStaticConfigList[deviceName].specifics.ds2408.inputMask; /* Write 1's to input pins */
         
         /* Take a copy of the new intended state 'cos channelAccessWriteDS2408 will read back the written
          * state which might not be what we want since we may be shadowing some pins */
         pinsStateToWrite = pinsState;
+        printDebug ("Writing %s to %s.\n", binaryString (pinsStateToWrite, &(buffer[0])), deviceNameList[deviceName]);
 #ifdef DONT_USE_ONE_WIRE_SERVER
         success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[deviceName].address.value[0], &pinsStateToWrite);
 #else
@@ -520,6 +570,10 @@ static Bool togglePinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask)
         if (success)
         {
             gDeviceStaticConfigList[deviceName].specifics.ds2408.pinsState = pinsState;
+        }
+        else
+        {
+            printDebug ("Write failed.\n");            
         }
 
         debugPrintPinsState();
@@ -852,6 +906,7 @@ Bool setupDevices (void)
                         if (success)
                         {
                             pinsState = gDeviceStaticConfigList[i].specifics.ds2408.pinsState;
+                            pinsState |= gDeviceStaticConfigList[i].specifics.ds2408.inputMask; /* Write 1's to input pins */
                             printDebug ("Writing 0x%.2x to DS2408 pins.\n", pinsState);
 #ifdef DONT_USE_ONE_WIRE_SERVER
                             success = channelAccessWriteDS2408 (gPortNumber, pAddress, &pinsState);
