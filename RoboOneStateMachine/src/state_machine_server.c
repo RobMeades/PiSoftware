@@ -22,6 +22,11 @@
  */
 
 /*
+ * EXTERNS
+ */
+extern Char *pgStateMachineMessageNames[];
+
+/*
  * GLOBALS - prefixed with g
  */
 
@@ -256,12 +261,12 @@ ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
     /* Check the type */
     ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_STATE_MACHINE_MSGS, pReceivedMsg->msgType);
     
-    printDebug ("SM Server received message type %d, length %d.\n", pReceivedMsg->msgType, pReceivedMsg->msgLength);
+    printDebug ("SM Server received message %s, length %d.\n", pgStateMachineMessageNames[pReceivedMsg->msgType], pReceivedMsg->msgLength);
     /* Do the thang */
     returnCode = doAction ((StateMachineMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
     if (pSendMsg->msgLength > 0)
     {
-        printDebug ("SM Server responding with message type %d, length %d.\n", pSendMsg->msgType, pSendMsg->msgLength);
+        printDebug ("SM Server responding with message %s, length %d.\n", pgStateMachineMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
     }
         
     return returnCode;

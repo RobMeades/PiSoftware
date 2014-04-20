@@ -11,6 +11,9 @@
 /* Extract the message type from the list */
 #define STATE_MACHINE_MSG_DEF_TYPE(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER) mSGtYPE,
 
+/* Make a message name from the list */
+#define STATE_MACHINE_MSG_DEF_NAME(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER) #mSGtYPE,
+
 /* Construct a full typedef for a REQ (incoming) message */
 #define MAKE_STATE_MACHINE_MSG_STRUCT_REQ(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER) typedef struct mSGsTRUCT##ReqTag            \
                                                                                                 {                                                \

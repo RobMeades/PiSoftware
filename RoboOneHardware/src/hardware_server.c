@@ -24,6 +24,11 @@
  */
 
 /*
+ * EXTERNS
+ */
+extern Char *pgHardwareMessageNames[];
+
+/*
  * GLOBALS - prefixed with g
  */
 
@@ -1098,10 +1103,10 @@ ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
     /* Check the type */
     ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_HARDWARE_MSGS, pReceivedMsg->msgType);
     
-    printDebug ("HW Server received message type %d, length %d.\n", pReceivedMsg->msgType, pReceivedMsg->msgLength);
+    printDebug ("HW Server received message %s, length %d.\n", pgHardwareMessageNames[pReceivedMsg->msgType], pReceivedMsg->msgLength);
     /* Do the thang */
     returnCode = doAction ((HardwareMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
-    printDebug ("HW Server responding with message type %d, length %d.\n", pSendMsg->msgType, pSendMsg->msgLength);
+    printDebug ("HW Server responding with message %s, length %d.\n", pgHardwareMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
         
     return returnCode;
 }

@@ -16,6 +16,11 @@
  */
 
 /*
+ * EXTERNS
+ */
+extern Char *pgHardwareMessageNames[];
+
+/*
  * STATIC FUNCTIONS
  */
 
@@ -76,7 +81,7 @@ Bool hardwareServerSendReceive (HardwareMsgType msgType, void *pSendMsgBody, UIn
             
             pReceivedMsg->msgLength = 0;
     
-            printDebug ("\nHW Client: sending message of type %d, length %d, hex dump:\n", pSendMsg->msgType, pSendMsg->msgLength);
+            printDebug ("\nHW Client: sending message %s, length %d, hex dump:\n", pgHardwareMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
             printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
             returnCode = runMessagingClient ((SInt32) atoi (HARDWARE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
                     

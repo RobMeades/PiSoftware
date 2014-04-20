@@ -21,6 +21,11 @@
  */
 
 /*
+ * EXTERNS
+ */
+extern Char *pgStateMachineMessageNames[];
+
+/*
  * GLOBALS - prefixed with g
  */
 
@@ -95,7 +100,7 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
             }
             pSendMsg->msgLength += sendMsgBodyLength;
             
-            printDebug ("\nSM Client: sending message of type %d, length %d, hex dump:\n", pSendMsg->msgType, pSendMsg->msgLength);
+            printDebug ("\nSM Client: sending message %s, length %d, hex dump:\n",  pgStateMachineMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
             printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
             returnCode = runMessagingClient ((SInt32) atoi (STATE_MACHINE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
                     
@@ -112,7 +117,7 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
                         *pReceivedMsgType = pReceivedMsg->msgType;
                         /* Pass back the body of the message */
                         receivedMsgBodyLength = pReceivedMsg->msgLength - sizeof (pReceivedMsg->msgType);
-                        printDebug ("SM Client: received message type %d, receivedMsgBodyLength: %d\n", pReceivedMsg->msgType, receivedMsgBodyLength);
+                        printDebug ("SM Client: received message %s, receivedMsgBodyLength: %d\n", pgStateMachineMessageNames[pReceivedMsg->msgType], receivedMsgBodyLength);
                         
                         ASSERT_PARAM (receivedMsgBodyLength <= MAX_MSG_BODY_LENGTH, receivedMsgBodyLength);
                         
