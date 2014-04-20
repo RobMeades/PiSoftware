@@ -28,10 +28,12 @@
 
 void transitionToDocked (RoboOneState *pState)
 {
+    Bool success;
+    
     /* Fill in default handlers and name first */
     defaultImplementation (pState);
     memcpy (&(pState->name[0]), DOCKED_STATE_NAME, strlen (DOCKED_STATE_NAME) + 1); /* +1 for terminator */
-    printDebug ("Transitioning to %s state.\n", &(pState->name[0]));
+    printDebug ("\n*** Transitioning to %s state.\n", &(pState->name[0]));
     
     /* Now hook in the event handlers for this state */
     pState->pEventTasksAvailable = transitionToMobile;
@@ -40,14 +42,20 @@ void transitionToDocked (RoboOneState *pState)
 
     /* Do the entry actions */
 
-    /* Switch Pi to 12V power - don't care about failure as this will be handled once insufficient power is available */
-    actionSwitchPiRioTo12VMainsPower();
-
-    /* Switch Hindbrain to 12V power - again, don't care about faiure */
-    actionSwitchHindbrainTo12VMainsPower();
-
-    /* Switch off the Hindbrain to save power - again, don't care about failure here */
-    actionSwitchOffHindbrain();
+    /* Switch on the external relays now as we need to fiddle with Hindbrain power and chargers */
+    success = actionEnableExternalRelays();
+    
+    if (success)
+    {
+        /* Switch Pi to 12V power - don't care about failure as this will be handled once insufficient power is available */
+        actionSwitchPiRioTo12VMainsPower();
+    
+        /* Switch Hindbrain to 12V power - again, don't care about faiure */
+        actionSwitchHindbrainTo12VMainsPower();
+    
+        /* Switch off the Hindbrain to save power - again, don't care about failure here */
+        actionSwitchOffHindbrain();
+    }
     
     /* TODO: enter the relevant sub-state */
 }

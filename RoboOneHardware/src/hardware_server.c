@@ -242,14 +242,24 @@ static UInt16 actionSetBool (HardwareMsgType msgType, UInt8 *pSendMsgBody)
             success = setAllBatteryChargersOff();
         }
         break;
-        case HARDWARE_DISABLE_ALL_RELAYS:
+        case HARDWARE_DISABLE_ON_PCB_RELAYS:
         {
-            success = disableAllRelays();
+            success = disableOnPCBRelays();
         }
         break;
-        case HARDWARE_ENABLE_ALL_RELAYS:
+        case HARDWARE_ENABLE_ON_PCB_RELAYS:
         {
-            success = enableAllRelays();
+            success = enableOnPCBRelays();
+        }
+        break;
+        case HARDWARE_DISABLE_EXTERNAL_RELAYS:
+        {
+            success = disableExternalRelays();
+        }
+        break;
+        case HARDWARE_ENABLE_EXTERNAL_RELAYS:
+        {
+            success = enableExternalRelays();
         }
         break;
         case HARDWARE_PERFORM_CAL_ALL_BATTERY_MONITORS:
@@ -414,13 +424,22 @@ static UInt16 actionReadBool (HardwareMsgType msgType, UInt8 *pSendMsgBody)
             sendMsgBodyLength += sizeof (((HardwareReadO3BatteryChargerCnf *) pSendMsgBody)->isOn);            
         }
         break;
-        case HARDWARE_READ_RELAYS_ENABLED:
+        case HARDWARE_READ_EXTERNAL_RELAYS_ENABLED:
         {
-            success = readRelaysEnabled (&isOn);
-            ((HardwareReadRelaysEnabledCnf *) pSendMsgBody)->success = success;
-            sendMsgBodyLength += sizeof (((HardwareReadRelaysEnabledCnf *) pSendMsgBody)->success);
-            ((HardwareReadRelaysEnabledCnf *) pSendMsgBody)->isOn = isOn;
-            sendMsgBodyLength += sizeof (((HardwareReadRelaysEnabledCnf *) pSendMsgBody)->isOn);            
+            success = readExternalRelaysEnabled (&isOn);
+            ((HardwareReadExternalRelaysEnabledCnf *) pSendMsgBody)->success = success;
+            sendMsgBodyLength += sizeof (((HardwareReadExternalRelaysEnabledCnf *) pSendMsgBody)->success);
+            ((HardwareReadExternalRelaysEnabledCnf *) pSendMsgBody)->isOn = isOn;
+            sendMsgBodyLength += sizeof (((HardwareReadExternalRelaysEnabledCnf *) pSendMsgBody)->isOn);            
+        }
+        break;
+        case HARDWARE_READ_ON_PCB_RELAYS_ENABLED:
+        {
+            success = readOnPCBRelaysEnabled (&isOn);
+            ((HardwareReadOnPCBRelaysEnabledCnf *) pSendMsgBody)->success = success;
+            sendMsgBodyLength += sizeof (((HardwareReadOnPCBRelaysEnabledCnf *) pSendMsgBody)->success);
+            ((HardwareReadOnPCBRelaysEnabledCnf *) pSendMsgBody)->isOn = isOn;
+            sendMsgBodyLength += sizeof (((HardwareReadOnPCBRelaysEnabledCnf *) pSendMsgBody)->isOn);            
         }
         break;
         default:
@@ -944,7 +963,8 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
         case HARDWARE_READ_O1_BATTERY_CHARGER:
         case HARDWARE_READ_O2_BATTERY_CHARGER:
         case HARDWARE_READ_O3_BATTERY_CHARGER:
-        case HARDWARE_READ_RELAYS_ENABLED:
+        case HARDWARE_READ_ON_PCB_RELAYS_ENABLED:
+        case HARDWARE_READ_EXTERNAL_RELAYS_ENABLED:
         {
             pSendMsg->msgLength += actionReadBool (receivedMsgType, &(pSendMsg->msgBody[0]));
         }
@@ -970,8 +990,10 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
         case HARDWARE_SET_O3_BATTERY_CHARGER_OFF:
         case HARDWARE_SET_ALL_BATTERY_CHARGERS_ON:
         case HARDWARE_SET_ALL_BATTERY_CHARGERS_OFF:
-        case HARDWARE_DISABLE_ALL_RELAYS:
-        case HARDWARE_ENABLE_ALL_RELAYS:
+        case HARDWARE_DISABLE_ON_PCB_RELAYS:
+        case HARDWARE_ENABLE_ON_PCB_RELAYS:
+        case HARDWARE_DISABLE_EXTERNAL_RELAYS:
+        case HARDWARE_ENABLE_EXTERNAL_RELAYS:
         case HARDWARE_PERFORM_CAL_ALL_BATTERY_MONITORS:
         case HARDWARE_PERFORM_CAL_RIO_BATTERY_MONITOR:
         case HARDWARE_PERFORM_CAL_O1_BATTERY_MONITOR:

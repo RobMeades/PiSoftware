@@ -32,15 +32,16 @@ void transitionToShutdown (RoboOneState *pState)
     /* Fill in default handlers and name first */
     defaultImplementation (pState);
     memcpy (&(pState->name[0]), SHUTDOWN_STATE_NAME, strlen (SHUTDOWN_STATE_NAME) + 1); /* +1 for terminator */
-    printDebug ("Transitioning to %s state.\n", &(pState->name[0]));
+    printDebug ("\n*** Transitioning to %s state.\n", &(pState->name[0]));
 
     /* There are no event handlers for this state */
     
     /* Do the entry actions */
     
-    /* Switch off Hindbrain to save power */
+    /* Switch off Hindbrain and disable relays */
     actionSwitchOffHindbrain();
-    actionDisableAllRelays();
+    actionDisableExternalRelays();
+    actionDisableOnPCBRelays();
     
     /* TODO: put Pi to sleep/ */
 

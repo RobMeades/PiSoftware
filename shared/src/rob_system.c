@@ -113,15 +113,22 @@ void setDebugPrintsOnToFile (Char * pFilename)
 }
 
 /*
- * Progress printing function (that can be stubbed out if necessary)
+ * Progress printing function
  */
 void printProgress (const Char * pFormat, ...)
 {
     if (gProgressPrintsAreOn)
     {
         va_list args;
+        
         va_start (args, pFormat);
         vprintf (pFormat, args);
+        
+        /* If debug is printing to file, put the progress prints there also */
+        if (gDebugPrintsAreOn && !gSuspendDebug && (pgDebugPrintsStream != PNULL))
+        {
+            vfprintf (pgDebugPrintsStream, pFormat, args);
+        }
         va_end (args);
     }
 }
@@ -169,6 +176,40 @@ void printHexDump (const UInt8 * pMemory, UInt16 size)
         }
     }
 }
+
+/*
+ * Return a binary string representation of
+ * a value.
+ * 
+ * value   the value to be represented as binary.
+ * pString storage for BINARY_STRING_BUFFER_SIZE
+ *         of null terminated string.
+ * 
+ * return  pString.
+ */
+Char * binaryString (UInt8 value, Char *pString)
+{
+    UInt8 i;
+    UInt8 mask = 0x80;
+    
+    ASSERT_PARAM (pString != PNULL, (unsigned long) pString);
+    
+    for (i = 0; i < 8; i++)
+    {
+        *(pString + i) = '0';
+        if ((value & mask) > 0)
+        {
+            *(pString + i) = '1';
+        }
+        mask >>= 1;
+    }
+    
+    *(pString + i) = 0; /* Add the terminator */
+    
+    return pString;
+}
+
+
 
 /*
  * Get the system time in ticks and in a

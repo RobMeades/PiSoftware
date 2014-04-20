@@ -11,6 +11,9 @@
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>
+#include <state_machine_server.h>
+#include <state_machine_msg_auto.h>
+#include <state_machine_client.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -235,13 +238,13 @@ static Bool commandHelp (WINDOW *pWin)
 }
 
 /*
- * A dummy command for exit.
+ * Things to do on exit.
  * 
  * @return  true.
  */
 static Bool commandExit (void)
 {
-	return true;
+	return stateMachineServerSendReceive (STATE_MACHINE_EVENT_SHUTDOWN, PNULL, 0, PNULL, PNULL);
 }
 
 /*
@@ -479,11 +482,7 @@ static Bool displayRelayStates (WINDOW *pWin)
  
     printHelper (pWin, "%s\n", RELAY_HEADING_STRING);
     
-    success = hardwareServerSendReceive (HARDWARE_READ_RELAYS_ENABLED, PNULL, 0, &relaysEnabled);
-    if (!relaysEnabled)
-    {
-        printHelper (pWin, "[");
-    }
+    hardwareServerSendReceive (HARDWARE_READ_ON_PCB_RELAYS_ENABLED, PNULL, 0, &relaysEnabled);
     success = hardwareServerSendReceive (HARDWARE_READ_O_PWR, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
     success = hardwareServerSendReceive (HARDWARE_READ_O_RST, PNULL, 0, &isOn);
@@ -492,6 +491,7 @@ static Bool displayRelayStates (WINDOW *pWin)
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
     success = hardwareServerSendReceive (HARDWARE_READ_RIO_PWR_BATT, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
+    hardwareServerSendReceive (HARDWARE_READ_EXTERNAL_RELAYS_ENABLED, PNULL, 0, &relaysEnabled);
     success = hardwareServerSendReceive (HARDWARE_READ_O_PWR_12V, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
     success = hardwareServerSendReceive (HARDWARE_READ_O_PWR_BATT, PNULL, 0, &isOn);
@@ -504,10 +504,6 @@ static Bool displayRelayStates (WINDOW *pWin)
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
     success = hardwareServerSendReceive (HARDWARE_READ_O3_BATTERY_CHARGER, PNULL, 0, &isOn);
     displayGpioStatesHelper (pWin, success, relaysEnabled, isOn);
-    if (!relaysEnabled)
-    {
-        printHelper (pWin, "]");
-    }
     
     printHelper (pWin, "\n");
     
@@ -820,7 +816,15 @@ static Bool setO3BatteryChargerOff (void)
  */
 static Bool enableAllRelays (void)
 {
-    return hardwareServerSendReceive (HARDWARE_ENABLE_ALL_RELAYS, PNULL, 0, PNULL);
+    Bool success;
+    
+    success = hardwareServerSendReceive (HARDWARE_ENABLE_ON_PCB_RELAYS, PNULL, 0, PNULL);
+    if (success)
+    {
+        success = hardwareServerSendReceive (HARDWARE_ENABLE_EXTERNAL_RELAYS, PNULL, 0, PNULL);
+    }
+    
+    return success;
 }
 
 /*
@@ -830,7 +834,15 @@ static Bool enableAllRelays (void)
  */
 static Bool disableAllRelays (void)
 {
-    return hardwareServerSendReceive (HARDWARE_DISABLE_ALL_RELAYS, PNULL, 0, PNULL);
+    Bool success;
+    
+    success = hardwareServerSendReceive (HARDWARE_DISABLE_ON_PCB_RELAYS, PNULL, 0, PNULL);
+    if (success)
+    {
+        success = hardwareServerSendReceive (HARDWARE_DISABLE_EXTERNAL_RELAYS, PNULL, 0, PNULL);
+    }
+    
+    return success;
 }
 
 /*

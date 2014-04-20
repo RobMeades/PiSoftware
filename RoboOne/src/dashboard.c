@@ -10,12 +10,12 @@
 #include <rob_system.h>
 #include <curses.h> /* Has to be ahead of rob_system.h in the list as it fiddles with bool */
 #include <menu.h>
-#include <state_machine_server.h>
-#include <state_machine_msg_auto.h>
-#include <state_machine_client.h>
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>
+#include <state_machine_server.h>
+#include <state_machine_msg_auto.h>
+#include <state_machine_client.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -410,9 +410,8 @@ static Bool updatePowerWindow (WINDOW *pWin, UInt8 count)
             wprintw (pWin, "    ??    ");            
         }
         
-        /* Then print how each of the Pi and the Hindbrain
-         * are powered. */
-        success = hardwareServerSendReceive (HARDWARE_READ_RELAYS_ENABLED, PNULL, 0, &relaysEnabled);
+        /* Then print how each of the Pi and the Hindbrain are powered. */
+        success = hardwareServerSendReceive (HARDWARE_READ_ON_PCB_RELAYS_ENABLED, PNULL, 0, &relaysEnabled);
         if (success)
         {
             success = hardwareServerSendReceive (HARDWARE_READ_RIO_PWR_12V, PNULL, 0, &is12V);
@@ -420,14 +419,19 @@ static Bool updatePowerWindow (WINDOW *pWin, UInt8 count)
             {
                 success = hardwareServerSendReceive (HARDWARE_READ_RIO_PWR_BATT, PNULL, 0, &isBatt);
             }
-            displayPowerStatesHelper (pWin, success, relaysEnabled, is12V, isBatt);
+        }
+        displayPowerStatesHelper (pWin, success, relaysEnabled, is12V, isBatt);
+            
+        success = hardwareServerSendReceive (HARDWARE_READ_EXTERNAL_RELAYS_ENABLED, PNULL, 0, &relaysEnabled);
+        if (success)
+        {
             success = hardwareServerSendReceive (HARDWARE_READ_O_PWR_12V, PNULL, 0, &is12V);
             if (success)
             {
                 success = hardwareServerSendReceive (HARDWARE_READ_O_PWR_BATT, PNULL, 0, &isBatt);
             }
-            displayPowerStatesHelper (pWin, success, relaysEnabled, is12V, isBatt);
         }
+        displayPowerStatesHelper (pWin, success, relaysEnabled, is12V, isBatt);
         row++;
     }
     else
@@ -671,10 +675,11 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
     Bool success;
     StateMachineMsgType receivedMsgType = STATE_MACHINE_SERVER_NULL;
     StateMachineServerGetContextCnf *pReceivedMsgBody;
+    OInputString *pInputString;
+    OResponseString *pResponseString;
     
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
     
-    /* Display the state */
     wmove (pWin, 0, 0);
     wclrtoeol (pWin);
     
@@ -682,6 +687,7 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
     
     if (pReceivedMsgBody != PNULL)
     {
+        /* Display the state */
         pReceivedMsgBody->roboOneContextContainer.isValid = false;
         success = stateMachineServerSendReceive (STATE_MACHINE_SERVER_GET_CONTEXT, PNULL, 0, &receivedMsgType, (void *) pReceivedMsgBody);
         if (success)
@@ -698,6 +704,32 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
         else
         {
             wprintw (pWin, "Error");
+        }
+        
+        /* Also display whether the Hindbrain is on or off */
+        pInputString = malloc (sizeof (*pInputString));
+        if (pInputString != PNULL)
+        {
+            memcpy (&(pInputString->string[0]), PING_STRING, strlen (PING_STRING) + 1); /* +1 to copy the terminator */
+            pInputString->waitForResponse = true;
+            
+            pResponseString = malloc (sizeof (*pResponseString));
+            if (pResponseString != PNULL)
+            {
+                pResponseString->stringLength = sizeof (pResponseString->string);
+                /* Send the ping string and check for an OK response */
+                success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, strlen (&(pInputString->string[0])) + 1, pResponseString);
+                if (success)
+                {
+                   wprintw (pWin, " [Hindbrain ON]");            
+                }
+                else
+                {
+                    wprintw (pWin, " [Hindbrain OFF]");                                
+                }
+                free (pResponseString);
+            }
+            free (pInputString);
         }
         
         wnoutrefresh (pWin);

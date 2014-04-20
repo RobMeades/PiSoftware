@@ -10,8 +10,10 @@
  * FUNCTION PROTOTYPES
  */
 
-Bool actionEnableAllRelays (void);
-Bool actionDisableAllRelays (void);
+Bool actionEnableExternalRelays (void);
+Bool actionDisableExternalRelays (void);
+Bool actionEnableOnPCBRelays (void);
+Bool actionDisableOnPCBRelays (void);
 Bool actionIsMains12VAvailable (void);
 Bool actionSwitchOnHindbrain (void);
 Bool actionSwitchOffHindbrain (void);

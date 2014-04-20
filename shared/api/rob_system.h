@@ -18,6 +18,7 @@ typedef unsigned long UInt32;
 #define ASSERT_ALWAYS_PARAM(pARAM1) ((assertFunc (__FUNCTION__, __LINE__, PNULL, (pARAM1))))
 #define ASSERT_STRING(cONDITION,sTRING) ((cONDITION) ? true : (assertFunc (__FUNCTION__, __LINE__, sTRING, 0)))
 #define ASSERT_PARAM(cONDITION,pARAM1) ((cONDITION) ? true : (assertFunc (__FUNCTION__, __LINE__, PNULL, (pARAM1))))
+#define BINARY_STRING_BUFFER_SIZE 9
 
 bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 param1);
 void setProgressPrintsOn (void);
@@ -30,4 +31,5 @@ void resumeDebug (void);
 void printProgress (const Char * pFormat, ...);
 void printDebug (const Char * pFormat, ...);
 void printHexDump (const UInt8 * pMemory, UInt16 size);
+Char * binaryString (UInt8 value, Char *pString);
 UInt32 getSystemTicks (void);

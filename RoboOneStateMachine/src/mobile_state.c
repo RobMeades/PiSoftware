@@ -28,7 +28,7 @@
  */
 static void eventTasksAvailable (RoboOneState *pState)
 {
-    printDebug ("Unsupported Tasks Available event in state %s.\n", &(pState->name[0]));
+    printDebug ("Uncoded Tasks Available event in state %s.\n", &(pState->name[0]));
 }
 
 /*
@@ -42,7 +42,7 @@ void transitionToMobile (RoboOneState *pState)
     /* Fill in default handlers and name first */
     defaultImplementation (pState);
     memcpy (&(pState->name[0]), MOBILE_STATE_NAME, strlen (MOBILE_STATE_NAME) + 1); /* +1 for terminator */
-    printDebug ("Transitioning to %s state.\n", &(pState->name[0]));
+    printDebug ("\n*** Transitioning to %s state.\n", &(pState->name[0]));
     
     /* Now hook in the event handlers for this state */
     pState->pEventInitFailure = transitionToInit;

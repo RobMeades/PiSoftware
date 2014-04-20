@@ -38,7 +38,7 @@ void transitionToInit (RoboOneState *pState)
     /* Fill in default handlers and name first */
     defaultImplementation (pState);
     memcpy (&(pState->name[0]), INIT_STATE_NAME, strlen (INIT_STATE_NAME) + 1); /* +1 for terminator */
-    printDebug ("Transitioning to %s state.\n", &(pState->name[0]));
+    printDebug ("\n*** Transitioning to %s state.\n", &(pState->name[0]));
 
     /* Now hook in the event handlers for this state */
     pState->pEventInitFailure = transitionToShutdown;
@@ -54,12 +54,13 @@ void transitionToInit (RoboOneState *pState)
     /* Initialise XBee?  Assume it's already initialised */
     /* Initialise OneWire devices?  Already initialised by RoboOne main() */
     
-    /* Switch Pi and Hindbrain back to battery power in case they have been on mains (don't care about failure) */
+    /* Switch Pi and Hindbrain back to battery power in case they have been on mains (don't care about failure,
+     * we're in init state after all so there's nowhere to go) */
     actionSwitchPiRioToBatteryPower();
     actionSwitchHindbrainToBatteryPower();
     
-    /* Switch all the relays on */
-    success = actionEnableAllRelays();
+    /* Switch the on-PCB relays on */
+    success = actionEnableOnPCBRelays();
     if (success)
     {
         /* Power up hindbrain to see if all is good */
@@ -69,7 +70,7 @@ void transitionToInit (RoboOneState *pState)
             /* TODO: Initialise RIO AHRS (or check that it is initialised) */
             /* TODO: Check status of Wifi and camera */
             /* TODO: Start inactivity timer */
-        }        
+        }
     }
             
     if (!success)

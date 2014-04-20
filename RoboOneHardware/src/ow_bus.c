@@ -29,6 +29,7 @@
 #define ONEWIRE_PORT_STRING    "/dev/USBSerial"
 #define MAX_NUM_DEVICES 8    /* This MUST be the same as the number of elements in the gDeviceStaticConfigList[] below */
 #define TOGGLE_DELAY_US 500000L  /* How long to toggle a set of pins from current state to opposite and back again */
+#define SERIAL_NUM_BUFFER_SIZE (NUM_BYTES_IN_SERIAL_NUM * 2) + 3 /* string representation of serial num with 0x in front and terminator on the end */
 
 /* The maximum number of devices that oneWireFindAllDevices() can report */
 #define MAX_DEVICES_TO_FIND         10
@@ -73,7 +74,7 @@
  * the locally stored pinsState rather than by just reading
  * back the pins directly */
 #define CHARGER_STATE_IO_SHADOW_MASK    0x00
-#define DARLINGTON_IO_SHADOW_MASK       0x00
+#define DARLINGTON_IO_SHADOW_MASK       (DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE)
 #define RELAY_IO_SHADOW_MASK            (RELAY_O_PWR_12V_ON | RELAY_O_PWR_BATT_OFF | RELAY_RIO_CHARGER_OFF | RELAY_O1_CHARGER_OFF | RELAY_O2_CHARGER_OFF | RELAY_O3_CHARGER_OFF)
 #define GENERAL_PURPOSE_IO_SHADOW_MASK  0x00
 
@@ -233,6 +234,11 @@ static Char *deviceNameList[] = {"RIO_BATTERY_MONITOR",
 static SInt32 gPortNumber = -1;
 
 /*
+ * FUNCTION PROTOTYPES
+ */
+static void debugPrintPinsState (void);
+
+/*
  * STATIC FUNCTIONS
  */
 
@@ -240,26 +246,32 @@ static SInt32 gPortNumber = -1;
  * Print out the address of a OneWire device.
  * 
  * pAddress   pointer to the 8-byte address.
- * newline    if true, add a newline on the end.
+ * pString    pointer to SERIAL_NUM_BUFFER_SIZE
+ *            of storage to put the null-terminated
+ *            string in. 
  *
- * @return  none.
+ * @return    pointer to pString.
  */
-static void printAddress (const UInt8 *pAddress, Bool newline)
+static Char * printAddress (const UInt8 *pAddress, Char *pString)
 {
     UInt8 i;
+    UInt8 x;
     
     ASSERT_PARAM (pAddress != PNULL, (unsigned long) pAddress);
+    ASSERT_PARAM (pString != PNULL, (unsigned long) pString);
 
+    sprintf (pString, "0x");
+    x = 2;
     for (i = 0; i < NUM_BYTES_IN_SERIAL_NUM; i++)
     {
-        printProgress ("%.2x", *pAddress);
-        pAddress++;                
+        sprintf (pString + x, "%.2x", *pAddress);
+        pAddress++;
+        x +=2;
     }
     
-    if (newline)
-    {
-        printDebug ("\n");
-    }
+    *(pString + x - 1) = 0; /* Put the terminator on */
+    
+    return pString;
 }
 
 /*
@@ -403,7 +415,9 @@ static Bool readPinsWithShadow (OwDeviceName deviceName, UInt8 *pPinsState)
         /* Now check against the shadow mask and for those pins use pinsState instead of the read-back state */
         *pPinsState = accountForShadow (deviceName, *pPinsState);
     }
-    
+
+    debugPrintPinsState();
+        
     return success;
 }
 
@@ -452,6 +466,8 @@ static Bool setPinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask, Bool set
     {
         gDeviceStaticConfigList[deviceName].specifics.ds2408.pinsState = pinsState;
     }
+
+    debugPrintPinsState();
     
     return success;
 }
@@ -477,6 +493,8 @@ static Bool togglePinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask)
     /* Read the last state of the pins, taking shadow state into account */
     success = readPinsWithShadow (deviceName, &pinsState);
         
+    debugPrintPinsState();
+
     /* Toggle the ones masked in */
     for (i = 0; (i < 2) && success; i++)
     {
@@ -503,11 +521,53 @@ static Bool togglePinsWithShadow (OwDeviceName deviceName, UInt8 pinsMask)
         {
             gDeviceStaticConfigList[deviceName].specifics.ds2408.pinsState = pinsState;
         }
+
+        debugPrintPinsState();
         
         usleep (TOGGLE_DELAY_US);
     }
     
+
     return success;
+}
+
+/*
+ * Print the state of all the IO pins for debugging.
+ */
+static void debugPrintPinsState (void)
+{
+    Bool success;
+    UInt8 pinsState;
+    Char buffer[BINARY_STRING_BUFFER_SIZE];
+    
+    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_CHARGER_STATE_PIO].address.value[0], &pinsState);
+    if (success)
+    {
+        /* Now check against the shadow mask and for those pins use pinsState instead of the read-back state */
+        pinsState = accountForShadow (OW_NAME_CHARGER_STATE_PIO, pinsState);
+        printDebug ("  CHARGER_STATE_PIO: %s.\n", binaryString (pinsState, &(buffer[0])));
+    }
+    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_DARLINGTON_PIO].address.value[0], &pinsState);
+    if (success)
+    {
+        /* Now check against the shadow mask and for those pins use pinsState instead of the read-back state */
+        pinsState = accountForShadow (OW_NAME_DARLINGTON_PIO, pinsState);
+        printDebug ("     DARLINGTON_PIO: %s.\n", binaryString (pinsState, &(buffer[0])));
+    }
+    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RELAY_PIO].address.value[0], &pinsState);
+    if (success)
+    {
+        /* Now check against the shadow mask and for those pins use pinsState instead of the read-back state */
+        pinsState = accountForShadow (OW_NAME_RELAY_PIO, pinsState);
+        printDebug ("          RELAY_PIO: %s.\n", binaryString (pinsState, &(buffer[0])));
+    }
+    success = readPIOLogicStateDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsState);
+    if (success)
+    {
+        /* Now check against the shadow mask and for those pins use pinsState instead of the read-back state */
+        pinsState = accountForShadow (OW_NAME_GENERAL_PURPOSE_PIO, pinsState);
+        printDebug ("GENERAL_PURPOSE_PIO: %s.\n", binaryString (pinsState, &(buffer[0])));
+    }
 }
 
 /*
@@ -690,7 +750,7 @@ UInt8 findAllDevices ()
             pPos = &(pDeviceList->address[0]);
             for (i = 0; i < numDevicesToPrint; i++)
             {
-                printAddress (pPos, true);
+                printProgress ((Char *) pPos, true);
                 pPos += NUM_BYTES_IN_SERIAL_NUM;
             }
         }
@@ -716,6 +776,7 @@ Bool setupDevices (void)
     UInt8 *pAddress;
     UInt8 pinsState;
     UInt8 i;
+    Char  serialNumBuffer[SERIAL_NUM_BUFFER_SIZE];
     
     printProgress ("Setting up OneWire devices...\n");
     for (i = 0; (i < MAX_NUM_DEVICES); i++)
@@ -732,9 +793,8 @@ Bool setupDevices (void)
         /* If it was found, set it up */
         if (found[i])
         {
-            printProgress ("Found %d [%s]: ", i + 1, deviceNameList[i]);
-            printAddress (pAddress, false);
-            printProgress (", setting it up...");
+            printProgress ("Found %d [%s]: %s, setting it up...", i + 1, deviceNameList[i], printAddress (pAddress, &(serialNumBuffer[0])));
+            printDebug ("\n");
             switch (getDeviceType (pAddress))
             {
                 case OW_TYPE_DS2438_BATTERY_MONITOR:
@@ -757,6 +817,7 @@ Bool setupDevices (void)
                         /* Set the time */
                         timeCapacity.elapsedTime = getSystemTicks ();
                         timeCapacity.remainingCapacityPresent = false;
+                        printDebug ("Writing time/capacity to DS2438.\n");
 #ifdef DONT_USE_ONE_WIRE_SERVER
                         success = writeTimeCapacityDS2438 (gPortNumber, pAddress, &(timeCapacity.elapsedTime), PNULL);
 #else
@@ -771,28 +832,34 @@ Bool setupDevices (void)
                      * the pin configuration, using an intermediate variable for the latter
                      * as the write function also reads the result back and I'd rather avoid
                      * my global data structure being modified */
+                    printDebug ("Disabling Test Mode to DS2408.\n");
 #ifdef DONT_USE_ONE_WIRE_SERVER
                     success = disableTestModeDS2408 (gPortNumber, pAddress);
 #else
                     success = oneWireServerSendReceive (DISABLE_TEST_MODE_DS2408, pAddress, PNULL, 0, PNULL);
 #endif
+                    debugPrintPinsState();
                     if (success)
                     {
+                        printDebug ("Writing 0x%.2x to DS2408 control register.\n", gDeviceStaticConfigList[i].specifics.ds2408.config);
 #ifdef DONT_USE_ONE_WIRE_SERVER
                         success = writeControlRegisterDS2408 (gPortNumber, pAddress, gDeviceStaticConfigList[i].specifics.ds2408.config);
 #else
                         success = oneWireServerSendReceive (WRITE_CONTROL_REGISTER_DS2408, pAddress, &(gDeviceStaticConfigList[i].specifics.ds2408.config),
                                                             sizeof (gDeviceStaticConfigList[i].specifics.ds2408.config), PNULL);
 #endif
+                        debugPrintPinsState();
                         if (success)
                         {
                             pinsState = gDeviceStaticConfigList[i].specifics.ds2408.pinsState;
+                            printDebug ("Writing 0x%.2x to DS2408 pins.\n", pinsState);
 #ifdef DONT_USE_ONE_WIRE_SERVER
                             success = channelAccessWriteDS2408 (gPortNumber, pAddress, &pinsState);
 #else
                             success = oneWireServerSendReceive (CHANNEL_ACCESS_WRITE_DS2408, pAddress, &pinsState, sizeof (pinsState), PNULL);
 #endif
                         }
+                        debugPrintPinsState();
                     }
                 }
                 break;
@@ -819,8 +886,7 @@ Bool setupDevices (void)
     {
         if (!found[i])
         {
-            printProgress ("Couldn't find %s, address: ", deviceNameList[i]);
-            printAddress (&gDeviceStaticConfigList[i].address.value[0], true);
+            printProgress ("Couldn't find %s, address: %s.\n", deviceNameList[i], printAddress (&gDeviceStaticConfigList[i].address.value[0], &(serialNumBuffer[0])));
             success = false;
         }
     }
@@ -923,7 +989,7 @@ Bool readChargerState (ChargeState *pState, Bool *pFlashDetectPossible)
              * Note: the wiring on RoboOne is such that unless
              * the relays are powered and the relay for that charger
              * deliberately switched off, the charger is powered ON */
-            success = readRelaysEnabled (&relaysPowered);
+            success = readExternalRelaysEnabled (&relaysPowered);
             if (success)
             {
                 success =  readRioBatteryCharger (&chargerPowered);
@@ -1559,53 +1625,37 @@ Bool setAllOChargersOff (void)
 }
 
 /*
- * Disable the power to all relays.  Note
- * that this doesn't change their logical state,
- * i.e. when power is enabled to them they will
- * return to their previous logic state.
+ * Disable the power to all on-PCB relays,
+ * the ones that control the Pi/RIO power
+ * source and toggling of power and reset
+ * to the Orangutan.  Note that this doesn't
+ * change their logical state, i.e. when power
+ * is enabled to them they will return to
+ * their previous logic state.
  * 
  * @return  true if successful, otherwise false.
  */
-Bool disableAllRelays (void)
+Bool disableOnPCBRelays (void)
 {
-    Bool success;
-    
-    /* First disable the external relays */
-    success = setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_ENABLE_BAR, true);
-    
-    if (success)
-    {
-        /* Then disable the on-PCB relays */
-        success = setPinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_ENABLE_BAR, true);
-    }
-    
-    return success;
+    return setPinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_ENABLE_BAR, true);
 }
 
 /*
- * Enable the power to all relays, returning
- * them to their previous logic state.
+ * Enable the power to all on-PCB relays,
+ * the ones that control the Pi/RIO power
+ * source and toggling of power and reset
+ * to the Orangutan, returning them to
+ * their previous logic state.
  * 
  * @return  true if successful, otherwise false.
  */
-Bool enableAllRelays (void)
+Bool enableOnPCBRelays (void)
 {
-    Bool success;
-    
-    /* First enable the external relays */
-    success = setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_ENABLE_BAR, false);
-    
-    if (success)
-    {
-        /* Then enable the on-PCB relays */
-        success = setPinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_ENABLE_BAR, false);
-    }
-    
-    return success;
+    return setPinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_ENABLE_BAR, false);
 }
 
 /*
- * Read the state of power to the relays.
+ * Read the state of power to the on-PCB relays.
  *
  * pIsOn  a place to return the state, true
  *        for On.  May be PNULL, in which case
@@ -1614,28 +1664,81 @@ Bool enableAllRelays (void)
  *
  * @return  true if successful, otherwise false.
  */
-Bool readRelaysEnabled (Bool *pIsOn)
+Bool readOnPCBRelaysEnabled (Bool *pIsOn)
 {
     Bool success;
-    UInt8 pinsStateRelay;
-    UInt8 pinsStateDarlington;
+    UInt8 pinsState;
     
-    /* First read the state of power to the external relays */
-    success = readPinsWithShadow (OW_NAME_RELAY_PIO, &pinsStateRelay);
+    /* Read the state of power to the on-PCB relays */
+    success = readPinsWithShadow (OW_NAME_DARLINGTON_PIO, &pinsState);
     
-    if (success)
+    if (success && (pIsOn != PNULL))
     {
-        /* Then read the state of power to the on-PCB relays */
-        success = readPinsWithShadow (OW_NAME_DARLINGTON_PIO, &pinsStateDarlington);
-        
-        if (success && (pIsOn != PNULL))
+        *pIsOn = false;
+        if ((pinsState & DARLINGTON_ENABLE_BAR) == 0)
         {
-            *pIsOn = false;
-            if (((pinsStateRelay & RELAY_ENABLE_BAR) == 0) && ((pinsStateDarlington & DARLINGTON_ENABLE_BAR) == 0))
-            {
-                *pIsOn = true;
-            }        
-        }
+            *pIsOn = true;
+        }        
+    }
+    
+    return success;
+}
+
+/*
+ * Disable the power to all external relays,
+ * the ones that control the chargers and
+ * whether the Hindbrain is running from
+ * 12V or battery power. Note that this doesn't
+ * change their logical state, i.e. when power
+ * is enabled to them they will return to
+ * their previous logic state.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool disableExternalRelays (void)
+{
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_ENABLE_BAR, true);
+}
+
+/*
+ * Disable the power to all external relays,
+ * the ones that control the chargers and
+ * whether the Hindbrain is running from
+ * 12V or battery power, returning them to
+ * their previous logic state.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool enableExternalRelays (void)
+{
+    return setPinsWithShadow (OW_NAME_RELAY_PIO, RELAY_ENABLE_BAR, false);
+}
+
+/*
+ * Read the state of power to the external relays.
+ *
+ * pIsOn  a place to return the state, true
+ *        for On.  May be PNULL, in which case
+ *        the read is performed but no value
+ *        is returned.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readExternalRelaysEnabled (Bool *pIsOn)
+{
+    Bool success;
+    UInt8 pinsState;
+    
+    /* Read the state of power to the external relays */
+    success = readPinsWithShadow (OW_NAME_RELAY_PIO, &pinsState);
+    
+    if (success && (pIsOn != PNULL))
+    {
+        *pIsOn = false;
+        if ((pinsState & RELAY_ENABLE_BAR) == 0)
+        {
+            *pIsOn = true;
+        }        
     }
     
     return success;

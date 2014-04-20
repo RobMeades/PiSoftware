@@ -9,8 +9,16 @@
 #define HARDWARE_SERVER_EXE "./roboone_hardware_server"
 #define HARDWARE_SERVER_PORT_STRING "5234"
 
-/* Maximum length of a string sent to or receied back from the Orangutan, AKA Hindbrain */
+/* Maximum length of a string sent to or received back from the Orangutan, AKA Hindbrain */
 #define MAX_O_STRING_LENGTH         80
+/* The string to ping the Hindbrain with to get an "OK" response if it's there */
+#define PING_STRING "!\n"
+/* Max length of response to the ping string*/
+#define O_RESPONSE_STRING_LENGTH 10
+/* Checker for a good response to the ping string, the parameter being of type OResponseString */
+#define O_CHECK_OK_STRING(PoUTPUTsTRING) (((PoUTPUTsTRING)->stringLength) >= 2) && (((PoUTPUTsTRING)->string[0] == 'O') && ((PoUTPUTsTRING)->string[1] == 'K') ? true : false)  
+/* Suggested startup delay for the Orangutan, AKA Hindbrain, before it can be pinged */
+#define O_START_DELAY_US 100000L
 
 /*
  * TYPES

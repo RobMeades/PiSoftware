@@ -33,7 +33,7 @@ void transitionToBatteryIdle (RoboOneState *pState)
     /* Fill in default handlers and name first */
     defaultImplementation (pState);
     memcpy (&(pState->name[0]), BATTERYIDLE_STATE_NAME, strlen (BATTERYIDLE_STATE_NAME) + 1); /* +1 for terminator */
-    printDebug ("Transitioning to %s state.\n", &(pState->name[0]));
+    printDebug ("\n*** Transitioning to %s state.\n", &(pState->name[0]));
     
     /* Now hook in the event handlers for this state */
     pState->pEventTasksAvailable = transitionToMobile;
