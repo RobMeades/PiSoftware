@@ -742,7 +742,7 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
  *
  * @return  true if successful, otherwise false.
  */
-Bool runDashboard (void)
+Bool runMonitor (void)
 {
     Bool success = true;
     Bool exitDashboard = false;

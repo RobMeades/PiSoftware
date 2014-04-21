@@ -7,7 +7,6 @@
 #include <rob_system.h>
 #include <curses.h>
 #include <menu.h>
-#include <dashboard.h>
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>

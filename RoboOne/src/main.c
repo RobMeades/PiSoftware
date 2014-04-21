@@ -10,7 +10,7 @@
 #include <sys/types.h> /* for pid_t */
 #include <sys/wait.h> /* for wait */
 #include <rob_system.h>
-#include <dashboard.h>
+#include <monitor.h>
 #include <messaging_server.h>
 #include <messaging_client.h>
 #include <state_machine_server.h>
@@ -168,7 +168,7 @@ int main (int argc, char **argv)
                     if (success)
                     {
                         /* Finally, display the dashboard */
-                        success = runDashboard();
+                        success = runMonitor();
                         
                         printProgress ("\nDone.\n");
                     }
