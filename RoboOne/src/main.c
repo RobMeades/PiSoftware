@@ -10,7 +10,6 @@
 #include <sys/types.h> /* for pid_t */
 #include <sys/wait.h> /* for wait */
 #include <rob_system.h>
-#include <one_wire.h>
 #include <dashboard.h>
 #include <messaging_server.h>
 #include <messaging_client.h>
