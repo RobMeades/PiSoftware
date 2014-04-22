@@ -14,12 +14,13 @@ SERVER_PRE = ../MessagingServer
 CLIENT_PRE = ../MessagingClient
 ROBOONEHARDWARE_PRE = ../RoboOneHardware
 ROBOONESTATEMACHINE_PRE = ../RoboOneStateMachine
+ROBOONETASKHANDLER_PRE = ../RoboOneTaskHandler
 
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
 CC = $(GCC_PREFIX)gcc.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ROBOONEHARDWARE_PRE)/$(API_DIR) -I$(ROBOONESTATEMACHINE_PRE)/$(API_DIR) $(FLAGS)
-LDFLAGS = -lncurses $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(OW_LIBS) $(ROBOONEHARDWARE_PRE)/$(OBJ_DIR)/roboone_hardware_client.a $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a $(ROBOONESTATEMACHINE_PRE)/$(OBJ_DIR)/roboone_state_machine_client.a
+CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ROBOONEHARDWARE_PRE)/$(API_DIR) -I$(ROBOONESTATEMACHINE_PRE)/$(API_DIR) -I$(ROBOONETASKHANDLER_PRE)/$(API_DIR) $(FLAGS)
+LDFLAGS = -lncurses $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(OW_LIBS) $(ROBOONEHARDWARE_PRE)/$(OBJ_DIR)/roboone_hardware_client.a $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a $(ROBOONESTATEMACHINE_PRE)/$(OBJ_DIR)/roboone_state_machine_client.a $(ROBOONETASKHANDLER_PRE)/$(OBJ_DIR)/roboone_task_handler_client.a
 
 all: $(PROGRAM)
 

@@ -3,8 +3,8 @@ ifneq (,)
 This makefile requires GNU Make.
 endif
 
-PROGRAM = roboone_state_machine_server
-LIB = roboone_state_machine_client.a
+PROGRAM = roboone_task_handler_server
+LIB = roboone_task_handler_client.a
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
@@ -13,16 +13,15 @@ SHARED_PRE = ../shared
 SERVER_PRE = ../MessagingServer
 CLIENT_PRE = ../MessagingClient
 ROBOONEHARDWARE_PRE = ../RoboOneHardware
-ROBOONETASKHANDLER_PRE = ../RoboOneTaskHandler
 
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
-LIB_OBJ:= $(OBJ_DIR)/state_machine_client.o $(OBJ_DIR)/state_machine_msg_names.o
-EXE_OBJ:= $(OBJ_DIR)/main.o $(OBJ_DIR)/actions.o $(OBJ_DIR)/state_machine.o $(OBJ_DIR)/state_machine_events.o $(OBJ_DIR)/state_machine_server.o $(OBJ_DIR)/state_machine_msg_names.o $(OBJ_DIR)/batteryidle_state.o $(OBJ_DIR)/docked_state.o $(OBJ_DIR)/docked_charging_state.o $(OBJ_DIR)/docked_mainsidle_state.o $(OBJ_DIR)/init_state.o $(OBJ_DIR)/mobile_state.o $(OBJ_DIR)/shutdown_state.o
+LIB_OBJ := $(OBJ_DIR)/task_handler_client.o $(OBJ_DIR)/task_handler_msg_names.o
+EXE_OBJ:= $(OBJ_DIR)/main.o $(OBJ_DIR)/task_handler.o $(OBJ_DIR)/task_handler_server.o $(OBJ_DIR)/hindbrain_direct_task_handler.o 
 CC = $(GCC_PREFIX)gcc.exe
 AR =  $(GCC_PREFIX)ar.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ROBOONEHARDWARE_PRE)/$(API_DIR) -I$(ROBOONETASKHANDLER_PRE)/$(API_DIR) 
-LDFLAGS = $(OBJ_DIR)/$(LIB) $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a $(ROBOONEHARDWARE_PRE)/$(OBJ_DIR)/roboone_hardware_client.a $(ROBOONETASKHANDLER_PRE)/$(OBJ_DIR)/roboone_task_handler_client.a 
+CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) -I$(ROBOONEHARDWARE_PRE)/$(API_DIR)
+LDFLAGS = $(OBJ_DIR)/$(LIB) $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a $(ROBOONEHARDWARE_PRE)/$(OBJ_DIR)/roboone_hardware_client.a
 
 all: $(PROGRAM)
 

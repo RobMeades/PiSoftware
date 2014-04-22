@@ -20,11 +20,11 @@
 /* Suggested startup delay for the Orangutan, AKA Hindbrain, before it can be pinged */
 #define O_START_DELAY_US 100000L
 
-/*
- * TYPES
- */
-
 #pragma pack(push, 1) /* Force GCC to pack everything from here on as tightly as possible */
+
+/*
+ * GENERAL MESSAGE TYPES
+ */
 
 /* The states of charge that a charger can be in */
 typedef enum ChargeStateTag
@@ -40,10 +40,6 @@ typedef enum ChargeStateTag
     CHARGE_STATE_NULL,
     CHARGE_STATE_BAD
 } ChargeState;
-
-/*
- * GENERAL MESSAGE TYPES
- */
 
 /*
  * TYPES FOR REQ MESSAGES

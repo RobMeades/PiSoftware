@@ -7,6 +7,7 @@
 #include <string.h>
 #include <rob_system.h>
 #include <messaging_server.h>
+#include <task_handler_types.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
 #include <state_machine_client.h>
@@ -31,7 +32,6 @@ extern Char *pgStateMachineMessageNames[];
  */
 
 RoboOneContext *pgRoboOneContext = PNULL;
-
 
 /*
  * STATIC FUNCTIONS
@@ -115,12 +115,12 @@ static UInt16 actionStateMachineServerGetContext (StateMachineServerGetContextCn
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
     ASSERT_PARAM (pgRoboOneContext != PNULL, (unsigned long) pgRoboOneContext);
     
-    pSendMsgBody->roboOneContextContainer.isValid = false;
+    pSendMsgBody->contextContainer.isValid = false;
     if (pgRoboOneContext != PNULL)
     {
-        memcpy (&(pSendMsgBody->roboOneContextContainer.roboOneContext), pgRoboOneContext, sizeof (pSendMsgBody->roboOneContextContainer.roboOneContext));
-        pSendMsgBody->roboOneContextContainer.isValid = true;
-        sendMsgBodyLength += sizeof (pSendMsgBody->roboOneContextContainer);
+        memcpy (&(pSendMsgBody->contextContainer.context), pgRoboOneContext, sizeof (pSendMsgBody->contextContainer.context));
+        pSendMsgBody->contextContainer.isValid = true;
+        sendMsgBodyLength += sizeof (pSendMsgBody->contextContainer);
     }    
     
     return sendMsgBodyLength;
@@ -196,8 +196,8 @@ static ServerReturnCode doAction (StateMachineMsgType receivedMsgType, UInt8 * p
         }
         break;
         case STATE_MACHINE_EVENT_TASKS_AVAILABLE:
-        {
-            eventTasksAvailableRoboOne (pgRoboOneContext);
+        {   
+            eventTasksAvailableRoboOne (pgRoboOneContext, (RoboOneTaskReq *) pReceivedMsgBody);
         }
         break;
         case STATE_MACHINE_EVENT_NO_TASKS_AVAILABLE:

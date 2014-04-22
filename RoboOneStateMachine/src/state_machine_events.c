@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <rob_system.h>
+#include <task_handler_types.h>
 #include <state_machine_server.h>
 #include <state_machine_events.h>
 #include <init_state.h>
@@ -39,10 +40,10 @@ void eventTimerExpiryRoboOne (RoboOneContext *pInstance)
     pInstance->state.pEventTimerExpiry (&(pInstance->state));
 }
 
-void eventTasksAvailableRoboOne (RoboOneContext *pInstance)
+void eventTasksAvailableRoboOne (RoboOneContext *pInstance, RoboOneTaskReq *pTaskReq)
 {
     ASSERT_PARAM (pInstance != PNULL, (unsigned long) pInstance);
-    pInstance->state.pEventTasksAvailable (&(pInstance->state));
+    pInstance->state.pEventTasksAvailable (&(pInstance->state), pTaskReq);
 }
 
 void eventNoTasksAvailableRoboOne (RoboOneContext *pInstance)

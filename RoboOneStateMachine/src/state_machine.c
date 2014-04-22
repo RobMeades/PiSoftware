@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <rob_system.h>
+#include <task_handler_types.h>
 #include <state_machine_server.h>
 #include <init_state.h>
 
@@ -36,7 +37,7 @@ static void defaultEventTimerExpiry (RoboOneState *pState)
     printDebug ("Unsupported TimerExpiry event in state %s.\n", &(pState->name[0]));        
 }
 
-static void defaultEventTasksAvailable (RoboOneState *pState)
+static void defaultEventTasksAvailable (RoboOneState *pState, RoboOneTaskReq *pTaskReq)
 {
     printDebug ("Unsupported TasksAvailable event in state %s.\n", &(pState->name[0]));    
 }

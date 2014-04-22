@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>RoboOne</name>
+	<name>RoboOneTaskHandler</name>
 	<comment></comment>
 	<projects>
 		<project>MessagingClient</project>
+		<project>MessagingServer</project>
 		<project>RoboOneHardware</project>
-		<project>RoboOneStateMachine</project>
-		<project>RoboOneTaskHandler</project>
 		<project>shared</project>
 	</projects>
 	<buildSpec>
@@ -44,7 +43,7 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildLocation</key>
-					<value>${workspace_loc:/RoboOne}</value>
+					<value>${workspace_loc:/RoboOneTaskHandler}</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.useDefaultBuildCmd</key>
@@ -87,12 +86,12 @@
 		<link>
 			<name>obj</name>
 			<type>2</type>
-			<location>C:/Users/Rob Meades/workspace/RoboOne/obj</location>
+			<location>C:/Users/Rob Meades/workspace/RoboOneTaskHandler/obj</location>
 		</link>
 		<link>
 			<name>src</name>
 			<type>2</type>
-			<location>C:/Users/Rob Meades/workspace/RoboOne/src</location>
+			<location>C:/Users/Rob Meades/workspace/RoboOneTaskHandler/src</location>
 		</link>
 	</linkedResources>
 </projectDescription>

@@ -11,10 +11,6 @@
 
 #define STATE_NAME_STRING_LENGTH 25
 
-/*
- * TYPES
- */
-
 #pragma pack(push, 1) /* Force GCC to pack everything from here on as tightly as possible */
 
 /*
@@ -27,7 +23,7 @@ typedef struct RoboOneStateTag
     void (*pEventInit) (struct RoboOneStateTag *pState);
     void (*pEventInitFailure) (struct RoboOneStateTag *pState);
     void (*pEventTimerExpiry) (struct RoboOneStateTag *pState);
-    void (*pEventTasksAvailable) (struct RoboOneStateTag *pState);
+    void (*pEventTasksAvailable) (struct RoboOneStateTag *pState, RoboOneTaskReq *pTaskReq);
     void (*pEventNoTasksAvailable) (struct RoboOneStateTag *pState);
     void (*pEventMainsPowerAvailable) (struct RoboOneStateTag *pState);
     void (*pEventInsufficientPower) (struct RoboOneStateTag *pState);
@@ -47,7 +43,7 @@ typedef struct RoboOneContextTag
 typedef struct RoboOneContextContainerTag
 {
     Bool isValid;
-    RoboOneContext roboOneContext;
+    RoboOneContext context;
 } RoboOneContextContainer;
 
 /*

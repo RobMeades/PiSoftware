@@ -5,4 +5,4 @@
 /*
  * FUNCTION PROTOTYPES
  */
-void transitionToMobile (RoboOneState * pState);
+void transitionToMobile (RoboOneState * pState, RoboOneTaskReq *pTaskReq);

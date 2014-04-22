@@ -17,7 +17,7 @@
 void eventInitRoboOne (RoboOneContext *pInstance);
 void eventInitFailureRoboOne (RoboOneContext *pInstance);
 void eventTimerExpiryRoboOne (RoboOneContext *pInstance);
-void eventTasksAvailableRoboOne (RoboOneContext *pInstance);
+void eventTasksAvailableRoboOne (RoboOneContext *pInstance, RoboOneTaskReq *pTaskReq);
 void eventNoTasksAvailableRoboOne (RoboOneContext *pInstance);
 void eventMainsPowerAvailableRoboOne (RoboOneContext *pInstance);
 void eventInsufficientPowerRoboOne (RoboOneContext *pInstance);

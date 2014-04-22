@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <rob_system.h>
+#include <task_handler_types.h>
+#include <task_handler_server.h>
+#include <task_handler_msg_auto.h>
+#include <task_handler_client.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
 #include <state_machine_client.h>
@@ -26,16 +30,30 @@
 /*
  * STATIC FUNCTIONS: EVENT HANDLERS
  */
-static void eventTasksAvailable (RoboOneState *pState)
+
+/*
+ * Handle the arrival of a task.
+ * 
+ * pState    pointer to the state structure.
+ * pTaskReq  pointer to the new task.
+ */
+static void eventTasksAvailable (RoboOneState *pState, RoboOneTaskReq *pTaskReq)
 {
-    printDebug ("Uncoded Tasks Available event in state %s.\n", &(pState->name[0]));
+    Bool success;
+    
+    ASSERT_PARAM (pState != PNULL, (unsigned long) pState);
+    ASSERT_PARAM (pTaskReq != PNULL, (unsigned long) pTaskReq);
+
+    /* Forward the task to the task handler */
+    success = taskHandlerServerSendReceive (TASK_HANDLER_TASK, pTaskReq, sizeof (*pTaskReq));
+    
+    ASSERT_STRING (success, "Task handler failed to accept command");
 }
 
 /*
  * PUBLIC FUNCTIONS
  */
-
-void transitionToMobile (RoboOneState *pState)
+void transitionToMobile (RoboOneState *pState, RoboOneTaskReq *pTaskReq)
 {
     Bool success = false;
     
@@ -65,6 +83,12 @@ void transitionToMobile (RoboOneState *pState)
         {
             /* Switch on Hindbrain */
             success = actionSwitchOnHindbrain ();
+            
+            if (success)
+            {
+                /* Now handle the event */
+                eventTasksAvailable (pState, pTaskReq);
+            }
         }
     }
     

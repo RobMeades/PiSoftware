@@ -13,6 +13,10 @@
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>
+#include <task_handler_types.h>
+#include <task_handler_server.h>
+#include <task_handler_msg_auto.h>
+#include <task_handler_client.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
 #include <state_machine_client.h>
@@ -687,13 +691,13 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
     if (pReceivedMsgBody != PNULL)
     {
         /* Display the state */
-        pReceivedMsgBody->roboOneContextContainer.isValid = false;
+        pReceivedMsgBody->contextContainer.isValid = false;
         success = stateMachineServerSendReceive (STATE_MACHINE_SERVER_GET_CONTEXT, PNULL, 0, &receivedMsgType, (void *) pReceivedMsgBody);
         if (success)
         {
-            if ((receivedMsgType == STATE_MACHINE_SERVER_GET_CONTEXT) && pReceivedMsgBody->roboOneContextContainer.isValid)
+            if ((receivedMsgType == STATE_MACHINE_SERVER_GET_CONTEXT) && pReceivedMsgBody->contextContainer.isValid)
             {
-                wprintw (pWin, "%s", &(pReceivedMsgBody->roboOneContextContainer.roboOneContext.state.name[0]));
+                wprintw (pWin, "%s", &(pReceivedMsgBody->contextContainer.context.state.name[0]));
             }
             else
             {
@@ -810,6 +814,10 @@ Bool runMonitor (void)
                 {
                     exitDashboard = gWindowList[x].pWinUpdate (gWindowList[x].pWin, i);
                 }
+                
+                /* Tick the Task Handler server after each window update */
+                /* TODO: do this with a timer in the Mobile State code instead */
+                taskHandlerServerSendReceive (TASK_HANDLER_TICK, PNULL, 0);
             }
             doupdate();
         }        

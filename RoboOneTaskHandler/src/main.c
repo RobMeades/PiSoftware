@@ -1,6 +1,6 @@
 /*
  * main.c
- * Entry point for the RoboOne State Machine.
+ * Entry point for the RoboOne Task Handler.
  */
 
 #include <stdio.h>
@@ -13,9 +13,9 @@
 #include <rob_system.h>
 #include <messaging_server.h>
 #include <task_handler_types.h>
-#include <state_machine_server.h>
-#include <state_machine_msg_auto.h>
-#include <state_machine_client.h>
+#include <task_handler_server.h>
+#include <task_handler_msg_auto.h>
+#include <task_handler_client.h>
 
 /*
  * STATIC FUNCTIONS
@@ -32,30 +32,30 @@
 int main (int argc, char **argv)
 {
     ServerReturnCode returnCode = SERVER_ERR_GENERAL_FAILURE;
-    UInt16 stateMachineServerPort;
+    UInt16 taskHandlerServerPort;
 
-    setDebugPrintsOnToFile ("roboonestatemachine.log");
+    setDebugPrintsOnToFile ("roboonetaskhandler.log");
     setProgressPrintsOn();
 
     if (argc == 2)
     {
-        stateMachineServerPort = atoi (argv[1]);
-        printProgress ("State machine server listening on port %d.\n", stateMachineServerPort);
+        taskHandlerServerPort = atoi (argv[1]);
+        printProgress ("Task handler server listening on port %d.\n", taskHandlerServerPort);
 
-        returnCode = runMessagingServer (stateMachineServerPort);
+        returnCode = runMessagingServer (taskHandlerServerPort);
             
         if (returnCode == SERVER_EXIT_NORMALLY)
         {
-            printProgress ("State machine server exiting normally.\n");            
+            printProgress ("Task handler server exiting normally.\n");            
         }
         else
         {
-            printProgress ("State machine server exiting with returnCode %d.\n", returnCode);                        
+            printProgress ("Task handler server exiting with returnCode %d.\n", returnCode);                        
         }            
     }    
     else
     {
-        printProgress ("Usage: %s portnumber\ne.g. %s 5232\n", argv[0], argv[0]);
+        printProgress ("Usage: %s portnumber\ne.g. %s 5233\n", argv[0], argv[0]);
     }
     
     setDebugPrintsOff();

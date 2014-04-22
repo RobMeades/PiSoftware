@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <rob_system.h>
+#include <task_handler_types.h>
 #include <state_machine_server.h>
 #include <actions.h>
 #include <docked_state.h>
