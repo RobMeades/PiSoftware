@@ -74,7 +74,8 @@ static Bool setO3BatteryChargerOn (void);
 static Bool setO3BatteryChargerOff (void);
 static Bool enableAllRelays (void);
 static Bool disableAllRelays (void);
-static Bool sendOString(WINDOW *pWin);
+static Bool sendOString (WINDOW *pWin);
+static Bool sendOTask (WINDOW *pWin);
 
 /*
  * TYPES
@@ -127,6 +128,7 @@ Command gCommandList[] = {{"?", {&commandHelp}, true, "display command help"},
  						  {"HM+", {&setOPwr12VOn}, false, "switch hindbrain (AKA Orangutan) mains power on"},
  						  {"HM-", {&setOPwr12VOff}, false, "switch hindbrain (AKA Orangutan) mains power off"},
                           {"HS", {&sendOString}, true, "send hindbrain (AKA Orangutan) a string"},
+                          {"HT", {&sendOTask}, true, "send hindbrain (AKA Orangutan) a task"},
  						  {"CX+", {&setAllBatteryChargersOn}, false, "switch all chargers on"},
  						  {"CX-", {&setAllBatteryChargersOff}, false, "switch all chargers off"},
  						  {"CP+", {&setRioBatteryChargerOn}, false, "switch RIO/Pi charger on"},
@@ -848,8 +850,8 @@ static Bool disableAllRelays (void)
 /*
  * Send a string to the Orangutan.
  *
- * pWin     a window to send output to, may
- *          be PNULL.
+ * pWin     a window to send output to,
+ *          may be PNULL.
  *
  * @return  true if successful, otherwise false.
  */
@@ -873,7 +875,7 @@ static Bool sendOString (WINDOW *pWin)
             {
                 removeCtrlCharacters (&(pInputString->string[0]), &(displayBuffer[0]));
                 
-                /* Send the and look for a response */
+                /* Send the string and look for a response */
                 success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, sizeof (*pInputString), pResponseString);
                 if (success)
                 {
@@ -900,6 +902,51 @@ static Bool sendOString (WINDOW *pWin)
      
     return success;
 }
+
+/*
+ * Send a task to the Orangutan.  This is
+ * pretty much the same as sending a string
+ * but goes via the state machine so that we
+ * shift into mobile state to do it.
+ *
+ * pWin     a window to send output to,
+ *          may be PNULL.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool sendOTask (WINDOW *pWin)
+{
+    Bool success = false;
+    RoboOneTaskReq *pTaskReq;
+    Char displayBuffer[MAX_O_STRING_LENGTH];
+
+    pTaskReq = malloc (sizeof (*pTaskReq));
+    if (pTaskReq != PNULL)
+    {
+        pTaskReq->headerPresent = false;
+        pTaskReq->body.protocol = TASK_PROTOCOL_HINDRAIN_DIRECT;
+
+        if (getStringInput (pWin, "String: ", &(pTaskReq->body.detail.hindbrainDirectReq.string[0]), sizeof (pTaskReq->body.detail.hindbrainDirectReq.string)) != PNULL)
+        {
+            removeCtrlCharacters (&(pTaskReq->body.detail.hindbrainDirectReq.string[0]), &(displayBuffer[0]));
+            
+            /* Send the task via the state machine */
+            success = stateMachineServerSendReceive (STATE_MACHINE_EVENT_TASKS_AVAILABLE, pTaskReq, sizeof (*pTaskReq), PNULL, PNULL);
+            if (success)
+            {
+                printHelper (pWin, "\nSent task '%s' successfully.\n", &(displayBuffer[0]));                
+            }
+            else
+            {
+                printHelper (pWin, "\nSend failed.\n");
+            }
+        }
+        free (pTaskReq);
+    }
+     
+    return success;
+}
+
 /*
  * Swap the battery connected to the RIO/Pi/5v.
  * This involves zeroing the accumulators, setting

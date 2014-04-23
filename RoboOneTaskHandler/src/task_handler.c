@@ -10,6 +10,7 @@
 /*
  * MANIFEST CONSTANTS
  */
+#define MAX_GUARD_COUNTER 150
 
 /*
  * TYPES
@@ -41,18 +42,25 @@ static TaskItem gTaskListRoot;
  */
 static void addTaskToList (TaskItem *pTaskItem)
 {
+    UInt16 guardCounter = 0;
     TaskItem *pT = &gTaskListRoot;
     
     ASSERT_PARAM (pT->pPreviousTask == PNULL, (unsigned long) pT->pPreviousTask);
     ASSERT_PARAM (pTaskItem->pPreviousTask == PNULL, (unsigned long) pTaskItem->pPreviousTask);
     ASSERT_PARAM (pTaskItem->pNextTask == PNULL, (unsigned long) pTaskItem->pNextTask);
 
+    printDebug ("Adding a task to the list.\n");
     /* Find the item at the end of the list */
-    while (pT->pNextTask != PNULL)
+    while ((pT->pNextTask != PNULL) && (guardCounter < MAX_GUARD_COUNTER))
     {
+        printDebug ("pT->pNextTask != PNULL.\n");
         pT = pT->pNextTask;
+        guardCounter++;
     }
     
+    ASSERT_PARAM (guardCounter < MAX_GUARD_COUNTER, guardCounter);
+    
+    printDebug ("Adding the task onto the end of the list.\n");
     /* Tag the new one on the end */
     pTaskItem->pPreviousTask = pT;
     pT->pNextTask = pTaskItem;
@@ -63,26 +71,42 @@ static void addTaskToList (TaskItem *pTaskItem)
  */
 static void removeUnusedTasksFromList (void)
 {
+    UInt16 guardCounter = 0;
     TaskItem *pThis = &gTaskListRoot;
     TaskItem *pPrevious = &gTaskListRoot;
     
     ASSERT_PARAM (pThis->pPreviousTask == PNULL, (unsigned long) pThis->pPreviousTask);
 
+    printDebug ("Removing unused tasks from list.\n");
+    
     /* Look for items where the task no longer exists
      * and remove them from the list, obviously avoiding
      * doing this to the root of the list */
-    pThis = pPrevious->pNextTask;
-    while (pThis != PNULL)
+    pThis = pThis->pNextTask;
+    while ((pThis != PNULL) && (guardCounter < MAX_GUARD_COUNTER))
     {
+        printDebug ("pThis != PNULL.\n");
         if (!pThis->taskPresent)
         {
+            printDebug ("pThis->taskPresent = false.\n");
             pThis->pNextTask->pPreviousTask = pThis->pPreviousTask;
             pPrevious->pNextTask = pThis->pNextTask;
+            printDebug ("Freeing it.\n");
             free (pThis);
+            printDebug ("Moving pointer on.\n");
+            pThis = pPrevious->pNextTask;
         }
-        pThis = pPrevious->pNextTask;
-        pPrevious = pThis->pPreviousTask;
+        else
+        {
+            printDebug ("pThis->taskPresent = true, just moving pointers on.\n");
+            pThis = pThis->pNextTask;
+            pPrevious = pThis;
+        }
+        
+        guardCounter++;
     }
+    
+    ASSERT_PARAM (guardCounter < MAX_GUARD_COUNTER, guardCounter);
 }
 
 /*
@@ -93,16 +117,25 @@ static void removeUnusedTasksFromList (void)
  */
 static UInt16 walkTaskList (void)
 {
+    UInt16 guardCounter = 0;
     TaskItem *pT = &gTaskListRoot;
     UInt16 count = 0;
     
     ASSERT_PARAM (pT->pPreviousTask == PNULL, (unsigned long) pT->pPreviousTask);
 
-    while (pT->pNextTask != PNULL)
+    printDebug ("Walking task list.\n");
+    while ((pT->pNextTask != PNULL) && (guardCounter < MAX_GUARD_COUNTER))
     {
+        printDebug ("pT->pNextTask != PNULL.\n");
         pT = pT->pNextTask;
         count++;
+        printDebug ("Count %d.\n", count);
+        guardCounter++;
     }
+    
+    ASSERT_PARAM (guardCounter < MAX_GUARD_COUNTER, guardCounter);
+
+    printDebug ("Final count %d.\n", count);
     
     return count;
 }
@@ -126,22 +159,32 @@ void initTaskHandler (void)
  */
 void clearTaskList (void)
 {
+    UInt16 guardCounter = 0;
     TaskItem *pThis = &gTaskListRoot;
-    TaskItem *pPrevious = &gTaskListRoot;
+    TaskItem *pRoot = &gTaskListRoot;
     
     ASSERT_PARAM (pThis->pPreviousTask == PNULL, (unsigned long) pThis->pPreviousTask);
 
+    printDebug ("Clearing task list.\n");
     /* Free up everything except the root entry
      * TODO: tell interested parties about this */
-    pThis = pPrevious->pNextTask;
-    while (pThis != PNULL)
+    pThis = pThis->pNextTask;
+    while ((pThis != PNULL) && (guardCounter < MAX_GUARD_COUNTER))
     {
-        pThis->pNextTask->pPreviousTask = pThis->pPreviousTask;
-        pPrevious->pNextTask = pThis->pNextTask;
+        printDebug ("pThis != PNULL.\n");
+        if (pThis->pNextTask != PNULL)
+        {
+            pThis->pNextTask->pPreviousTask = pThis->pPreviousTask;
+        }
+        pRoot->pNextTask = pThis->pNextTask;
+        printDebug ("Freeing it.\n");
         free (pThis);
-        pThis = pPrevious->pNextTask;
-        pPrevious = pThis->pPreviousTask;
+        printDebug ("Move pointer on.\n");
+        pThis = pRoot->pNextTask;
+        guardCounter++;
     }
+    
+    ASSERT_PARAM (guardCounter < MAX_GUARD_COUNTER, guardCounter);    
 }
 
 /*
@@ -158,6 +201,7 @@ Bool handleTaskReq (RoboOneTaskReq *pTaskReq)
     
     ASSERT_PARAM (pTaskReq != PNULL, (unsigned long) pTaskReq);
 
+    printDebug ("Handling a new task.\n");
     pTaskItem = malloc (sizeof (*pTaskItem));
     if (pTaskItem != PNULL)
     {
@@ -180,4 +224,5 @@ void tickTaskHandler (void)
 {
     removeUnusedTasksFromList();
     printDebug ("Task Handler: received tick message, %d tasks in the list.\n", walkTaskList());
+    printDebug ("Task Handler: received tick message.\n");
 }

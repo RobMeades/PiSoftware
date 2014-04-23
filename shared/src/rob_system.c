@@ -24,13 +24,39 @@ static Bool gSuspendDebug = false;
  */
 Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 param1)
 {
+    Char * pFormat = PNULL;
+    
     if (pText)
     {
-	    printf ("\n!!! ASSERT: %s#%u:%s %lu!!!\n", pPlace, (int) line, pText, param1);
+        pFormat = "\n!!! ASSERT: %s#%u:%s %lu!!!\n";
+	    printf (pFormat, pPlace, (int) line, pText, param1);
     }
     else
     {
-	    printf ("\n!!! ASSERT: %s#%u: %lu!!!\n", pPlace, (int) line, param1);
+        pFormat = "\n!!! ASSERT: %s#%u: %lu!!!\n";
+	    printf (pFormat, pPlace, (int) line, param1);
+    }
+    
+    /* If debug is printing to file, put the assert there also */
+    if (gDebugPrintsAreOn && (pgDebugPrintsStream != PNULL))
+    {
+        /* But remove any initial line feeds for neatness */
+        if (*pFormat == '\n')
+        {
+            pFormat++;
+        }
+        fprintf (pgDebugPrintsStream, "%.10lu: ", getSystemTicks());
+        
+        if (pText)
+        {
+            fprintf (pgDebugPrintsStream, pFormat, pPlace, (int) line, pText, param1);
+        }
+        else
+        {
+            fprintf (pgDebugPrintsStream, pFormat, pPlace, (int) line, param1);
+        }
+        fflush (pgDebugPrintsStream);
+        fclose (pgDebugPrintsStream);
     }
 
     fflush (stdout);

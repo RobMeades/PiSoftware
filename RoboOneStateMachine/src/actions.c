@@ -230,41 +230,15 @@ Bool actionSwitchPiRioToBatteryPower (void)
 Bool actionSwitchHindbrainTo12VMainsPower (void)
 {
     Bool success = false;
-    OInputString *pInputString;
-    OResponseString *pResponseString;
 
-    pInputString = malloc (sizeof (*pInputString));
-    if (pInputString != PNULL)
+    /* Switch 12V/mains power on to the Hindbrain */
+    printDebug ("ACTION: switching on 12V/mains power to Hindbrain.\n");
+    success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_12V_ON, PNULL, 0, PNULL);
+    if (success)
     {
-        memcpy (&(pInputString->string[0]), PING_STRING, strlen (PING_STRING) + 1); /* +1 to copy the terminator */
-        pInputString->waitForResponse = true;
-        
-        pResponseString = malloc (sizeof (*pResponseString));
-        if (pResponseString != PNULL)
-        {
-            pResponseString->stringLength = sizeof (pResponseString->string);
-            /* Switch 12V/mains power on to the Hindbrain */
-            printDebug ("ACTION: switching on 12V/mains power to Hindbrain.\n");
-            success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_12V_ON, PNULL, 0, PNULL);
-            if (success)
-            {
-                /* Switch battery power off to the Hindbrain */
-                printDebug ("ACTION: switching off battery power to Hindbrain.\n");
-                success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_BATT_OFF, PNULL, 0, PNULL);    
-                if (success)
-                {
-                    /* Send the ping string and check for an OK response */
-                    printDebug ("ACTION: Pinging Hindbrain.\n");
-                    success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, strlen (&(pInputString->string[0])) + 1, pResponseString);
-                    if (success && !O_CHECK_OK_STRING (pResponseString))
-                    {
-                        success = false;
-                    }
-                }
-            }
-            free (pResponseString);
-        }
-        free (pInputString);
+        /* Switch battery power off to the Hindbrain */
+        printDebug ("ACTION: switching off battery power to Hindbrain.\n");
+        success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_BATT_OFF, PNULL, 0, PNULL);    
     }
     
     return success;
@@ -279,41 +253,15 @@ Bool actionSwitchHindbrainTo12VMainsPower (void)
 Bool actionSwitchHindbrainToBatteryPower (void)
 {
     Bool success = false;
-    OInputString *pInputString;
-    OResponseString *pResponseString;
 
-    pInputString = malloc (sizeof (*pInputString));
-    if (pInputString != PNULL)
+    /* Switch battery power on to the Hindbrain */
+    printDebug ("ACTION: switching on battery power to Hindbrain.\n");
+    success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_BATT_ON, PNULL, 0, PNULL);
+    if (success)
     {
-        memcpy (&(pInputString->string[0]), PING_STRING, strlen (PING_STRING) + 1); /* +1 to copy the terminator */
-        pInputString->waitForResponse = true;
-        
-        pResponseString = malloc (sizeof (*pResponseString));
-        if (pResponseString != PNULL)
-        {
-            pResponseString->stringLength = sizeof (pResponseString->string);
-            /* Switch battery power on to the Hindbrain */
-            printDebug ("ACTION: switching on battery power to Hindbrain.\n");
-            success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_BATT_ON, PNULL, 0, PNULL);
-            if (success)
-            {
-                /* Switch 12V/mains power off to the Hindbrain */
-                printDebug ("ACTION: switching off 12V/mains power to Hindbrain.\n");
-                success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_12V_OFF, PNULL, 0, PNULL);    
-                if (success)
-                {
-                    /* Send the ping string and check for an OK response */
-                    printDebug ("ACTION: Pinging Hindbrain.\n");
-                    success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, strlen (&(pInputString->string[0])) + 1, pResponseString);
-                    if (success && !O_CHECK_OK_STRING (pResponseString))
-                    {
-                        success = false;
-                    }
-                }
-            }
-            free (pResponseString);
-        }
-        free (pInputString);
+        /* Switch 12V/mains power off to the Hindbrain */
+        printDebug ("ACTION: switching off 12V/mains power to Hindbrain.\n");
+        success = hardwareServerSendReceive (HARDWARE_SET_O_PWR_12V_OFF, PNULL, 0, PNULL);    
     }
     
     return success;

@@ -47,7 +47,11 @@ static void eventTasksAvailable (RoboOneState *pState, RoboOneTaskReq *pTaskReq)
     /* Forward the task to the task handler */
     success = taskHandlerServerSendReceive (TASK_HANDLER_TASK, pTaskReq, sizeof (*pTaskReq));
     
-    ASSERT_STRING (success, "Task handler failed to accept command");
+    /* TODO: something more sensible than this */
+    if (!success)
+    {
+        printDebug ("!!!Task handler failed to accept command!!!.\n");
+    }
 }
 
 /*
