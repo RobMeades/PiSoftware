@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <termios.h>
 #include <unistd.h>
 #include <rob_system.h>
@@ -177,44 +176,6 @@ static void printHelper (WINDOW *pWin, const Char * pFormat, ...)
         vprintf (pFormat, args);
         va_end (args);
     }
-}
-
-/*
- * Remove control characters from a null
- * terminated string.
- * 
- * pInput   the null terminated input string.
- * pOutput  pointer to somewhere to store the
- *          filtered string, needs to be
- *          at least as large as pInput. The
- *          null terminator is copied.
- * 
- * @return  none.
- */
-static void removeCtrlCharacters (const Char *pInput, Char *pOutput)
-{
-    UInt32 i;
-    UInt32 inputLength;
-    Char *pDest;
-    const Char *pSrc;
-    
-    ASSERT_PARAM (pInput != PNULL, (unsigned long) pInput);
-    ASSERT_PARAM (pOutput != PNULL, (unsigned long) pOutput);
-    
-    inputLength = strlen (pInput);
-    
-    pSrc = pInput;
-    pDest = pOutput;
-    for (i = 0; i < inputLength; i++)
-    {
-        if (isprint (*pSrc))
-        {
-            *pDest = *pSrc;
-            pDest++;
-        }
-        pSrc++;
-    }
-    *pDest = 0; /* Add the null terminator */
 }
 
 /*
@@ -858,25 +819,25 @@ static Bool disableAllRelays (void)
 static Bool sendOString (WINDOW *pWin)
 {
     Bool success = false;
-    OInputString *pInputString;
+    OInputContainer *pInputContainer;
     OResponseString *pResponseString;
     Char displayBuffer[MAX_O_STRING_LENGTH];
      
-    pInputString = malloc (sizeof (*pInputString));
-    if (pInputString != PNULL)
+    pInputContainer = malloc (sizeof (*pInputContainer));
+    if (pInputContainer != PNULL)
     {
-        pInputString->waitForResponse = true;
+        pInputContainer->waitForResponse = true;
         
         pResponseString = malloc (sizeof (*pResponseString));
         if (pResponseString != PNULL)
         {
             pResponseString->stringLength = sizeof (pResponseString->string);
-            if (getStringInput (pWin, "String: ", &(pInputString->string[0]), sizeof (pInputString->string)) != PNULL)
+            if (getStringInput (pWin, "String: ", &(pInputContainer->string[0]), sizeof (pInputContainer->string)) != PNULL)
             {
-                removeCtrlCharacters (&(pInputString->string[0]), &(displayBuffer[0]));
+                removeCtrlCharacters (&(pInputContainer->string[0]), &(displayBuffer[0]));
                 
                 /* Send the string and look for a response */
-                success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, sizeof (*pInputString), pResponseString);
+                success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputContainer, sizeof (*pInputContainer), pResponseString);
                 if (success)
                 {
                     printHelper (pWin, "\nSent '%s' successfully", &(displayBuffer[0]));
@@ -897,7 +858,7 @@ static Bool sendOString (WINDOW *pWin)
             }
             free (pResponseString);
         }
-        free (pInputString);
+        free (pInputContainer);
     }
      
     return success;
@@ -926,7 +887,7 @@ static Bool sendOTask (WINDOW *pWin)
         pTaskReq->headerPresent = false;
         pTaskReq->body.protocol = TASK_PROTOCOL_HINDRAIN_DIRECT;
 
-        if (getStringInput (pWin, "String: ", &(pTaskReq->body.detail.hindbrainDirectReq.string[0]), sizeof (pTaskReq->body.detail.hindbrainDirectReq.string)) != PNULL)
+        if (getStringInput (pWin, "Task string: ", &(pTaskReq->body.detail.hindbrainDirectReq.string[0]), sizeof (pTaskReq->body.detail.hindbrainDirectReq.string)) != PNULL)
         {
             removeCtrlCharacters (&(pTaskReq->body.detail.hindbrainDirectReq.string[0]), &(displayBuffer[0]));
             
@@ -934,7 +895,7 @@ static Bool sendOTask (WINDOW *pWin)
             success = stateMachineServerSendReceive (STATE_MACHINE_EVENT_TASKS_AVAILABLE, pTaskReq, sizeof (*pTaskReq), PNULL, PNULL);
             if (success)
             {
-                printHelper (pWin, "\nSent task '%s' successfully.\n", &(displayBuffer[0]));                
+                printHelper (pWin, "\nSent task '%s'.\n", &(displayBuffer[0]));                
             }
             else
             {

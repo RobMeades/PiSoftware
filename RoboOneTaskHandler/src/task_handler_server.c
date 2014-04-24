@@ -82,7 +82,7 @@ static ServerReturnCode doAction (TaskHandlerMsgType receivedMsgType, UInt8 * pR
         /*
          * Messages to do with tasks
          */
-        case TASK_HANDLER_TASK:
+        case TASK_HANDLER_NEW_TASK:
         {
             success = handleTaskReq ((RoboOneTaskReq *) pReceivedMsgBody);
         }
@@ -134,6 +134,7 @@ ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
     ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_TASK_HANDLER_MSGS, pReceivedMsg->msgType);
     
     printDebug ("TH Server received message %s, length %d.\n", pgTaskHandlerMessageNames[pReceivedMsg->msgType], pReceivedMsg->msgLength);
+    printHexDump (pReceivedMsg, pReceivedMsg->msgLength + 1);
     /* Do the thang */
     returnCode = doAction ((TaskHandlerMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
     if (pSendMsg->msgLength > 0)

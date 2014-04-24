@@ -102,7 +102,7 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
             pSendMsg->msgLength += sendMsgBodyLength;
             
             printDebug ("SM Client: sending message %s, length %d, hex dump:\n",  pgStateMachineMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
-            printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
+            printHexDump (pSendMsg, pSendMsg->msgLength + 1);
             returnCode = runMessagingClient ((SInt32) atoi (STATE_MACHINE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
                     
             printDebug ("SM Client: message system returnCode: %d\n", returnCode);
@@ -126,7 +126,7 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
                         {
                             /* Copy out the body */
                             memcpy (pReceivedMsgBody, &(pReceivedMsg->msgBody[0]), receivedMsgBodyLength);
-                            printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);        
+                            printHexDump (pReceivedMsg, pReceivedMsg->msgLength + 1);        
                         }
                     }
                     /* Free the space for the received message */

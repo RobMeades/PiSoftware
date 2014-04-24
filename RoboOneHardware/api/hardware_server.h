@@ -89,6 +89,6 @@ typedef struct OInputStringTag
 {
     Bool   waitForResponse;
     Char   string[MAX_O_STRING_LENGTH]; /* Must have a null terminator */
-} OInputString;
+} OInputContainer;
 
 #pragma pack(pop) /* End of packing */ 

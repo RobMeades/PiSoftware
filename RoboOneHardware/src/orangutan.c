@@ -88,6 +88,12 @@ Bool sendStringToOrangutan (Char *pSendString, Char *pReceiveString, UInt32 *pRe
         {
             SInt32 bytesToSend = strlen (pSendString);
             
+            /* Stop overruns */
+            if (bytesToSend > ORANGUTAN_BUFFER_SIZE)
+            {
+                bytesToSend = ORANGUTAN_BUFFER_SIZE;
+            }
+            
             /* Write the string, excluding the terminator */
             if (write (fd, pSendString, bytesToSend) == bytesToSend)
             {

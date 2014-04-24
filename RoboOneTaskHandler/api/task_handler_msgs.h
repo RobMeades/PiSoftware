@@ -23,5 +23,5 @@
  */
 TASK_HANDLER_MSG_DEF (TASK_HANDLER_SERVER_START, TaskHandlerServerStart, taskHandlerServerStart, TASK_HANDLER_EMPTY, TASK_HANDLER_EMPTY)
 TASK_HANDLER_MSG_DEF (TASK_HANDLER_SERVER_STOP, TaskHandlerServerStop, taskHandlerServerStop, TASK_HANDLER_EMPTY, TASK_HANDLER_EMPTY)
-TASK_HANDLER_MSG_DEF (TASK_HANDLER_TASK, TaskHandlerTask, taskHandlerTask, RoboOneTaskReq taskReq, RoboOneTaskInd taskInd)
+TASK_HANDLER_MSG_DEF (TASK_HANDLER_NEW_TASK, TaskHandlerTask, taskHandlerTask, RoboOneTaskReq taskReq, RoboOneTaskInd taskInd)
 TASK_HANDLER_MSG_DEF (TASK_HANDLER_TICK, TaskHandlerTick, taskHandlerTick, TASK_HANDLER_EMPTY, TASK_HANDLER_EMPTY)

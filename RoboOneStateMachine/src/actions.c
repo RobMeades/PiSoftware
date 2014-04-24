@@ -93,15 +93,15 @@ Bool actionIsMains12VAvailable (void)
 Bool actionSwitchOnHindbrain (void)
 {
     Bool success = false;
-    OInputString *pInputString;
+    OInputContainer *pInputContainer;
     OResponseString *pResponseString;
     UInt8 i;
     
-    pInputString = malloc (sizeof (*pInputString));
-    if (pInputString != PNULL)
+    pInputContainer = malloc (sizeof (*pInputContainer));
+    if (pInputContainer != PNULL)
     {
-        memcpy (&(pInputString->string[0]), PING_STRING, strlen (PING_STRING) + 1); /* +1 to copy the terminator */
-        pInputString->waitForResponse = true;
+        memcpy (&(pInputContainer->string[0]), PING_STRING, strlen (PING_STRING) + 1); /* +1 to copy the terminator */
+        pInputContainer->waitForResponse = true;
         
         pResponseString = malloc (sizeof (*pResponseString));
         if (pResponseString != PNULL)
@@ -118,7 +118,7 @@ Bool actionSwitchOnHindbrain (void)
                     usleep (O_START_DELAY_US);
                     printDebug ("ACTION: Pinging Hindbrain.\n");
                     /* Send the ping string and check for an OK response */
-                    success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, strlen (&(pInputString->string[0])) + 1, pResponseString);
+                    success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputContainer, sizeof (*pInputContainer), pResponseString);
                     if (success)
                     {
                        if (O_CHECK_OK_STRING (pResponseString))
@@ -134,7 +134,7 @@ Bool actionSwitchOnHindbrain (void)
             }
             free (pResponseString);
         }
-        free (pInputString);
+        free (pInputContainer);
     }
     
     return success;
@@ -149,14 +149,14 @@ Bool actionSwitchOffHindbrain (void)
 {
     Bool success = false;
     Bool hindbrainOn = true;
-    OInputString *pInputString;
+    OInputContainer *pInputContainer;
     UInt8 i;
     
-    pInputString = malloc (sizeof (*pInputString));
-    if (pInputString != PNULL)
+    pInputContainer = malloc (sizeof (*pInputContainer));
+    if (pInputContainer != PNULL)
     {
-        memcpy (&(pInputString->string[0]), PING_STRING, strlen (PING_STRING) + 1); /* +1 to copy the terminator */
-        pInputString->waitForResponse = false;
+        memcpy (&(pInputContainer->string[0]), PING_STRING, strlen (PING_STRING) + 1); /* +1 to copy the terminator */
+        pInputContainer->waitForResponse = false;
         
         /* Do this twice in case the Hindbrain is already off and the first toggle switches it on */
         for (i = 0; hindbrainOn && (i < 2); i++)
@@ -168,10 +168,10 @@ Bool actionSwitchOffHindbrain (void)
             {
                 printDebug ("ACTION: Pinging Hindbrain.\n");
                 /* Send the ping string - it should *fail* to send */
-                hindbrainOn = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputString, strlen (&(pInputString->string[0])) + 1, PNULL);
+                hindbrainOn = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputContainer, sizeof (*pInputContainer), PNULL);
             }
         }
-        free (pInputString);
+        free (pInputContainer);
     }
     
     return success;

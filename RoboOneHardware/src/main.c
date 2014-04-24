@@ -47,7 +47,7 @@ int main (int argc, char **argv)
             {
                 /* Now start up the server */
                 hardwareServerPort = atoi (argv[1]);
-                printProgress ("HardwareServer listening on port %d.\n", hardwareServerPort);
+                printProgress ("Hardware server listening on port %d.\n", hardwareServerPort);
 
                 returnCode = runMessagingServer (hardwareServerPort);                
             }

@@ -89,5 +89,5 @@ HARDWARE_MSG_DEF (HARDWARE_SWAP_O2_BATTERY, HardwareSwapO2Battery, hardwareSwapO
 HARDWARE_MSG_DEF (HARDWARE_SWAP_O3_BATTERY, HardwareSwapO3Battery, hardwareSwapO3Battery, HardwareBatterySwapData batterySwapData, HARDWARE_EMPTY)
 HARDWARE_MSG_DEF (HARDWARE_SET_ANALOGUE_MUX_INPUT, HardwareSetAnalogueMuxInput, hardwareSetAnalogueMuxInput, UInt8 input, HARDWARE_EMPTY)
 HARDWARE_MSG_DEF (HARDWARE_READ_ANALOGUE_MUX, HardwareReadAnalogueMux, hardwareReadAnalogueMux, HARDWARE_EMPTY, UInt16 voltage)
-HARDWARE_MSG_DEF (HARDWARE_SEND_O_STRING, HardwareSendOString, hardwareSendOString, OInputString string, OResponseString string)
+HARDWARE_MSG_DEF (HARDWARE_SEND_O_STRING, HardwareSendOString, hardwareSendOString, OInputContainer string, OResponseString string)
 

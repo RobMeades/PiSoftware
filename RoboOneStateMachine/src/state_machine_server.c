@@ -262,6 +262,7 @@ ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
     ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_STATE_MACHINE_MSGS, pReceivedMsg->msgType);
     
     printDebug ("SM Server received message %s, length %d.\n", pgStateMachineMessageNames[pReceivedMsg->msgType], pReceivedMsg->msgLength);
+    printHexDump (pReceivedMsg, pReceivedMsg->msgLength + 1);
     /* Do the thang */
     returnCode = doAction ((StateMachineMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
     if (pSendMsg->msgLength > 0)

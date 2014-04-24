@@ -30,6 +30,7 @@ void suspendDebug (void);
 void resumeDebug (void);
 void printProgress (const Char * pFormat, ...);
 void printDebug (const Char * pFormat, ...);
-void printHexDump (const UInt8 * pMemory, UInt16 size);
+void printHexDump (const void * pMemory, UInt16 size);
 Char * binaryString (UInt8 value, Char *pString);
+Char * removeCtrlCharacters (const Char *pInput, Char *pOutput);
 UInt32 getSystemTicks (void);

@@ -82,7 +82,7 @@ Bool hardwareServerSendReceive (HardwareMsgType msgType, void *pSendMsgBody, UIn
             pReceivedMsg->msgLength = 0;
     
             printDebug ("HW Client: sending message %s, length %d, hex dump:\n", pgHardwareMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
-            printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
+            printHexDump (pSendMsg, pSendMsg->msgLength + 1);
             returnCode = runMessagingClient ((SInt32) atoi (HARDWARE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
                     
             printDebug ("HW Client: message system returnCode: %d\n", returnCode);
@@ -93,7 +93,7 @@ Bool hardwareServerSendReceive (HardwareMsgType msgType, void *pSendMsgBody, UIn
                 /* Check the Bool 'success' at the start of the message body */
                 receivedMsgBodyLength = pReceivedMsg->msgLength - sizeof (pReceivedMsg->msgType);
                 printDebug ("HW Client: receivedMsgBodyLength: %d\n", receivedMsgBodyLength);
-                printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);
+                printHexDump (pReceivedMsg, pReceivedMsg->msgLength + 1);
                 if (receivedMsgBodyLength >= sizeof (Bool))
                 {
                     printDebug ("HW Client: success field: %d\n", (Bool) pReceivedMsg->msgBody[0]);

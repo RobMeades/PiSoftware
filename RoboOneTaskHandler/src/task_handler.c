@@ -68,12 +68,15 @@ static void addTaskToList (TaskItem *pTaskItem)
 
 /*
  * Remove unused asks from the task list.
+ * 
+ * @return  number of tasks left in the list;
  */
-static void removeUnusedTasksFromList (void)
+static UInt16 removeUnusedTasksFromList (void)
 {
     UInt16 guardCounter = 0;
     TaskItem *pThis = &gTaskListRoot;
     TaskItem *pPrevious = &gTaskListRoot;
+    UInt16 count = 0;
     
     ASSERT_PARAM (pThis->pPreviousTask == PNULL, (unsigned long) pThis->pPreviousTask);
 
@@ -89,9 +92,12 @@ static void removeUnusedTasksFromList (void)
         if (!pThis->taskPresent)
         {
             printDebug ("pThis->taskPresent = false.\n");
-            pThis->pNextTask->pPreviousTask = pThis->pPreviousTask;
+            if (pThis->pNextTask != PNULL)
+            {
+                pThis->pNextTask->pPreviousTask = pThis->pPreviousTask;
+            }
             pPrevious->pNextTask = pThis->pNextTask;
-            printDebug ("Freeing it.\n");
+            printDebug ("Freeing memory.\n");
             free (pThis);
             printDebug ("Moving pointer on.\n");
             pThis = pPrevious->pNextTask;
@@ -101,19 +107,21 @@ static void removeUnusedTasksFromList (void)
             printDebug ("pThis->taskPresent = true, just moving pointers on.\n");
             pThis = pThis->pNextTask;
             pPrevious = pThis;
+            count++;
         }
         
         guardCounter++;
     }
     
     ASSERT_PARAM (guardCounter < MAX_GUARD_COUNTER, guardCounter);
+    
+    return count;
 }
 
 /*
  * Walk the task list and print useful stuff out.
  * 
  * @return  number of tasks in the list;
- * 
  */
 static UInt16 walkTaskList (void)
 {
@@ -177,9 +185,9 @@ void clearTaskList (void)
             pThis->pNextTask->pPreviousTask = pThis->pPreviousTask;
         }
         pRoot->pNextTask = pThis->pNextTask;
-        printDebug ("Freeing it.\n");
+        printDebug ("Freeing memory.\n");
         free (pThis);
-        printDebug ("Move pointer on.\n");
+        printDebug ("Moving pointer on.\n");
         pThis = pRoot->pNextTask;
         guardCounter++;
     }
@@ -222,7 +230,44 @@ Bool handleTaskReq (RoboOneTaskReq *pTaskReq)
  */
 void tickTaskHandler (void)
 {
-    removeUnusedTasksFromList();
-    printDebug ("Task Handler: received tick message, %d tasks in the list.\n", walkTaskList());
-    printDebug ("Task Handler: received tick message.\n");
+    Bool success = false;
+    UInt16 guardCounter = 0;
+    TaskItem *pT = &gTaskListRoot;
+    UInt16 count = 0;
+    
+    ASSERT_PARAM (pT->pPreviousTask == PNULL, (unsigned long) pT->pPreviousTask);
+
+    while ((pT->pNextTask != PNULL) && (guardCounter < MAX_GUARD_COUNTER))
+    {        
+        pT = pT->pNextTask;
+        if (pT->taskPresent)
+        {
+            switch (pT->task.body.protocol)
+            {
+                case TASK_PROTOCOL_HINDRAIN_DIRECT:
+                {
+                    success = handleHindbrainDirectTaskReq (&pT->task.body.detail.hindbrainDirectReq);
+                    pT->taskPresent = false;
+                }
+                break;
+                default:
+                {
+                    ASSERT_ALWAYS_PARAM (pT->task.body.protocol);   
+                }
+                break;
+            }
+
+            /* Handle the confirmation side */
+            if (pT->task.headerPresent)
+            {
+            }
+        }
+        guardCounter++;
+    }
+    
+    ASSERT_PARAM (guardCounter < MAX_GUARD_COUNTER, guardCounter);
+
+    count = removeUnusedTasksFromList();
+
+    printDebug ("Task Handler: received tick message, %d tasks in the list.\n", count);
 }

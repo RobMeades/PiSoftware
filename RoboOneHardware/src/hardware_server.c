@@ -890,23 +890,40 @@ static UInt16 actionSendOString (Char *pInputString, Bool waitForResponse, Hardw
     UInt16 sendMsgBodyLength = 0;
     Char *pResponseString = PNULL;
     UInt32 *pResponseStringLength = PNULL;
+    Char displayBuffer[MAX_O_STRING_LENGTH];
     
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
     ASSERT_PARAM (pInputString != PNULL, (unsigned long) pInputString);
 
+    printDebug ("HW Server: received '%s', sending to Orangutan.\n", removeCtrlCharacters (pInputString, &(displayBuffer[0])));
     pResponseStringLength = &(pSendMsgBody->string.stringLength); 
     *pResponseStringLength = 0;
     
     if (waitForResponse)
     {
         pResponseString = &(pSendMsgBody->string.string[0]);
-        *pResponseStringLength = MAX_O_STRING_LENGTH;
+        *pResponseStringLength = sizeof (pSendMsgBody->string.string);
     }
     
     success = sendStringToOrangutan (pInputString, pResponseString, pResponseStringLength);
     pSendMsgBody->success = success;
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
     sendMsgBodyLength += *pResponseStringLength + sizeof (*pResponseStringLength); /* Assumes packing of 1 */
+    if (success)
+    {
+        if (pResponseString != PNULL)
+        {
+            printDebug ("HW Server: received '%s', back from Orangutan.\n", removeCtrlCharacters (pResponseString, &(displayBuffer[0])));
+        }
+        else
+        {
+            printDebug ("HW Server: send successful, not waiting for a response.\n");
+        }
+    }
+    else
+    {
+        printDebug ("HW Server: send failed.\n");        
+    }
     
     return sendMsgBodyLength;
 }
@@ -1104,6 +1121,7 @@ ServerReturnCode serverHandleMsg (Msg *pReceivedMsg, Msg *pSendMsg)
     ASSERT_PARAM (pReceivedMsg->msgType < MAX_NUM_HARDWARE_MSGS, pReceivedMsg->msgType);
     
     printDebug ("HW Server received message %s, length %d.\n", pgHardwareMessageNames[pReceivedMsg->msgType], pReceivedMsg->msgLength);
+    printHexDump (pReceivedMsg, pReceivedMsg->msgLength + 1);
     /* Do the thang */
     returnCode = doAction ((HardwareMsgType) pReceivedMsg->msgType, pReceivedMsg->msgBody, pSendMsg);
     printDebug ("HW Server responding with message %s, length %d.\n", pgHardwareMessageNames[pSendMsg->msgType], pSendMsg->msgLength);

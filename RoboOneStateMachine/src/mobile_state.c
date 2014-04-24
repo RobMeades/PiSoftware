@@ -45,7 +45,7 @@ static void eventTasksAvailable (RoboOneState *pState, RoboOneTaskReq *pTaskReq)
     ASSERT_PARAM (pTaskReq != PNULL, (unsigned long) pTaskReq);
 
     /* Forward the task to the task handler */
-    success = taskHandlerServerSendReceive (TASK_HANDLER_TASK, pTaskReq, sizeof (*pTaskReq));
+    success = taskHandlerServerSendReceive (TASK_HANDLER_NEW_TASK, pTaskReq, sizeof (*pTaskReq));
     
     /* TODO: something more sensible than this */
     if (!success)

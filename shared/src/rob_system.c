@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 #include <fcntl.h>
 #include <time.h>
 #include <rob_system.h>
@@ -183,17 +185,19 @@ void printDebug (const Char * pFormat, ...)
         fprintf (pStream, "%.10lu: ", getSystemTicks());
         vfprintf (pStream, pFormat, args);
         va_end (args);
+        fflush (pStream);
     }
 }
 
 /*
  * Dump hex from memory
  */
-void printHexDump (const UInt8 * pMemory, UInt16 size)
+void printHexDump (const void * pMemory, UInt16 size)
 {
     UInt8 i;
     UInt32 time;
     FILE *pStream = stdout;
+    const UInt8 *pPrint = pMemory;
     
     if (gDebugPrintsAreOn && !gSuspendDebug)
     {
@@ -207,9 +211,10 @@ void printHexDump (const UInt8 * pMemory, UInt16 size)
         fprintf (pStream, "Printing at least %d bytes:\n", size);
         for (i = 0; i < size; i +=8)
         {
-            fprintf (pStream, "%.10lu: 0x%.8lx: 0x%.2x 0x%.2x 0x%.2x 0x%.2x : 0x%.2x 0x%.2x 0x%.2x 0x%.2x\n", time, (unsigned long) pMemory, *pMemory, *(pMemory + 1), *(pMemory + 2), *(pMemory + 3), *(pMemory + 4), *(pMemory + 5), *(pMemory + 6), *(pMemory + 7));
-            pMemory +=8;
+            fprintf (pStream, "%.10lu: 0x%.8lx: 0x%.2x 0x%.2x 0x%.2x 0x%.2x : 0x%.2x 0x%.2x 0x%.2x 0x%.2x\n", time, (unsigned long) pPrint, *pPrint, *(pPrint + 1), *(pPrint + 2), *(pPrint + 3), *(pPrint + 4), *(pPrint + 5), *(pPrint + 6), *(pPrint + 7));
+            pPrint +=8;
         }
+        fflush (pStream);
     }
 }
 
@@ -245,7 +250,45 @@ Char * binaryString (UInt8 value, Char *pString)
     return pString;
 }
 
-
+/*
+ * Remove control characters from a null
+ * terminated string.
+ * 
+ * pInput   the null terminated input string.
+ * pOutput  pointer to somewhere to store the
+ *          filtered string, needs to be
+ *          at least as large as pInput. The
+ *          null terminator is copied.
+ * 
+ * @return  pOutput.
+ */
+Char * removeCtrlCharacters (const Char *pInput, Char *pOutput)
+{
+    UInt32 i;
+    UInt32 inputLength;
+    Char *pDest;
+    const Char *pSrc;
+    
+    ASSERT_PARAM (pInput != PNULL, (unsigned long) pInput);
+    ASSERT_PARAM (pOutput != PNULL, (unsigned long) pOutput);
+    
+    inputLength = strlen (pInput);
+    
+    pSrc = pInput;
+    pDest = pOutput;
+    for (i = 0; i < inputLength; i++)
+    {
+        if (isprint (*pSrc))
+        {
+            *pDest = *pSrc;
+            pDest++;
+        }
+        pSrc++;
+    }
+    *pDest = 0; /* Add the null terminator */
+    
+    return pOutput;
+}
 
 /*
  * Get the system time in ticks and in a

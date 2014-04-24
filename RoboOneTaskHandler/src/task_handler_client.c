@@ -8,6 +8,7 @@
 #include <rob_system.h>
 #include <messaging_server.h>
 #include <messaging_client.h>
+#include <hardware_server.h>
 #include <task_handler_types.h>
 #include <task_handler_server.h>
 #include <task_handler_msg_auto.h>
@@ -88,7 +89,7 @@ Bool taskHandlerServerSendReceive (TaskHandlerMsgType msgType, void *pSendMsgBod
             pReceivedMsg->msgLength = 0;
     
             printDebug ("TH Client: sending message %s, length %d, hex dump:\n", pgTaskHandlerMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
-            printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
+            printHexDump (pSendMsg, pSendMsg->msgLength + 1);
             returnCode = runMessagingClient ((SInt32) atoi (TASK_HANDLER_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
                     
             printDebug ("TH Client: message system returnCode: %d\n", returnCode);
@@ -99,7 +100,7 @@ Bool taskHandlerServerSendReceive (TaskHandlerMsgType msgType, void *pSendMsgBod
                 /* Check the Bool 'success' at the start of the message body */
                 receivedMsgBodyLength = pReceivedMsg->msgLength - sizeof (pReceivedMsg->msgType);
                 printDebug ("TH Client: receivedMsgBodyLength: %d\n", receivedMsgBodyLength);
-                printHexDump ((UInt8 *) pReceivedMsg, pReceivedMsg->msgLength + 1);
+                printHexDump (pReceivedMsg, pReceivedMsg->msgLength + 1);
                 if (receivedMsgBodyLength >= sizeof (Bool))
                 {
                     printDebug ("TH Client: success field: %d\n", (Bool) pReceivedMsg->msgBody[0]);
