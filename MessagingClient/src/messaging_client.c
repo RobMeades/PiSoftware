@@ -33,22 +33,27 @@ extern int errno;
  * pReceivedMsg is not PNULL.  Then it closes
  * the connection.
  * 
- * serverPort   the port number to use.
- * pSendMsg     the message to send.
- * pReceivedMsg the response received from
- *              the server, may be PNULL, in
- *              which case no response from
- *              the server is expected.
+ * serverPort      the port number to use.
+ * pIpAddressToUse pointer to a null terminated
+ *                 string representing the IP address
+ *                 to use.  May be PNULL, in which
+ *                 case 127.0.0.1 is used.
+ * pSendMsg        the message to send.
+ * pReceivedMsg    the response received from
+ *                 the server, may be PNULL, in
+ *                 which case no response from
+ *                 the server is expected.
  * 
  * @return      client return code.
  */
-ClientReturnCode runMessagingClient (UInt16 serverPort, Msg *pSendMsg, Msg *pReceivedMsg)
+ClientReturnCode runMessagingClient (UInt16 serverPort, Char *pIpAddressToUse, Msg *pSendMsg, Msg *pReceivedMsg)
 {
     ClientReturnCode returnCode = CLIENT_SUCCESS;
     UInt32 serverSocket;
     SockAddrIn messagingServer;
     UInt16 rawSendLength;
-    
+    Char *pIpAddress = "127.0.0.1";
+
     suspendDebug(); /* Switch the detail off 'cos it gets annoying */
     if (pSendMsg != PNULL)
     {
@@ -57,10 +62,16 @@ ClientReturnCode runMessagingClient (UInt16 serverPort, Msg *pSendMsg, Msg *pRec
         if (serverSocket >= 0)
         {
             printDebug ("Messaging Client %d: created socket %d.\n", serverPort, serverSocket);
+            
+            if (pIpAddressToUse != PNULL)
+            {
+               pIpAddress = pIpAddressToUse;            
+            }
+            
             /* Construct the server sockaddr_in structure */
             memset (&messagingServer, 0, sizeof (messagingServer)); 
             messagingServer.sin_family = AF_INET;                      /* Internet/IP */
-            messagingServer.sin_addr.s_addr = inet_addr ("127.0.0.1"); /* IP address */
+            messagingServer.sin_addr.s_addr = inet_addr (pIpAddress); /* IP address */
             messagingServer.sin_port = htons (serverPort);             /* server port */
             
             /* Establish connection */

@@ -16,6 +16,7 @@
  * MANIFEST CONSTANTS
  */
 #define MAX_LEN_IP_ADDRESS_STRING 17 /* Includes null terminator */
+#define MAX_LEN_PORT_STRING       6  /* Includes null terminator */
 
 #pragma pack(push, 1) /* Force GCC to pack everything from here on as tightly as possible */
 
@@ -53,7 +54,7 @@ typedef struct RoboOneTaskContainerTag
 typedef struct RoboOneTaskReqHeaderTag
 {
     UInt8 handle;
-    SInt32 sourceServerPort;
+    Char sourceServerPortString[MAX_LEN_PORT_STRING];
     Bool sourceServerIpAddressStringPresent;
     Char sourceServerIpAddressString[MAX_LEN_IP_ADDRESS_STRING];    
 } RoboOneTaskReqHeader;

@@ -63,7 +63,7 @@ Bool taskHandlerServerSendReceive (TaskHandlerMsgType msgType, void *pSendMsgBod
     Msg *pReceivedMsg;
     UInt16 receivedMsgBodyLength = 0;
 
-    ASSERT_PARAM (msgType < MAX_NUM_TASK_HANDLER_MSGS, (unsigned long) msgType);
+    ASSERT_PARAM (msgType < MAX_NUM_TASK_HANDLER_MSGS, msgType);
     ASSERT_PARAM (sendMsgBodyLength <= MAX_MSG_BODY_LENGTH, sendMsgBodyLength);
 
     pSendMsg = malloc (sizeof (*pSendMsg));
@@ -90,7 +90,7 @@ Bool taskHandlerServerSendReceive (TaskHandlerMsgType msgType, void *pSendMsgBod
     
             printDebug ("TH Client: sending message %s, length %d, hex dump:\n", pgTaskHandlerMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
             printHexDump (pSendMsg, pSendMsg->msgLength + 1);
-            returnCode = runMessagingClient ((SInt32) atoi (TASK_HANDLER_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
+            returnCode = runMessagingClient ((SInt32) atoi (TASK_HANDLER_SERVER_PORT_STRING), PNULL, pSendMsg, pReceivedMsg);
                     
             printDebug ("TH Client: message system returnCode: %d\n", returnCode);
             /* This code makes assumptions about packing (i.e. that it's '1' and that the

@@ -158,11 +158,11 @@ int main (int argc, char **argv)
                         /* Send the message and get a response */
                         if (i > 0)
                         {
-                            returnCode = runMessagingClient (oneWireServerPort, pSendMsg, pReceivedMsg);
+                            returnCode = runMessagingClient (oneWireServerPort, PNULL, pSendMsg, pReceivedMsg);
                         }
                         else
                         {
-                            returnCode = runMessagingClient (oneWireServerPort, pSendMsg, PNULL); /* No echo will result for a zero length message */                    
+                            returnCode = runMessagingClient (oneWireServerPort, PNULL, pSendMsg, PNULL); /* No echo will result for a zero length message */                    
                         }
                         
                         if (returnCode == CLIENT_SUCCESS)

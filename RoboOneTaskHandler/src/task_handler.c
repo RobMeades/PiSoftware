@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <rob_system.h>
 #include <task_handler_types.h>
+#include <task_handler_server.h>
+#include <task_handler_msg_auto.h>
+#include <task_handler_responder.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -234,7 +237,8 @@ void tickTaskHandler (void)
     UInt16 guardCounter = 0;
     TaskItem *pT = &gTaskListRoot;
     UInt16 count = 0;
-    
+    Char *pIpAddress = PNULL;
+        
     ASSERT_PARAM (pT->pPreviousTask == PNULL, (unsigned long) pT->pPreviousTask);
 
     while ((pT->pNextTask != PNULL) && (guardCounter < MAX_GUARD_COUNTER))
@@ -248,6 +252,16 @@ void tickTaskHandler (void)
                 {
                     success = handleHindbrainDirectTaskReq (&pT->task.body.detail.hindbrainDirectReq);
                     pT->taskPresent = false;
+                    
+                    /* Handle the confirmation if one was requested */
+                    if (pT->task.headerPresent)
+                    {
+                        if (pT->task.header.sourceServerIpAddressStringPresent)
+                        {
+                            pIpAddress = &(pT->task.header.sourceServerIpAddressString[0]);
+                        }
+                        taskHandlerServerResponder (&(pT->task.header.sourceServerPortString[0]), pIpAddress, TASK_HANDLER_TASK_IND, &success, sizeof (success));
+                    }
                 }
                 break;
                 default:
@@ -255,11 +269,6 @@ void tickTaskHandler (void)
                     ASSERT_ALWAYS_PARAM (pT->task.body.protocol);   
                 }
                 break;
-            }
-
-            /* Handle the confirmation side */
-            if (pT->task.headerPresent)
-            {
             }
         }
         guardCounter++;

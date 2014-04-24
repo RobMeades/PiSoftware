@@ -27,4 +27,4 @@ typedef enum ClientReturnCodeTag
  * FUNCTION PROTOTYPES
  */
 
-ClientReturnCode runMessagingClient (UInt16 serverPort, Msg *pSendMsg, Msg *pReceivedMsg);
+ClientReturnCode runMessagingClient (UInt16 serverPort, Char *pIpAddress, Msg *pSendMsg, Msg *pReceivedMsg);

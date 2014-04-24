@@ -56,7 +56,7 @@ Bool hardwareServerSendReceive (HardwareMsgType msgType, void *pSendMsgBody, UIn
     Msg *pReceivedMsg;
     UInt16 receivedMsgBodyLength = 0;
 
-    ASSERT_PARAM (msgType < MAX_NUM_HARDWARE_MSGS, (unsigned long) msgType);
+    ASSERT_PARAM (msgType < MAX_NUM_HARDWARE_MSGS, msgType);
     ASSERT_PARAM (sendMsgBodyLength <= MAX_MSG_BODY_LENGTH, sendMsgBodyLength);
 
     pSendMsg = malloc (sizeof (*pSendMsg));
@@ -83,7 +83,7 @@ Bool hardwareServerSendReceive (HardwareMsgType msgType, void *pSendMsgBody, UIn
     
             printDebug ("HW Client: sending message %s, length %d, hex dump:\n", pgHardwareMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
             printHexDump (pSendMsg, pSendMsg->msgLength + 1);
-            returnCode = runMessagingClient ((SInt32) atoi (HARDWARE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
+            returnCode = runMessagingClient ((SInt32) atoi (HARDWARE_SERVER_PORT_STRING), PNULL, pSendMsg, pReceivedMsg);
                     
             printDebug ("HW Client: message system returnCode: %d\n", returnCode);
             /* This code makes assumptions about packing (i.e. that it's '1' and that the

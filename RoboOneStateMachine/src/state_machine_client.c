@@ -70,7 +70,7 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
     Msg *pReceivedMsg = PNULL;
     UInt16 receivedMsgBodyLength = 0;
 
-    ASSERT_PARAM (sendMsgType < MAX_NUM_STATE_MACHINE_MSGS, (unsigned long) sendMsgType);
+    ASSERT_PARAM (sendMsgType < MAX_NUM_STATE_MACHINE_MSGS, sendMsgType);
     ASSERT_PARAM (sendMsgBodyLength <= MAX_MSG_BODY_LENGTH, sendMsgBodyLength);
 
     pSendMsg = malloc (sizeof (*pSendMsg));
@@ -103,7 +103,7 @@ Bool stateMachineServerSendReceive (StateMachineMsgType sendMsgType, void *pSend
             
             printDebug ("SM Client: sending message %s, length %d, hex dump:\n",  pgStateMachineMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
             printHexDump (pSendMsg, pSendMsg->msgLength + 1);
-            returnCode = runMessagingClient ((SInt32) atoi (STATE_MACHINE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
+            returnCode = runMessagingClient ((SInt32) atoi (STATE_MACHINE_SERVER_PORT_STRING), PNULL, pSendMsg, pReceivedMsg);
                     
             printDebug ("SM Client: message system returnCode: %d\n", returnCode);
             /* This code makes assumptions about packing (i.e. that it's '1') so be careful */
