@@ -20,18 +20,19 @@
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
 #include <state_machine_client.h>
+#include <main.h>
 
 /*
  * MANIFEST CONSTANTS
  */
 
 /* The shape of the dashboard windows.
- * Note that this is designed for a 55 row long terminal window. */
+ * Note that this is designed for a 62 row long terminal window. */
 /* The actual space used by a window doesn't include the heading,
  * that is added on the line above (so that if the window is
  * a scrolling one the heading doesn't disappear with the scroll),
  * so NEVER start a window at 0, only 1 or more */
-#define SCR_HEIGHT                55
+#define SCR_HEIGHT                62
 #define SCR_WIDTH                 80
 #define BORDER_WIDTH              1
 #define HEADING_HEIGHT            1
@@ -61,12 +62,12 @@
 #define WIN_CMD_WIDTH             25
 #define WIN_OUTPUT_START_ROW      17
 #define WIN_OUTPUT_START_COL      2
-#define WIN_OUTPUT_HEIGHT         35
+#define WIN_OUTPUT_HEIGHT         42
 #define WIN_OUTPUT_WIDTH          76
 #define WIN_STATE_START_ROW       9 /* sits on top of the mux window so move this if you ever want them both on */
 #define WIN_STATE_START_COL       35
 #define WIN_STATE_HEIGHT          3
-#define WIN_STATE_WIDTH           28
+#define WIN_STATE_WIDTH           42
 
 /* The places that various things should appear on the background
  * screen, negative meaning to count up from the bottom of the
@@ -134,6 +135,11 @@ typedef struct WindowInfoTag
 } WindowInfo;
 
 /*
+ * EXTERNS
+ */
+extern RoboOneGlobals gRoboOneGlobals;
+
+/*
  * GLOBALS (prefixed with g)
  */
 
@@ -166,10 +172,7 @@ WINDOW **gpOutputWindow = &(gWindowList[0].pWin);
  * isEnabled whether there is power to the relays.
  * is12V     whether the 12V supply is on.
  * isBatt    whether the battery supply is on.
- * 
- * @return  none.
  */
-
 static void displayPowerStatesHelper (WINDOW *pWin, Bool isKnown, Bool isEnabled, Bool is12V, Bool isBatt)
 {
     if (isKnown)
@@ -202,6 +205,48 @@ static void displayPowerStatesHelper (WINDOW *pWin, Bool isKnown, Bool isEnabled
         wprintw (pWin, "    ??    ");            
     }
 }
+
+/* Helper function to display a string that
+ * describes the outcome of the last task
+ * operation.
+ * 
+ * result    the result to explain.
+ * 
+ * @return   pointer to string to display,
+ *           may be PNULL if result is out
+ *           of range.
+ */
+static Char * displayTaskResultHelper (RoboOneHDResult result)
+{
+    Char * pString = PNULL;
+    
+    switch (result)
+    {
+        case HD_RESULT_SUCCESS:
+        {
+            pString = "rsp";
+        }
+        break;
+        case HD_RESULT_SEND_FAILURE:
+        {
+            pString = "send failed";
+        }
+        break;
+        case HD_RESULT_GENERAL_FAILURE:
+        {
+            pString = "failed";
+        }
+        break;
+        default:
+        {
+            ASSERT_ALWAYS_PARAM (result);            
+        }
+        break;
+    }
+    
+    return pString;
+}
+
 /*
  * Init function for Rio window.
  * 
@@ -680,10 +725,12 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
     StateMachineMsgType receivedMsgType = STATE_MACHINE_SERVER_NULL;
     StateMachineServerGetContextCnf *pReceivedMsgBody;
     OInputContainer *pInputContainer;
+    UInt8 row = 0;
+    UInt8 col = 0;
     
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
     
-    wmove (pWin, 0, 0);
+    wmove (pWin, row, col);
     wclrtoeol (pWin);
     
     pReceivedMsgBody = malloc (sizeof (StateMachineServerGetContextCnf));
@@ -727,6 +774,24 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
                 wprintw (pWin, " [Hindbrain OFF]");                                
             }
             free (pInputContainer);
+        }
+        row++;
+        wmove (pWin, row, col);
+        wclrtoeol (pWin);
+                
+        /* Print the status of any recent task activity */
+        if (strlen (&(gRoboOneGlobals.roboOneTaskInfo.lastTaskSent[0])) > 0)
+        {
+            wprintw (pWin, "Task %d: '%s'", gRoboOneGlobals.roboOneTaskInfo.taskCounter, &(gRoboOneGlobals.roboOneTaskInfo.lastTaskSent[0]));
+            if (gRoboOneGlobals.roboOneTaskInfo.lastResultReceivedIsValid)
+            {
+                wprintw (pWin, ", %s", displayTaskResultHelper (gRoboOneGlobals.roboOneTaskInfo.lastResultReceived));            
+                
+                if (strlen (&(gRoboOneGlobals.roboOneTaskInfo.lastIndString[0])) > 0)
+                {
+                    wprintw (pWin, ": '%s'", &(gRoboOneGlobals.roboOneTaskInfo.lastIndString[0]));            
+                }            
+            }
         }
         
         wnoutrefresh (pWin);

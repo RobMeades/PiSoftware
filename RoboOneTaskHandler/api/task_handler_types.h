@@ -51,7 +51,7 @@ typedef struct RoboOneTaskContainerTag
 /* Header used on request messages if indications of progress are required */
 typedef struct RoboOneTaskReqHeaderTag
 {
-    UInt8 handle;
+    UInt32 handle;
     SInt32 sourceServerPort;
     Bool sourceServerIpAddressStringPresent;
     Char sourceServerIpAddressString[MAX_LEN_IP_ADDRESS_STRING];    

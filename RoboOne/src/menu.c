@@ -14,6 +14,7 @@
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
 #include <state_machine_client.h>
+#include <main.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -97,6 +98,11 @@ typedef struct CommandTag
 } Command;
 
 /*
+ * EXTERNS
+ */
+extern RoboOneGlobals gRoboOneGlobals;
+
+/*
  * GLOBALS (prefixed with g)
  */
 
@@ -128,7 +134,7 @@ Command gCommandList[] = {{"?", {&commandHelp}, true, "display command help"},
  						  {"HM+", {&setOPwr12VOn}, false, "switch hindbrain (AKA Orangutan) mains power on"},
  						  {"HM-", {&setOPwr12VOff}, false, "switch hindbrain (AKA Orangutan) mains power off"},
                           {"HS", {&sendOString}, true, "send hindbrain (AKA Orangutan) a string"},
-                          {"HT", {&sendOTask}, true, "send hindbrain (AKA Orangutan) a task"},
+                          {"T", {&sendOTask}, true, "send a task to hindbrain (AKA Orangutan)"},
  						  {"CX+", {&setAllBatteryChargersOn}, false, "switch all chargers on"},
  						  {"CX-", {&setAllBatteryChargersOff}, false, "switch all chargers off"},
  						  {"CP+", {&setRioBatteryChargerOn}, false, "switch RIO/Pi charger on"},
@@ -822,7 +828,7 @@ static Bool sendOString (WINDOW *pWin)
     Bool success = false;
     OInputContainer *pInputContainer;
     OResponseString *pResponseString;
-    Char displayBuffer[MAX_O_STRING_LENGTH];
+    Char * pDisplayBuffer;
      
     pInputContainer = malloc (sizeof (*pInputContainer));
     if (pInputContainer != PNULL)
@@ -833,29 +839,35 @@ static Bool sendOString (WINDOW *pWin)
         if (pResponseString != PNULL)
         {
             pResponseString->stringLength = sizeof (pResponseString->string);
-            if (getStringInput (pWin, "String: ", &(pInputContainer->string[0]), sizeof (pInputContainer->string)) != PNULL)
+            
+            pDisplayBuffer = malloc (MAX_O_STRING_LENGTH);
+            if (pDisplayBuffer != PNULL)
             {
-                removeCtrlCharacters (&(pInputContainer->string[0]), &(displayBuffer[0]));
-                
-                /* Send the string and look for a response */
-                success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputContainer, sizeof (*pInputContainer), pResponseString);
-                if (success)
+                if (getStringInput (pWin, "String: ", &(pInputContainer->string[0]), sizeof (pInputContainer->string)) != PNULL)
                 {
-                    printHelper (pWin, "\nSent '%s' successfully", &(displayBuffer[0]));
-                    if (pResponseString->stringLength > 1) /* There will always be a terminator, hence the 1 */
+                    removeCtrlCharacters (&(pInputContainer->string[0]), pDisplayBuffer);
+                    
+                    /* Send the string and look for a response */
+                    success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputContainer, sizeof (*pInputContainer), pResponseString);
+                    if (success)
                     {
-                        removeCtrlCharacters (&(pResponseString->string[0]), &(displayBuffer[0]));
-                        printHelper (pWin, ", response: '%s'.\n", &(displayBuffer[0]));                
+                        printHelper (pWin, "\nSent '%s' successfully", pDisplayBuffer);
+                        if (pResponseString->stringLength > 1) /* There will always be a terminator, hence the 1 */
+                        {
+                            removeCtrlCharacters (&(pResponseString->string[0]), pDisplayBuffer);
+                            printHelper (pWin, ", response: '%s'.\n", pDisplayBuffer);                
+                        }
+                        else
+                        {
+                            printHelper (pWin, ", no response.\n");                                
+                        }
                     }
                     else
                     {
-                        printHelper (pWin, ", no response.\n");                                
+                        printHelper (pWin, "\nSend failed.\n");
                     }
                 }
-                else
-                {
-                    printHelper (pWin, "\nSend failed.\n");
-                }
+                free (pDisplayBuffer);
             }
             free (pResponseString);
         }
@@ -880,7 +892,6 @@ static Bool sendOTask (WINDOW *pWin)
 {
     Bool success = false;
     RoboOneTaskReq *pTaskReq;
-    Char displayBuffer[MAX_O_STRING_LENGTH];
 
     pTaskReq = malloc (sizeof (*pTaskReq));
     if (pTaskReq != PNULL)
@@ -889,20 +900,26 @@ static Bool sendOTask (WINDOW *pWin)
         pTaskReq->headerPresent = true;
         pTaskReq->header.sourceServerPort = LOCAL_SERVER_PORT;
         pTaskReq->header.sourceServerIpAddressStringPresent = false;
+        pTaskReq->header.handle = gRoboOneGlobals.roboOneTaskInfo.taskCounter;
         pTaskReq->body.protocol = TASK_PROTOCOL_HD;
 
         if (getStringInput (pWin, "Task string: ", &(pTaskReq->body.detail.hdReq.string[0]), sizeof (pTaskReq->body.detail.hdReq.string)) != PNULL)
         {
-            removeCtrlCharacters (&(pTaskReq->body.detail.hdReq.string[0]), &(displayBuffer[0]));
+            removeCtrlCharacters (&(pTaskReq->body.detail.hdReq.string[0]), &(gRoboOneGlobals.roboOneTaskInfo.lastTaskSent[0]));
+            gRoboOneGlobals.roboOneTaskInfo.lastResultReceivedIsValid = false;
+            gRoboOneGlobals.roboOneTaskInfo.lastIndString[0] = 0;
             
             /* Send the task via the state machine */
             success = stateMachineServerSendReceive (STATE_MACHINE_EVENT_TASKS_AVAILABLE, pTaskReq, sizeof (*pTaskReq), PNULL, PNULL);
             if (success)
             {
-                printHelper (pWin, "\nSent task '%s'.\n", &(displayBuffer[0]));                
+                removeCtrlCharacters (&(pTaskReq->body.detail.hdReq.string[0]), &(gRoboOneGlobals.roboOneTaskInfo.lastTaskSent[0]));
+                gRoboOneGlobals.roboOneTaskInfo.taskCounter++;
+                printHelper (pWin, "\nSent task '%s'.\n", &(gRoboOneGlobals.roboOneTaskInfo.lastTaskSent[0]));
             }
             else
             {
+                gRoboOneGlobals.roboOneTaskInfo.lastTaskSent[0] = 0;
                 printHelper (pWin, "\nSend failed.\n");
             }
         }

@@ -25,6 +25,7 @@
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>
+#include <main.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -38,6 +39,7 @@ extern int errno;
 /*
  * GLOBALS (prefixed with g)
  */
+RoboOneGlobals gRoboOneGlobals;
 
 /*
  * STATIC FUNCTIONS
@@ -62,6 +64,17 @@ void *localServer (void * serverPort)
     ASSERT_ALWAYS_PARAM (returnCode);
     
     pthread_exit (&returnCode);
+}
+
+/*
+ * Initalise globals.
+ */
+static void initGlobals (void)
+{
+    gRoboOneGlobals.roboOneTaskInfo.taskCounter = 0;    
+    gRoboOneGlobals.roboOneTaskInfo.lastTaskSent[0] = 0;
+    gRoboOneGlobals.roboOneTaskInfo.lastResultReceivedIsValid = false;
+    gRoboOneGlobals.roboOneTaskInfo.lastIndString[0] = 0;    
 }
 
 /*
@@ -221,6 +234,8 @@ int main (int argc, char **argv)
     setDebugPrintsOnToFile ("roboone.log");
     setProgressPrintsOn();
 
+    initGlobals();
+    
     /* Spawn a child that will become the Hardware server. */
     hwServerPID = fork();
     if (hwServerPID == 0)

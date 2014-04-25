@@ -13,6 +13,7 @@
 #include <task_handler_types.h>
 #include <task_handler_server.h>
 #include <task_handler_msg_auto.h>
+#include <main.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -25,6 +26,7 @@
 /*
  * EXTERNS
  */
+extern RoboOneGlobals gRoboOneGlobals;
 extern Char *pgTaskHandlerMessageNames[];
 
 /*
@@ -43,15 +45,20 @@ extern Char *pgTaskHandlerMessageNames[];
  */
 static void handleHDTaskInd (RoboOneHDTaskInd *pHDTaskInd)
 {
-    Char displayBuffer[MAX_O_STRING_LENGTH];
-    
     ASSERT_PARAM (pHDTaskInd != PNULL, (unsigned long) pHDTaskInd);
     
+    /* Strictly speaking should semaphore access to this global data but in practice
+     * it is for information only and would only occur if the user performed actions
+     * inhumanly fast so is very unlikely ever to cause overlapping access */
+    gRoboOneGlobals.roboOneTaskInfo.lastResultReceived = pHDTaskInd->result;
+    gRoboOneGlobals.roboOneTaskInfo.lastResultReceivedIsValid = true;
+    gRoboOneGlobals.roboOneTaskInfo.lastIndString[0] = 0;
     switch (pHDTaskInd->result)
     {
         case HD_RESULT_SUCCESS:
         {
-            printDebug ("RO Server, HD Protocol: response '%s'.\n", removeCtrlCharacters (&(pHDTaskInd->string[0]), &(displayBuffer[0])));
+            removeCtrlCharacters (&(pHDTaskInd->string[0]), &(gRoboOneGlobals.roboOneTaskInfo.lastIndString[0]));
+            printDebug ("RO Server, HD Protocol: response '%s'.\n", &(gRoboOneGlobals.roboOneTaskInfo.lastIndString[0]));
         }
         break;
         case HD_RESULT_SEND_FAILURE:
@@ -84,7 +91,7 @@ static void handleTaskInd (RoboOneTaskInd *pTaskInd)
 
     switch (pTaskInd->body.protocol)
     {
-        /* There is only one protocol at the moment */
+        /* Only the Hindbrain Direct protocol is used by this program */
         case TASK_PROTOCOL_HD:
         {
             handleHDTaskInd ((RoboOneHDTaskInd *) &(pTaskInd->body.detail.hdInd));

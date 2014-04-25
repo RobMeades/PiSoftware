@@ -45,10 +45,10 @@ static TaskItem gTaskListRoot;
  */
 static void initTaskItem (TaskItem *pTaskItem)
 {
-    gTaskListRoot.pNextTask = PNULL;
-    gTaskListRoot.pPreviousTask = PNULL;
-    gTaskListRoot.taskCompleted = false;
-    gTaskListRoot.pResult = PNULL;
+    pTaskItem->pNextTask = PNULL;
+    pTaskItem->pPreviousTask = PNULL;
+    pTaskItem->taskCompleted = false;
+    pTaskItem->pResult = PNULL;
 }
 
 /*
