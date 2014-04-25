@@ -197,6 +197,7 @@ pacman -S lrzsz
 pacman -S picocom
 pacman -S minicom
 pacman -S unzip
+pacman -S setserial
 
 INSTALL/SET-UP AUDIO OUTPUT
 
