@@ -29,21 +29,25 @@
 /*
  * Handle a task directed at the Hindbrain.
  * 
- * pTaskReq  pointer to the Hindbrain Direct task
- *           to be handled.
+ * pHDTaskReq  pointer to the Hindbrain Direct task
+ *             to be handled.
+ * pHDTaskInd  pointer a place to put the response.
  * 
- * @return   true if successful, otherwise false.
+ * @return     result code from RoboOneHDResult.
  */
-Bool handleHindbrainDirectTaskReq (RoboOneHindbrainDirectTaskReq *pTaskReq)
+RoboOneHDResult handleHDTaskReq (RoboOneHDTaskReq *pHDTaskReq, RoboOneHDTaskInd *pHDTaskInd)
 {
-    Bool success = false;
+    RoboOneHDResult result = HD_RESULT_GENERAL_FAILURE;
     OInputContainer *pInputContainer;
     OResponseString *pResponseString;
     Char displayBuffer[MAX_O_STRING_LENGTH];
 
-    ASSERT_PARAM (pTaskReq != PNULL, (unsigned long) pTaskReq);
+    ASSERT_PARAM (pHDTaskReq != PNULL, (unsigned long) pHDTaskReq);
+    ASSERT_PARAM (pHDTaskInd != PNULL, (unsigned long) pHDTaskInd);
      
-    printDebug ("Task Handler: HD Protocol Task received '%s', sending to Hindbrain.\n", removeCtrlCharacters (&(pTaskReq->string[0]), &(displayBuffer[0])));
+    pHDTaskInd->string[0] = 0; /* Put in a terminator just in case we fail */
+
+    printDebug ("Task Handler: HD Protocol Task received '%s', sending to Hindbrain.\n", removeCtrlCharacters (&(pHDTaskReq->string[0]), &(displayBuffer[0])));
     pInputContainer = malloc (sizeof (*pInputContainer));
     if (pInputContainer != PNULL)
     {
@@ -51,29 +55,36 @@ Bool handleHindbrainDirectTaskReq (RoboOneHindbrainDirectTaskReq *pTaskReq)
         pInputContainer->waitForResponse = true;
         
         /* Stop overruns as we're using different buffer lengths here */
-        lengthInputString = strlen (&(pTaskReq->string[0])) + 1; /* +1 for terminator */
+        lengthInputString = strlen (&(pHDTaskReq->string[0])) + 1; /* +1 for terminator */
         if (lengthInputString > sizeof (pInputContainer->string))
         {
             lengthInputString = sizeof (pInputContainer->string) - 1;
             pInputContainer->string[lengthInputString] = 0; /* Make sure that a terminator gets on the end as it would otherwise be chopped off */
         }
         
-        memcpy (&(pInputContainer->string[0]), &(pTaskReq->string[0]), lengthInputString);
+        memcpy (&(pInputContainer->string[0]), &(pHDTaskReq->string[0]), lengthInputString);
         
-        /* Go send the string and wait for an "OK" answer */
+        /* Go send the string and wait for an answer */
         pResponseString = malloc (sizeof (*pResponseString));
         if (pResponseString != PNULL)
         {
             pResponseString->stringLength = sizeof (pResponseString->string);
-            success = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputContainer, sizeof (*pInputContainer), pResponseString);
-            if (success)
+            result = HD_RESULT_SEND_FAILURE;
+            
+            if (hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputContainer, sizeof (*pInputContainer), pResponseString))
             {
-                printDebug ("Task Handler: '%s' response from Hindbrain.\n", removeCtrlCharacters (&(pResponseString->string[0]), &(displayBuffer[0])));
-                if (!O_CHECK_OK_STRING (pResponseString))
+                /* Prevent overruns */
+                if (pResponseString->stringLength > sizeof (pHDTaskInd->string))
                 {
-                    printDebug ("Task Handler: response indicated failure.\n");
-                    success = false;
+                    pResponseString->stringLength = sizeof (pHDTaskInd->string) - 1; /* - 1 to ensure a terminator */
+                    pResponseString->string[pResponseString->stringLength] = 0;
                 }
+                
+                /* Copy the answer into the indication to send back */
+                memcpy (&(pHDTaskInd->string[0]), &(pResponseString->string[0]), pResponseString->stringLength);
+                pHDTaskInd->stringLength = pResponseString->stringLength;
+                result = HD_RESULT_SUCCESS;
+                printDebug ("Task Handler: '%s' response from Hindbrain.\n", removeCtrlCharacters (&(pResponseString->string[0]), &(displayBuffer[0])));
             }
             else
             {            
@@ -84,5 +95,5 @@ Bool handleHindbrainDirectTaskReq (RoboOneHindbrainDirectTaskReq *pTaskReq)
         free (pInputContainer);
     }
     
-    return success;
+    return result;
 }

@@ -9,6 +9,7 @@
 #include <task_handler_server.h>
 #include <task_handler_msg_auto.h>
 #include <task_handler_responder.h>
+#include <hindbrain_direct_task_handler.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -22,8 +23,9 @@ typedef struct TaskItemTag
 {
     struct TaskItemTag *pPreviousTask;
     struct TaskItemTag *pNextTask;
-    Bool taskPresent;
+    Bool taskCompleted;
     RoboOneTaskReq task;
+    RoboOneTaskInd *pResult;
 } TaskItem;
 
 /*
@@ -35,6 +37,19 @@ static TaskItem gTaskListRoot;
 /*
  * STATIC FUNCTIONS
  */
+
+/*
+ * Initialise and entry in the list
+ * 
+ * pTaskItem  the item to initialise.
+ */
+static void initTaskItem (TaskItem *pTaskItem)
+{
+    gTaskListRoot.pNextTask = PNULL;
+    gTaskListRoot.pPreviousTask = PNULL;
+    gTaskListRoot.taskCompleted = false;
+    gTaskListRoot.pResult = PNULL;
+}
 
 /*
  * Add a task to the task list.
@@ -56,25 +71,33 @@ static void addTaskToList (TaskItem *pTaskItem)
     /* Find the item at the end of the list */
     while ((pT->pNextTask != PNULL) && (guardCounter < MAX_GUARD_COUNTER))
     {
-        printDebug ("pT->pNextTask != PNULL.\n");
+        printDebug ("Moving past used entry %d.\n", guardCounter);
         pT = pT->pNextTask;
         guardCounter++;
     }
     
     ASSERT_PARAM (guardCounter < MAX_GUARD_COUNTER, guardCounter);
     
-    printDebug ("Adding the task onto the end of the list.\n");
+    printDebug ("Adding the task onto the end of the list at entry %d.\n", guardCounter);
     /* Tag the new one on the end */
     pTaskItem->pPreviousTask = pT;
     pT->pNextTask = pTaskItem;
 }
 
 /*
- * Remove unused asks from the task list.
+ * Walk the task list, doing several possible things.
+ * 
+ * removeUnusedTasks  if true, remove the any unused
+ *                    tasks, freeing their memory.
+ *                    An unused task is one that is
+ *                    completed and has a null result
+ *                    pointer
+ * clearAllTasks      if true, remove all tasks,
+ *                    freeing memory.
  * 
  * @return  number of tasks left in the list;
  */
-static UInt16 removeUnusedTasksFromList (void)
+static UInt16 walkTaskList (Bool removeUnusedTasks, Bool clearAllTasks)
 {
     UInt16 guardCounter = 0;
     TaskItem *pThis = &gTaskListRoot;
@@ -83,31 +106,33 @@ static UInt16 removeUnusedTasksFromList (void)
     
     ASSERT_PARAM (pThis->pPreviousTask == PNULL, (unsigned long) pThis->pPreviousTask);
 
-    printDebug ("Removing unused tasks from list.\n");
-    
     /* Look for items where the task no longer exists
      * and remove them from the list, obviously avoiding
      * doing this to the root of the list */
     pThis = pThis->pNextTask;
     while ((pThis != PNULL) && (guardCounter < MAX_GUARD_COUNTER))
     {
-        printDebug ("pThis != PNULL.\n");
-        if (!pThis->taskPresent)
+        printDebug ("Entry %d, task completed %d.\n", guardCounter, pThis->taskCompleted);
+        if ((pThis->taskCompleted  && (pThis->pResult == PNULL) && removeUnusedTasks) || clearAllTasks)
         {
-            printDebug ("pThis->taskPresent = false.\n");
             if (pThis->pNextTask != PNULL)
             {
                 pThis->pNextTask->pPreviousTask = pThis->pPreviousTask;
             }
             pPrevious->pNextTask = pThis->pNextTask;
-            printDebug ("Freeing memory.\n");
+            if (pThis->pResult != PNULL)
+            {
+                printDebug (" freeing result memory.\n");
+                free (pThis->pResult);                
+            }
+            printDebug (" freeing task memory.\n");
             free (pThis);
-            printDebug ("Moving pointer on.\n");
+            printDebug (" moving pointer on.\n");
             pThis = pPrevious->pNextTask;
         }
         else
         {
-            printDebug ("pThis->taskPresent = true, just moving pointers on.\n");
+            printDebug (" moving pointers on.\n");
             pThis = pThis->pNextTask;
             pPrevious = pThis;
             count++;
@@ -122,33 +147,50 @@ static UInt16 removeUnusedTasksFromList (void)
 }
 
 /*
- * Walk the task list and print useful stuff out.
+ * Do a Hindbrain Direct protocol task.
  * 
- * @return  number of tasks in the list;
+ * pTaskItem  pointer to the task in the linked
+ *            list.
+ * 
+ * @return    true if the task was completed.
  */
-static UInt16 walkTaskList (void)
+static Bool doHDTask (TaskItem *pTaskItem)
 {
-    UInt16 guardCounter = 0;
-    TaskItem *pT = &gTaskListRoot;
-    UInt16 count = 0;
-    
-    ASSERT_PARAM (pT->pPreviousTask == PNULL, (unsigned long) pT->pPreviousTask);
+    Bool success = false;
+    ASSERT_PARAM (pTaskItem != PNULL, (unsigned long) pTaskItem);
+    ASSERT_PARAM (pTaskItem->pResult == PNULL, (unsigned long) pTaskItem->pResult);
 
-    printDebug ("Walking task list.\n");
-    while ((pT->pNextTask != PNULL) && (guardCounter < MAX_GUARD_COUNTER))
+    pTaskItem->pResult = malloc (sizeof (*pTaskItem->pResult));
+    if (pTaskItem->pResult != PNULL)
     {
-        printDebug ("pT->pNextTask != PNULL.\n");
-        pT = pT->pNextTask;
-        count++;
-        printDebug ("Count %d.\n", count);
-        guardCounter++;
+        pTaskItem->pResult->body.protocol = TASK_PROTOCOL_HD;
+        pTaskItem->pResult->body.detail.hdInd.result = handleHDTaskReq (&pTaskItem->task.body.detail.hdReq, &pTaskItem->pResult->body.detail.hdInd);
+        success = true;
     }
     
-    ASSERT_PARAM (guardCounter < MAX_GUARD_COUNTER, guardCounter);
+    return success;
+}
 
-    printDebug ("Final count %d.\n", count);
+/*
+ * Send confirmations of task completeness.
+ * 
+ * pTaskItem  pointer to the task in the linked
+ *            list.
+ * 
+ * @return    always true.
+ */
+static Bool doTaskCompleted (TaskItem *pTaskItem)
+{
+    /* Handle the confirmation if one was requested and is available */
+    if (pTaskItem->task.headerPresent && (pTaskItem->pResult != PNULL))
+    {
+        pTaskItem->pResult->handle = pTaskItem->task.header.handle;
+        taskHandlerResponder (&(pTaskItem->task.header), TASK_HANDLER_TASK_IND, pTaskItem->pResult, sizeof (*pTaskItem->pResult));
+        free (pTaskItem->pResult);
+        pTaskItem->pResult = PNULL;
+    }
     
-    return count;
+    return true;
 }
 
 /*
@@ -156,46 +198,27 @@ static UInt16 walkTaskList (void)
  */
 
 /*
- * Initialise the task handler.
+ * Initialise the task list.
+ * 
+ * @return   true if successful, otherwise false.
  */
-void initTaskHandler (void)
+Bool initTaskList (void)
 {
-    gTaskListRoot.pNextTask = PNULL;
-    gTaskListRoot.pPreviousTask = PNULL;
-    gTaskListRoot.taskPresent = false;
+    initTaskItem (&gTaskListRoot);
+    
+    return true;
 }
 
 /*
- * Clear the task list.
+ * Empty the task list.
+ * 
+ * @return   true if successful, otherwise false.
  */
-void clearTaskList (void)
+Bool clearTaskList(void)
 {
-    UInt16 guardCounter = 0;
-    TaskItem *pThis = &gTaskListRoot;
-    TaskItem *pRoot = &gTaskListRoot;
+    walkTaskList (false, true);
     
-    ASSERT_PARAM (pThis->pPreviousTask == PNULL, (unsigned long) pThis->pPreviousTask);
-
-    printDebug ("Clearing task list.\n");
-    /* Free up everything except the root entry
-     * TODO: tell interested parties about this */
-    pThis = pThis->pNextTask;
-    while ((pThis != PNULL) && (guardCounter < MAX_GUARD_COUNTER))
-    {
-        printDebug ("pThis != PNULL.\n");
-        if (pThis->pNextTask != PNULL)
-        {
-            pThis->pNextTask->pPreviousTask = pThis->pPreviousTask;
-        }
-        pRoot->pNextTask = pThis->pNextTask;
-        printDebug ("Freeing memory.\n");
-        free (pThis);
-        printDebug ("Moving pointer on.\n");
-        pThis = pRoot->pNextTask;
-        guardCounter++;
-    }
-    
-    ASSERT_PARAM (guardCounter < MAX_GUARD_COUNTER, guardCounter);    
+    return true;
 }
 
 /*
@@ -205,7 +228,7 @@ void clearTaskList (void)
  * 
  * @return   true if successful, otherwise false.
  */
-Bool handleTaskReq (RoboOneTaskReq *pTaskReq)
+Bool handleNewTaskReq (RoboOneTaskReq *pTaskReq)
 {
     Bool success = false;
     TaskItem *pTaskItem;
@@ -217,9 +240,7 @@ Bool handleTaskReq (RoboOneTaskReq *pTaskReq)
     if (pTaskItem != PNULL)
     {
         memcpy (&(pTaskItem->task), pTaskReq, sizeof (pTaskItem->task));
-        pTaskItem->pNextTask = PNULL;
-        pTaskItem->pPreviousTask = PNULL;
-        pTaskItem->taskPresent = true;
+        initTaskItem (pTaskItem);
         addTaskToList (pTaskItem);
         success = true;
     }
@@ -230,53 +251,50 @@ Bool handleTaskReq (RoboOneTaskReq *pTaskReq)
 /*
  * Tick the task handler over,
  * allowing it to do stuff.
+ * 
+ * @return   true if successful, otherwise false.
  */
-void tickTaskHandler (void)
+Bool tickTaskHandler (void)
 {
-    Bool success = false;
+    Bool success = true;
     UInt16 guardCounter = 0;
     TaskItem *pT = &gTaskListRoot;
-    UInt16 count = 0;
-    Char *pIpAddress = PNULL;
         
     ASSERT_PARAM (pT->pPreviousTask == PNULL, (unsigned long) pT->pPreviousTask);
 
+    printDebug ("Task Handler: received tick message, %d task(s) in the list.\n", walkTaskList (false, false));
+    
     while ((pT->pNextTask != PNULL) && (guardCounter < MAX_GUARD_COUNTER))
     {        
         pT = pT->pNextTask;
-        if (pT->taskPresent)
+        if (!pT->taskCompleted)
         {
             switch (pT->task.body.protocol)
             {
-                case TASK_PROTOCOL_HINDRAIN_DIRECT:
+                case TASK_PROTOCOL_HD:
                 {
-                    success = handleHindbrainDirectTaskReq (&pT->task.body.detail.hindbrainDirectReq);
-                    pT->taskPresent = false;
-                    
-                    /* Handle the confirmation if one was requested */
-                    if (pT->task.headerPresent)
-                    {
-                        if (pT->task.header.sourceServerIpAddressStringPresent)
-                        {
-                            pIpAddress = &(pT->task.header.sourceServerIpAddressString[0]);
-                        }
-                        taskHandlerServerResponder (&(pT->task.header.sourceServerPortString[0]), pIpAddress, TASK_HANDLER_TASK_IND, &success, sizeof (success));
-                    }
+                    pT->taskCompleted = doHDTask (pT);
                 }
                 break;
                 default:
                 {
                     ASSERT_ALWAYS_PARAM (pT->task.body.protocol);   
+                    success = false;
                 }
                 break;
             }
         }
+        
+        /* Handle any indications of completion that need doing */
+        doTaskCompleted (pT);   
+
         guardCounter++;
     }
     
     ASSERT_PARAM (guardCounter < MAX_GUARD_COUNTER, guardCounter);
 
-    count = removeUnusedTasksFromList();
+    /* Remove any completed tasks */
+    walkTaskList (true, false);
 
-    printDebug ("Task Handler: received tick message, %d tasks in the list.\n", count);
+    return success;
 }

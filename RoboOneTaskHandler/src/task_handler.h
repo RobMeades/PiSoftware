@@ -9,7 +9,7 @@
 /*
  * FUNCTION PROTOTYPES
  */
-void initTaskHandler (void);
-void clearTaskList (void);
-Bool handleTaskReq (RoboOneTaskReq *pTaskReq);
-void tickTaskHandler (void);
+Bool initTaskList (void);
+Bool clearTaskList (void);
+Bool handleNewTaskReq (RoboOneTaskReq *pTaskReq);
+Bool tickTaskHandler (void);

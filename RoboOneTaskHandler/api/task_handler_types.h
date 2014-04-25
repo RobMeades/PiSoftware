@@ -16,7 +16,6 @@
  * MANIFEST CONSTANTS
  */
 #define MAX_LEN_IP_ADDRESS_STRING 17 /* Includes null terminator */
-#define MAX_LEN_PORT_STRING       6  /* Includes null terminator */
 
 #pragma pack(push, 1) /* Force GCC to pack everything from here on as tightly as possible */
 
@@ -27,16 +26,15 @@
 /* The task protocols that can be employed */ 
 typedef enum RoboOneTaskProtocolTag
 {
-    TASK_PROTOCOL_HINDRAIN_DIRECT,
+    TASK_PROTOCOL_HD, /* Hindbrain Direct */
     MAX_NUM_TASK_PROTOCOL_TYPES
 } RoboOneTaskProtocol;
 
-/* Union of the REQ and CNF bodies */
+/* Union of the REQ and IND bodies */
 typedef union RoboOneTaskUnionTag
 {
-    RoboOneHindbrainDirectTaskReq hindbrainDirectReq;
-    RoboOneHindbrainDirectTaskCnf hindbrainDirectCnf;
-    RoboOneHindbrainDirectTaskInd hindbrainDirectInd;
+    RoboOneHDTaskReq hdReq;
+    RoboOneHDTaskInd hdInd;
 } RoboOneTaskUnion;
 
 /* Generic container for both task REQ and task IND */
@@ -54,7 +52,7 @@ typedef struct RoboOneTaskContainerTag
 typedef struct RoboOneTaskReqHeaderTag
 {
     UInt8 handle;
-    Char sourceServerPortString[MAX_LEN_PORT_STRING];
+    SInt32 sourceServerPort;
     Bool sourceServerIpAddressStringPresent;
     Char sourceServerIpAddressString[MAX_LEN_IP_ADDRESS_STRING];    
 } RoboOneTaskReqHeader;

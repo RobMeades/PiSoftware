@@ -9,10 +9,12 @@
 #include <unistd.h> /* for fork */
 #include <sys/types.h> /* for pid_t */
 #include <sys/wait.h> /* for wait */
+#include <pthread.h>
 #include <rob_system.h>
 #include <monitor.h>
 #include <messaging_server.h>
 #include <messaging_client.h>
+#include <local_server.h>
 #include <task_handler_types.h>
 #include <task_handler_server.h>
 #include <task_handler_msg_auto.h>
@@ -31,7 +33,6 @@
 /*
  * EXTERNS
  */
-
 extern int errno;
 
 /*
@@ -41,6 +42,78 @@ extern int errno;
 /*
  * STATIC FUNCTIONS
  */
+
+/*
+ * A local server that listens out for
+ * the progress of completing tasks.
+ * This local server should never return,
+ * it is started in its own thread and
+ * cancelled by main().
+ * 
+ * pServerPort pointer to the port to use.
+ */
+void *localServer (void * serverPort)
+{
+    ServerReturnCode returnCode = SERVER_ERR_GENERAL_FAILURE;
+
+    printProgress ("RO Server listening on port %d.\n", (SInt32) serverPort);
+    returnCode = runMessagingServer ((SInt32) serverPort);
+    
+    ASSERT_ALWAYS_PARAM (returnCode);
+    
+    pthread_exit (&returnCode);
+}
+
+/*
+ * Start a local server in it's own thread
+ * that listens out for the progress of task
+ * completion.
+ * 
+ * serverPort         the port to use
+ * pLocalServerThread pointer to a place
+ *                    to store the thread
+ *                    details
+ * 
+ * @return true if successful, otherwise false.
+ */
+static Bool startLocalServerThread (pthread_t *pLocalServerThread, SInt32 serverPort)
+{
+    Bool success = true;
+
+    ASSERT_PARAM (pLocalServerThread != PNULL, (unsigned long) pLocalServerThread);
+
+    if (pthread_create (pLocalServerThread, NULL, localServer, (void *) serverPort) != 0)
+    {
+        success = false;
+        printDebug ("!!! Couldn't create RO Server thread, err: %s. !!!\n", strerror (errno));
+    }
+    
+    return success;
+}
+
+/*
+ * Stop the local server thread.
+ * 
+ * pLocalServerThread pointer to the thread
+ *                    details
+ * 
+ * @return            true if successful,
+ *                    otherwise false.
+ */
+static Bool stopLocalServerThread (pthread_t *pLocalServerThread)
+{
+    Bool success = true;
+
+    ASSERT_PARAM (pLocalServerThread != PNULL, (unsigned long) pLocalServerThread);
+
+    if (pthread_cancel (*pLocalServerThread) != 0)
+    {
+        success = false;
+        printDebug ("!!! Couldn't cancel RO Server thread, err: %s. !!!\n", strerror (errno));
+    }
+    
+    return success;
+}
 
 /*
  * Send a message to stop the Hardware Server.
@@ -143,6 +216,7 @@ int main (int argc, char **argv)
     pid_t  hwServerPID;
     pid_t  smServerPID;
     pid_t  thServerPID;
+    pthread_t localServerThread;
     
     setDebugPrintsOnToFile ("roboone.log");
     setProgressPrintsOn();
@@ -214,8 +288,17 @@ int main (int argc, char **argv)
                             
                             if (success)
                             {
-                                /* Finally, display the monitor to display things and generate events */
-                                success = runMonitor();
+                                /* Start the local server that listens out for task progress indications */
+                                success = startLocalServerThread (&localServerThread, LOCAL_SERVER_PORT);
+                                
+                                if (success)
+                                {
+                                    /* Finally, display the monitor to display things and generate events */
+                                    success = runMonitor();
+                                    
+                                    /* Tidy up the local server now that we're done */
+                                    stopLocalServerThread (&localServerThread);
+                                }
                                 
                                 printProgress ("\nDone.\n");
                             }

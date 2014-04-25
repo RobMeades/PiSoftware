@@ -68,15 +68,13 @@ static ServerReturnCode doAction (TaskHandlerMsgType receivedMsgType, UInt8 * pR
          */
         case TASK_HANDLER_SERVER_START:
         {
-            initTaskHandler();
-            success = true;
+            success = initTaskList();
         }
         break;
         case TASK_HANDLER_SERVER_STOP:
         {
-            clearTaskList();
+            success = clearTaskList();
             returnCode = SERVER_EXIT_NORMALLY;
-            success = true;
         }
         break;
         /*
@@ -84,13 +82,12 @@ static ServerReturnCode doAction (TaskHandlerMsgType receivedMsgType, UInt8 * pR
          */
         case TASK_HANDLER_NEW_TASK:
         {
-            success = handleTaskReq ((RoboOneTaskReq *) pReceivedMsgBody);
+            success = handleNewTaskReq ((RoboOneTaskReq *) pReceivedMsgBody);
         }
         break;
         case TASK_HANDLER_TICK:
         {
-            tickTaskHandler();
-            success = true;
+            success = tickTaskHandler();
         }
         break;
         default:

@@ -6,6 +6,7 @@
 #include <rob_system.h>
 #include <curses.h>
 #include <menu.h>
+#include <local_server.h>
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>
@@ -884,12 +885,15 @@ static Bool sendOTask (WINDOW *pWin)
     pTaskReq = malloc (sizeof (*pTaskReq));
     if (pTaskReq != PNULL)
     {
-        pTaskReq->headerPresent = false;
-        pTaskReq->body.protocol = TASK_PROTOCOL_HINDRAIN_DIRECT;
+        /* Put in a header so that the task handler knows where to send indications of progress */
+        pTaskReq->headerPresent = true;
+        pTaskReq->header.sourceServerPort = LOCAL_SERVER_PORT;
+        pTaskReq->header.sourceServerIpAddressStringPresent = false;
+        pTaskReq->body.protocol = TASK_PROTOCOL_HD;
 
-        if (getStringInput (pWin, "Task string: ", &(pTaskReq->body.detail.hindbrainDirectReq.string[0]), sizeof (pTaskReq->body.detail.hindbrainDirectReq.string)) != PNULL)
+        if (getStringInput (pWin, "Task string: ", &(pTaskReq->body.detail.hdReq.string[0]), sizeof (pTaskReq->body.detail.hdReq.string)) != PNULL)
         {
-            removeCtrlCharacters (&(pTaskReq->body.detail.hindbrainDirectReq.string[0]), &(displayBuffer[0]));
+            removeCtrlCharacters (&(pTaskReq->body.detail.hdReq.string[0]), &(displayBuffer[0]));
             
             /* Send the task via the state machine */
             success = stateMachineServerSendReceive (STATE_MACHINE_EVENT_TASKS_AVAILABLE, pTaskReq, sizeof (*pTaskReq), PNULL, PNULL);

@@ -63,11 +63,11 @@ int main (int argc, char **argv)
         
         if (returnCode == SERVER_EXIT_NORMALLY)
         {
-            printProgress ("HardwareServer exiting normally.\n");            
+            printProgress ("Hardware server exiting normally.\n");            
         }
         else
         {
-            printProgress ("HardwareServer exiting with returnCode %d.\n", returnCode);                        
+            printProgress ("Hardware server exiting with returnCode %d.\n", returnCode);                        
         }        
     }    
     else
