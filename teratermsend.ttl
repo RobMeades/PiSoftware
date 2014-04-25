@@ -76,6 +76,8 @@ messagebox "Zmodem did not return success, check terminal window." messageBoxTit
 goto finish
 
 :zmodemsuccess
+sendln
+wait "~]$"
 sendln makeexe
 wait "~]$"
 goto writesuccess
