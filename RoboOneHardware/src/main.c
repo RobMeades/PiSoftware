@@ -49,7 +49,9 @@ int main (int argc, char **argv)
                 hardwareServerPort = atoi (argv[1]);
                 printProgress ("Hardware server listening on port %d.\n", hardwareServerPort);
 
-                returnCode = runMessagingServer (hardwareServerPort);                
+                returnCode = runMessagingServer (hardwareServerPort);
+                
+                closeOrangutan();
             }
             else
             {

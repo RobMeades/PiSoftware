@@ -20,6 +20,7 @@
 #include <hardware_msg_auto.h>
 #include <ow_bus.h>
 #include <hw_config.h>
+#include <orangutan.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -1008,12 +1009,20 @@ Bool readChargerState (ChargeState *pState, Bool *pFlashDetectPossible)
 /*
  * Switch the Orangutan power relay from it's current 
  * state to the reverse and back again.
+ * This function also speculatively opens the Orangutan
+ * in case this is a power on.
  *
  * @return  true if successful, otherwise false.
  */
 Bool toggleOPwr (void)
 {
-    return togglePinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_O_PWR_TOGGLE);
+    Bool success;
+    
+    success = togglePinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_O_PWR_TOGGLE);
+    
+    openOrangutan();
+
+    return success;
 }
 
 /*
@@ -1048,12 +1057,19 @@ Bool readOPwr (Bool *pIsOn)
 /*
  * Switch the Orangutan reset relay from it's current 
  * state to the reverse and back again.
+ * This function also er-opens the Orangutan port.
  *
  * @return  true if successful, otherwise false.
  */
 Bool toggleORst (void)
 {
-    return togglePinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_O_RESET_TOGGLE);
+    Bool success;
+    
+    success = togglePinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_O_RESET_TOGGLE);
+
+    openOrangutan();
+    
+    return success;
 }
 
 /*
