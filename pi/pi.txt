@@ -469,6 +469,11 @@ Using curses, which I do on RoboOne, has the unfortunate effect of fiddling with
 NCURSES_NO_SETBUF=1
 export NCURSES_NO_SETBUF
 
+While you're there, we need a nice long screen so also add the following lines to /etc/profiles:
+
+# Give me a nice long terminal screen
+export LINES=62
+
 MAKE YET ANOTHER BACKUP
 Now everything is working, make backup 1.0.
 
