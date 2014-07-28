@@ -52,7 +52,7 @@ int main (int argc, char **argv)
         pReceivedMsg = malloc (sizeof (Msg));
         if (pReceivedMsg != PNULL)
         {
-            returnCode = runMessagingClient ((SInt32) atoi (ONE_WIRE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
+            returnCode = runMessagingClient ((SInt32) atoi (ONE_WIRE_SERVER_PORT_STRING), PNULL, pSendMsg, pReceivedMsg);
             
             if ((returnCode == CLIENT_SUCCESS) && (pReceivedMsg->msgLength > 0))
             {

@@ -116,7 +116,7 @@ Bool oneWireServerSendReceive (OneWireMsgType msgType, SInt32 portNumber, UInt8 
     
             printDebug ("\nOW Client: sending message %s, length %d, hex dump:\n", pgOneWireMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
             printHexDump ((UInt8 *) pSendMsg, pSendMsg->msgLength + 1);
-            returnCode = runMessagingClient ((SInt32) atoi (ONE_WIRE_SERVER_PORT_STRING), pSendMsg, pReceivedMsg);
+            returnCode = runMessagingClient ((SInt32) atoi (ONE_WIRE_SERVER_PORT_STRING), PNULL, pSendMsg, pReceivedMsg);
                     
             printDebug ("OW Client: message system returnCode: %d\n", returnCode);
             /* This code makes assumptions about packing (i.e. that it's '1' and that the

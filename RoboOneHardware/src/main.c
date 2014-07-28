@@ -11,6 +11,7 @@
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>
+#include <orangutan.h>
 #include <ow_bus.h>
 
 /*

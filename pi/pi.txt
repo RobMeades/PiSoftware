@@ -193,6 +193,7 @@ timedatectl set-timezone Europe/London
 
 INSTALL GENERAL PACKAGES
 
+pacman -S bash-completion
 pacman -S lrzsz
 pacman -S picocom
 pacman -S minicom
@@ -375,7 +376,7 @@ Get raspivid and netcat:
 pacman -S raspberrypi-firmware-tools
 pacman -S openbsd-netcat
 
-raspvid ends up in an odd place, so edit /etc/profile and add to it:
+raspivid ends up in an odd place, so edit /etc/profile and add to it:
 
 PATH="$PATH:/opt/vc/bin"
 
