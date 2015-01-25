@@ -3,25 +3,24 @@ ifneq (,)
 This makefile requires GNU Make.
 endif
 
-PROGRAM = charger
+PROGRAM = pi_io.a
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
-FLAGS = 
 
 SHARED_PRE = ../shared
-PI_IO_PRE =  ../PiIo
 
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
-CC = $(GCC_PREFIX)gcc.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(PI_IO_PRE)/$(API_DIR) $(FLAGS)
-LDFLAGS = -lncurses -pthread $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(PI_IO_PRE)/$(OBJ_DIR)/pi_io.a  
+CC =  $(GCC_PREFIX)gcc.exe
+AR =  $(GCC_PREFIX)ar.exe
+CFLAGS = -Wall -pedantic -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR)
+LDFLAGS =
 
 all: $(PROGRAM)
 
 $(PROGRAM): .depend $(OBJS)
-	$(CC) $(OBJS) $(LDFLAGS) -o $(OBJ_DIR)/$(PROGRAM)
+	$(AR) r $(LDFLAGS) $(OBJ_DIR)/$(PROGRAM) $(OBJS) 
 
 depend: .depend
 
@@ -38,7 +37,6 @@ depend: .depend
 # variables used here, the variable $* that matches whatever % stands for
 # can be useful in special cases.
 $(OBJ_DIR)/%.o:$(SRC_DIR)/%.c
-	mkdir -p $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 %:$(SRC_DIR)/%.c
