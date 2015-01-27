@@ -75,8 +75,10 @@ int main (int argc, char **argv)
         GPIO_CONFIG_OUTPUT (GPIO_IR_ENABLE);
         GPIO_CONFIG_OUTPUT (GPIO_MOTOR_MICRO_STEP);
         GPIO_CONFIG_OUTPUT (GPIO_MOTOR_DIRECTION);
+        GPIO_CONFIG_OUTPUT (GPIO_MOTOR_ENABLE_BAR);
 
         GPIO_SET (GPIO_IR_ENABLE);
+        GPIO_SET (GPIO_MOTOR_ENABLE_BAR);
         
         /*
          * The charger should be placed against a wall,
@@ -150,11 +152,13 @@ int main (int argc, char **argv)
                     if ((angleMicrosteps + microstepChange < LIMIT_ANGLE_MICROSTEPS) &&
                         (angleMicrosteps + microstepChange > -LIMIT_ANGLE_MICROSTEPS))
                     {
+                        GPIO_CLR (GPIO_MOTOR_ENABLE_BAR);
                         GPIO_SET (GPIO_MOTOR_MICRO_STEP);
                         usleep (10000);                        
                         GPIO_CLR (GPIO_MOTOR_MICRO_STEP);
                         usleep (10000);
                         angleMicrosteps += microstepChange;
+                        GPIO_SET (GPIO_MOTOR_ENABLE_BAR);
                     }
                 }
             }
