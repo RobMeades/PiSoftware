@@ -6,6 +6,12 @@ http://downloads.raspberrypi.org/arch_latest
 
 Write the .img file in the downloaded .zip file to the SD card you had in your Pi, e.g. by inserting it into the Windows machine you did the download from and then using Win32DiskImager to write the image.
 
+Update: ARCH no longer provide an .img file.  So if you don't have a Linux machine handy the best thing is to go find their last one, e.g. here:
+
+http://downloads.raspberrypi.org/arch/images/arch-2014-06-22/ArchLinuxARM-2014.06-rpi.img.zip
+
+...and do pacman -Syu from there.  Of course, this will likely not work on a Pi 2.  Either that or use a utility to make an .img file from the .gz file yourself (it is apparently easy).  Or create a bootable Ubuntu USB stick and boot a PC into that.
+
 RESIZE FILESYSTEM
 
 Put the SD card into the Pi (it doesn't have to be the one in RoboOne, any Pi will do) and resize the file system to a larger and yet manageable size as follows.  Borrowing from http://jan.alphadev.net/post/53594241659/growing-the-rpi-root-partition, the initial partitioning of recent Arch Linux images is slightly different from those that went before, and different from the NOOBS Pi image as well.  
@@ -245,6 +251,8 @@ Connected to 127.0.0.1.
 220 (vsFTPd 3.0.2)
 Name (127.0.0.1:pi):
 
+Type "quit" and press enter to leave ftp.
+
 Then edit /etc/vsftpd.conf to disable anonymous FTP (anonymous_enable=NO), allow local users to log in (local_enable=YES) and enable writing (write_enable=YES).   Restart the vsfptd service once more and check that you can log into the FTP server from somewhere else as the user pi.
 
 Set vsftpd to start at boot by entering:
@@ -253,12 +261,13 @@ systemctl enable vsftpd
 
 COPY OVER FILES
 
-While you're connected via FTP...
+While you're connected via FTP, if you're reinstalling stuff on this new image from a previous one...
 
 Copy the file /etc/udev/rules.d/39-rob.rules from the old SD card to the new one.
 Copy any bash scripts (e.g. the one that streams video), modified RIO files, etc. from the home directory of the old SD card to the new one.
 Copy the OneWire executable tstfind across (you will use it later).
 You may need to "chmod 755" the files to make them executable.
+Be careful as some of these files might have adopted DOS line endings if they have been edited on a PC.  This may result in XBeeUSB, for instance, not working properly as a terminal.  You can correct the line endings by recreating the file via a terminal from Windows, cutting and pasting the lines in from the original file and pressing "return" instead of pasting the ends of the lines.
 
 Reboot the Pi for the 39-rob.rules file to take effect.
 
@@ -286,7 +295,7 @@ Enable the streaming service to run at boot by entering:
 systemctl enable gmediarender
 
 MAKE A BACKUP
-Beyond here we fiddle with boot stuff so best make a backup now in case it goes belly-up.  You can use Win32DiskImager since you will only be writing the image back to this SD card (if you want to write to another SD card you should use dd to make an image of just the 15,499,999 blocks that are our good maximum size).  So, shutdown the Pi with:
+Beyond here we fiddle with boot stuff so best make a backup now in case it goes belly-up.  HDD Raw Copy Tool is the best as it ignores the size of the destination SD card.  So, shutdown the Pi with:
 
 shutdown -hP now
 
@@ -303,9 +312,16 @@ It should show:
 usb-FTDI_FT232R_USB_UART_A601ED4K-if00-port0
 usb-Prolific_Technology_Inc._USB-Serial_Controller-if00-port0
 
+or possibly:
+
+usb-FTDI_FT232R_USB_UART_AM01P5FX-if00-port0
+usb-Prolific_Technology_Inc._USB-Serial_Controller-if00-port0
+
 Power up the Orangutan board and check that you can talk to it via Picocom with:
 
 sh ./RoboOneSerial.sh
+
+Edit the file XBee.sh to match whichever "usb-FTDI_FT232R_USB_UART..." you have above.
 
 Check that you can talk to the XBee with:
 
@@ -339,6 +355,8 @@ aplay test.wav
 
 ACTIVATE WIFI DONGLE
 
+Warning: this bit is always fiddly and takes multiple attempts to achieve success.
+
 Bring up the Wifi dongle by entering:
 
 ip link set wlan0 up
@@ -349,7 +367,7 @@ pacman -S iw
 pacman -S wpa_supplicant
 pacman -S wireless_tools
 pacman -S netctl
-pacman -s dialog
+pacman -S dialog
 
 Then use the menu to attach to the wifi network:
 
@@ -444,6 +462,8 @@ Check that you can now log into the Pi via the XBee.  Assuming you can, make the
 
 systemctl enable serial-getty@XBeeUSB.service
 
+If it doesn't work, check for DOS line endings appearing in /etc/udev/rules.d/39-rob.rules.
+
 MAKE ANOTHER BACKUP
 We'll be fiddling with boot things again, so shut down the Pi and make a back-up.
 
@@ -465,13 +485,13 @@ sudo ./rioboard_test
 Note that the test program MUST be run with root privileges or it won't be able to access shared memory.  If a load of numbers stream up your screen, you're done.
 
 ENVIRONMENT VARIABLES
-Using curses, which I do on RoboOne, has the unfortunate effect of fiddling with the way output is buffered and this is something that cannot be modified within the execution of a program.  To stop it doing this, edit /etc/profiles and add at the end of it:
+Using curses, which I do on RoboOne, has the unfortunate effect of fiddling with the way output is buffered and this is something that cannot be modified within the execution of a program.  To stop it doing this, edit /etc/profile and add at the end of it:
 
 # Stop curses from fiddling with setbuf
 NCURSES_NO_SETBUF=1
 export NCURSES_NO_SETBUF
 
-While you're there, we need a nice long screen so also add the following lines to /etc/profiles:
+While you're there, we need a nice long screen so also add the following lines to /etc/profile:
 
 # Give me a nice long terminal screen
 export LINES=62
