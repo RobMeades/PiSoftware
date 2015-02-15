@@ -113,6 +113,7 @@ int main (int argc, char **argv)
             success = openIo();
             if (success)
             {
+                printProgress ("Setting up GPIOs...\n");
                 GPIO_CONFIG_INPUT (GPIO_IR_DETECT_NORTH);
                 GPIO_CONFIG_INPUT (GPIO_IR_DETECT_SOUTH);
                 GPIO_CONFIG_INPUT (GPIO_IR_DETECT_EAST);
@@ -133,7 +134,8 @@ int main (int argc, char **argv)
                  * line the charging point (which is mounted at
                  * North) up with an approaching IR.
                  */
-                while (1)
+                printProgress ("Starting main loop...\n");
+                do
                 {
                     UInt32 clockwiseVote;
                     UInt32 antiClockwiseVote;
@@ -209,7 +211,8 @@ int main (int argc, char **argv)
                         }
                     }
                 }
-                
+                while (!key_abort() && success);
+                printProgress ("Exiting...\n");
                 GPIO_CLR (GPIO_IR_ENABLE);
                 closeIo();
             }
@@ -218,6 +221,8 @@ int main (int argc, char **argv)
                 printProgress ("Initialisation failure, is this program running as root?\n");        
             }
         }
+        
+        oneWireStopBus (gPortNumber);
     }
     
     if (!success)
