@@ -30,12 +30,14 @@
 /* The maximum number of battery monitoring devices on the One Wire bus */
 #define MAX_BATTERY_DEVICES 1
 
+/* The maximum number of IO devices on the One Wire bus */
+#define MAX_IO_DEVICES 2
+
 /* Convert a microstep to an angle in degrees, rounding down */
 #define MICROSTEPS_TO_ANGLE(m) (m * 360 /1600)
 
 /* Convert an angle to microsteps, rounding down */
 #define ANGLE_TO_MICROSTEPS(a) (a * 1600 / 360)
-
 
 /* The minimum angle to move (chose a multiple of 0.225) */
 #define MIN_ANGLE_DEGREES 9
@@ -55,6 +57,7 @@
  
 SInt32 gPortNumber = 0;
 UInt8 gBatteryDeviceArray[MAX_BATTERY_DEVICES][NUM_BYTES_IN_SERIAL_NUM];
+UInt8 gIoDeviceArray[MAX_IO_DEVICES][NUM_BYTES_IN_SERIAL_NUM];
 SInt16 gCurrent;
 double gTemperature;
 UInt16 gVoltage;

@@ -588,7 +588,7 @@
 <XPD:OBJ name="NameLabel" type="EdgeLabelView" guid="w2tjZiKxSUGx2KbL8KKAeQAA">
 <XPD:ATTR name="Alpha" type="real">-2.57921339552771</XPD:ATTR>
 <XPD:ATTR name="Distance" type="real">44.0454310910905</XPD:ATTR>
-<XPD:ATTR name="Text" type="string">All chargers off</XPD:ATTR>
+<XPD:ATTR name="Text" type="string">Fully Charged</XPD:ATTR>
 <XPD:REF name="Model">FNtPx4T+C0yAXBLoyPlWawAA</XPD:REF>
 </XPD:OBJ>
 <XPD:OBJ name="StereotypeLabel" type="EdgeLabelView" guid="N3vVWwBrK0eFdD6q08OktAAA">
@@ -890,7 +890,7 @@
 <XPD:REF name="Target">SCunKcaLWEyUZh/AhshyfAAA</XPD:REF>
 </XPD:OBJ>
 <XPD:OBJ name="Transitions[4]" type="UMLTransition" guid="FNtPx4T+C0yAXBLoyPlWawAA">
-<XPD:ATTR name="Name" type="string">All chargers off</XPD:ATTR>
+<XPD:ATTR name="Name" type="string">Fully Charged</XPD:ATTR>
 <XPD:REF name="StateMachine">Ld5zdch2dUecqqTRLZS9EQAA</XPD:REF>
 <XPD:REF name="Source">ok6IE8+6OkyYdvR63rggHAAA</XPD:REF>
 <XPD:REF name="Target">7DaWh3fTnUGhYO1LdyKFpAAA</XPD:REF>

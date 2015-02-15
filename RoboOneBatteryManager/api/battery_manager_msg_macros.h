@@ -25,6 +25,7 @@
 /* Construct a full typedef for an RSP (outgoing) message with the standard success field at the start */
 #define MAKE_BATTERY_MANAGER_MSG_STRUCT_RSP(mSGtYPE, mSGsTRUCT, mSGmEMBER, iNDmSGmEMBER, rSPmSGmEMBER) typedef struct mSGsTRUCT##RspTag   \
                                                                                                        {                                  \
+                                                                                                           Bool success;                  \
                                                                                                            rSPmSGmEMBER;                  \
                                                                                                        } mSGsTRUCT##Rsp;
 /* Construct a full typedef for an REQ (incoming) message */
@@ -36,6 +37,7 @@
 /* Construct a full typedef for an CNF (outgoing) message with the standard success field at the start */
 #define MAKE_BATTERY_MANAGER_MSG_STRUCT_CNF(mSGtYPE, mSGsTRUCT, mSGmEMBER, rEQmSGmEMBER, cNFmSGmEMBER) typedef struct mSGsTRUCT##cNFTag   \
                                                                                                        {                                  \
+                                                                                                           Bool success;                  \
                                                                                                            cNFmSGmEMBER;                  \
                                                                                                        } mSGsTRUCT##Cnf;
 /* Construct the members of the message unions */

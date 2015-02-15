@@ -125,6 +125,8 @@ static void signalChargeStateAll (void)
  */
 static Bool setChargerOn (BatteryContainerData *pBatteryContainerData)
 {
+    ASSERT_PARAM (pBatteryContainerData != PNULL, (unsigned long) pBatteryContainerData);
+
     if (!pBatteryContainerData->insufficientCharge)
     {
         if (pBatteryContainerData->batteryData.remainingCapacity < MINIMUM_CHARGE)
@@ -390,6 +392,9 @@ static UInt16 actionBatteryManagerChargingPermitted (Bool isPermitted)
         hardwareServerSendReceive (HARDWARE_SET_O2_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);
         hardwareServerSendReceive (HARDWARE_SET_O3_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);       
     }
+    
+    /* No need to check if charging is permited now, the function calls
+     * below will do that anyway */ 
     
     gChargingPermitted = isPermitted;
     
