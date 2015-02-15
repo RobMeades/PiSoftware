@@ -9,7 +9,7 @@
 
 /* GPIO handling macros
  * These can be used directly if openIo() is called first.  If it is not,
- * them the function call interface must be used.
+ * then the function call interface must be used.
  */
 
 /* Configure a GPIO as an input */

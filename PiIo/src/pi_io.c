@@ -17,7 +17,13 @@
  */
 
 /* GPIO memory mapping */
-#define BCM2708_PERIPHERALS_BASE 0x20000000
+#ifdef PI_1
+#    define BCM2708_PERIPHERALS_BASE 0x20000000
+#else
+/* For PI 2 it's different, thanks to Gordon Henderson of wiringPi for telling me */
+#    define BCM2708_PERIPHERALS_BASE 0x3F000000
+#endif
+
 #define GPIO_BASE                (BCM2708_PERIPHERALS_BASE + 0x200000)  /* GPIO controller */ 
  
 #define BLOCK_SIZE (4 * 1024)
