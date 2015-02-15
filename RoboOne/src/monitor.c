@@ -10,6 +10,7 @@
 #include <rob_system.h>
 #include <curses.h> /* Has to be ahead of rob_system.h in the list as it fiddles with bool */
 #include <menu.h>
+#include <hardware_types.h>
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>
@@ -20,6 +21,9 @@
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
 #include <state_machine_client.h>
+#include <battery_manager_server.h>
+#include <battery_manager_msg_auto.h>
+#include <battery_manager_client.h>
 #include <main.h>
 
 /*
@@ -272,37 +276,35 @@ static void initRioWindow (WINDOW *pWin)
  */
 static Bool updateRioWindow (WINDOW *pWin, UInt8 count)
 {
-    SInt16 current = 0;
-    UInt16 voltage = 0;
-    UInt16 remainingCapacity = 0;
-    HardwareChargeDischarge chargeDischarge;
+    BatteryData batteryData;
     UInt8 row = 0;
     UInt8 col = 0;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
 
-    chargeDischarge.charge = 0;
-    chargeDischarge.discharge = 0;
+    memset (&batteryData, 0, sizeof (batteryData));
 
-    hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_CURRENT, PNULL, 0, &current);
-    hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_VOLTAGE, PNULL, 0, &voltage);
+    hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_CURRENT, PNULL, 0, &(batteryData.current));
+    hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_VOLTAGE, PNULL, 0, &(batteryData.voltage));
     wmove (pWin, row, col);
     wclrtoeol (pWin);
-    wprintw (pWin, "%d mA, %u mV", current, voltage);
+    wprintw (pWin, "%d mA, %u mV", batteryData.current, batteryData.voltage);
     row++;
 
     if (count % SLOW_UPDATE_BACKOFF == 0)
     {
-        hardwareServerSendReceive (HARDWARE_READ_RIO_REMAINING_CAPACITY, PNULL, 0, &remainingCapacity);
-        hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(chargeDischarge.discharge));
+        hardwareServerSendReceive (HARDWARE_READ_RIO_REMAINING_CAPACITY, PNULL, 0, &(batteryData.remainingCapacity));
+        hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData.chargeDischarge.discharge));
         wmove (pWin, row, col);
         wclrtoeol (pWin);
-        wprintw (pWin, "%u mAhr(s) remain", remainingCapacity);
+        wprintw (pWin, "%u mAhr(s) remain", batteryData.remainingCapacity);
         row++;
         wmove (pWin, row, col);
         wclrtoeol (pWin);
-        wprintw (pWin, "lifetime -%lu/%lu mAhr", chargeDischarge.discharge, chargeDischarge.charge);
+        wprintw (pWin, "lifetime -%lu/%lu mAhr", batteryData.chargeDischarge.discharge, batteryData.chargeDischarge.charge);
         row++;
+        
+        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_RIO, &batteryData, sizeof (batteryData), PNULL);        
     }
     else
     {
@@ -339,53 +341,53 @@ static void initOWindow (WINDOW *pWin)
  */
 static Bool updateOWindow (WINDOW *pWin, UInt8 count)
 {
-    SInt16 current[3];
-    UInt16 voltage[3];
-    UInt16 remainingCapacity[3];
-    HardwareChargeDischarge chargeDischarge[3];
+    BatteryData batteryData[3];
     UInt8 row = 0;
     UInt8 col = 0;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
    
-    memset (&current, 0, sizeof (current));
-    memset (&voltage, 0, sizeof (voltage));
-    memset (&remainingCapacity, 0, sizeof (remainingCapacity));
-    memset (&chargeDischarge, 0, sizeof (chargeDischarge));
+    memset (&batteryData, 0, sizeof (batteryData));
 
-    hardwareServerSendReceive (HARDWARE_READ_O1_BATT_CURRENT, PNULL, 0, &current[0]);
-    hardwareServerSendReceive (HARDWARE_READ_O2_BATT_CURRENT, PNULL, 0, &current[1]);
-    hardwareServerSendReceive (HARDWARE_READ_O3_BATT_CURRENT, PNULL, 0, &current[2]);
-    hardwareServerSendReceive (HARDWARE_READ_O1_BATT_VOLTAGE, PNULL, 0, &voltage[0]);
-    hardwareServerSendReceive (HARDWARE_READ_O2_BATT_VOLTAGE, PNULL, 0, &voltage[1]);
-    hardwareServerSendReceive (HARDWARE_READ_O3_BATT_VOLTAGE, PNULL, 0, &voltage[2]);
+    hardwareServerSendReceive (HARDWARE_READ_O1_BATT_CURRENT, PNULL, 0, &(batteryData[0].current));
+    hardwareServerSendReceive (HARDWARE_READ_O2_BATT_CURRENT, PNULL, 0, &(batteryData[1].current));
+    hardwareServerSendReceive (HARDWARE_READ_O3_BATT_CURRENT, PNULL, 0, &(batteryData[2].current));
+    hardwareServerSendReceive (HARDWARE_READ_O1_BATT_VOLTAGE, PNULL, 0, &(batteryData[0].voltage));
+    hardwareServerSendReceive (HARDWARE_READ_O2_BATT_VOLTAGE, PNULL, 0, &(batteryData[1].voltage));
+    hardwareServerSendReceive (HARDWARE_READ_O3_BATT_VOLTAGE, PNULL, 0, &(batteryData[2].voltage));
     wmove (pWin, row, col);
     wclrtoeol (pWin);
-    wprintw (pWin, "%d/%d/%d mA, %u/%u/%u mV", current[0], current[1], current[2], voltage[0], voltage[1], voltage[2]);
+    wprintw (pWin, "%d/%d/%d mA, %u/%u/%u mV", batteryData[0].current, batteryData[1].current, batteryData[2].current,
+                                               batteryData[0].voltage, batteryData[1].voltage, batteryData[2].voltage);
     row++;
     
     if (count % SLOWER_UPDATE_BACKOFF == 0)
     {
-        hardwareServerSendReceive (HARDWARE_READ_O1_REMAINING_CAPACITY, PNULL, 0, &remainingCapacity[0]);
-        hardwareServerSendReceive (HARDWARE_READ_O2_REMAINING_CAPACITY, PNULL, 0, &remainingCapacity[1]);
-        hardwareServerSendReceive (HARDWARE_READ_O3_REMAINING_CAPACITY, PNULL, 0, &remainingCapacity[2]);
-        hardwareServerSendReceive (HARDWARE_READ_O1_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &chargeDischarge[0]);
-        hardwareServerSendReceive (HARDWARE_READ_O2_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &chargeDischarge[1]);
-        hardwareServerSendReceive (HARDWARE_READ_O3_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &chargeDischarge[2]);
+        hardwareServerSendReceive (HARDWARE_READ_O1_REMAINING_CAPACITY, PNULL, 0, &(batteryData[0].remainingCapacity));
+        hardwareServerSendReceive (HARDWARE_READ_O2_REMAINING_CAPACITY, PNULL, 0, &(batteryData[1].remainingCapacity));
+        hardwareServerSendReceive (HARDWARE_READ_O3_REMAINING_CAPACITY, PNULL, 0, &(batteryData[2].remainingCapacity));
+        hardwareServerSendReceive (HARDWARE_READ_O1_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData[0].chargeDischarge));
+        hardwareServerSendReceive (HARDWARE_READ_O2_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData[1].chargeDischarge));
+        hardwareServerSendReceive (HARDWARE_READ_O3_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData[2].chargeDischarge));
         wmove (pWin, row, col);
         wclrtoeol (pWin);
-        wprintw (pWin, "%u mAhr(s) remain", remainingCapacity[0] + remainingCapacity[1] + remainingCapacity[2]);
+        wprintw (pWin, "%u mAhr(s) remain", batteryData[0].remainingCapacity + batteryData[1].remainingCapacity + batteryData[2].remainingCapacity);
         row++;
         wmove (pWin, row, col);
         wclrtoeol (pWin);
-        wprintw (pWin, "lifetime -%lu/%lu mAhr", chargeDischarge[0].discharge + chargeDischarge[1].discharge + chargeDischarge[2].discharge, chargeDischarge[0].charge + chargeDischarge[1].charge + chargeDischarge[2].charge);
-        row++;
+        wprintw (pWin, "lifetime -%lu/%lu mAhr", batteryData[0].chargeDischarge.discharge + batteryData[1].chargeDischarge.discharge + batteryData[2].chargeDischarge.discharge,
+                                                 batteryData[0].chargeDischarge.charge + batteryData[1].chargeDischarge.charge + batteryData[2].chargeDischarge.charge);
+        row++;        
+
+        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O1, &(batteryData[0]), sizeof (batteryData[0]), PNULL);
+        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O2, &(batteryData[1]), sizeof (batteryData[1]), PNULL);
+        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O3, &(batteryData[2]), sizeof (batteryData[2]), PNULL);
     }
     else
     {
         row += 2;
     }
-    
+
     wnoutrefresh (pWin);
     
     return false;

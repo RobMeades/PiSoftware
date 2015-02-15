@@ -62,6 +62,11 @@ static void defaultEventFullyCharged (RoboOneState *pState)
     printDebug ("Unsupported FullyCharged event in state %s.\n", &(pState->name[0]));
 }
 
+static void defaultEventInsufficientCharge (RoboOneState *pState)
+{
+    printDebug ("Unsupported InsufficientCharge event in state %s.\n", &(pState->name[0]));    
+}
+
 static void defaultEventShutdown (RoboOneState *pState)
 {
     printDebug ("Unsupported Shutdown event in state %s.\n", &(pState->name[0]));
@@ -81,5 +86,6 @@ void defaultImplementation (RoboOneState *pState)
     pState->pEventMainsPowerAvailable = defaultEventMainsPowerAvailable;
     pState->pEventInsufficientPower = defaultEventInsufficientPower;
     pState->pEventFullyCharged = defaultEventFullyCharged;
+    pState->pEventInsufficientCharge = defaultEventInsufficientCharge;
     pState->pEventShutdown = defaultEventShutdown;
 }

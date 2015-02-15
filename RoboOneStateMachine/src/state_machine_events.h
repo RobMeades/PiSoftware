@@ -22,4 +22,5 @@ void eventNoTasksAvailableRoboOne (RoboOneContext *pInstance);
 void eventMainsPowerAvailableRoboOne (RoboOneContext *pInstance);
 void eventInsufficientPowerRoboOne (RoboOneContext *pInstance);
 void eventFullyChargedRoboOne (RoboOneContext *pInstance);
+void eventInsufficientChargeRoboOne (RoboOneContext *pInstance);
 void eventShutdownRoboOne (RoboOneContext *pInstance);

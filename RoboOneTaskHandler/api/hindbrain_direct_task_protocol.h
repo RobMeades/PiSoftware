@@ -21,8 +21,7 @@
 
 typedef struct RoboOneHDTaskReqTag
 {
-  Char string[MAX_LEN_HD_COMMAND_STRING]; /* Must end with '\n' and then be null terminated */
-    
+  Char string[MAX_LEN_HD_COMMAND_STRING]; /* Must end with '\n' and then be null terminated */  
 } RoboOneHDTaskReq;
 
 /*

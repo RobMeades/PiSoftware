@@ -7,6 +7,7 @@
 #include <curses.h>
 #include <menu.h>
 #include <local_server.h>
+#include <hardware_types.h>
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>
@@ -32,6 +33,7 @@
 #define SWAP_BATTERY_STATE_PROMPT "Is the new battery fully charged (Y) (N if it is discharged)?: "
 #define SWAP_BATTERY_CNF_MSG "Battery data updated.\n"
 #define BATTERY_CAPACITY 2200
+#define MAX_LEN_INPUT_STRING 30 /* Includes null terminator */
 
 /*
  * STATIC FUNCTION PROTOTYPES
@@ -77,6 +79,7 @@ static Bool enableAllRelays (void);
 static Bool disableAllRelays (void);
 static Bool sendOString (WINDOW *pWin);
 static Bool sendOTask (WINDOW *pWin);
+static Bool sendMotionTask (WINDOW *pWin);
 
 /*
  * TYPES
@@ -109,7 +112,7 @@ extern RoboOneGlobals gRoboOneGlobals;
 /* Array of possible commands.  All command strings MUST be unique.
  * Try not to begin any with a Y or N to avoid accidental cross-over with
  * Y/N confirmation prompts.
- * IF YOU MODIFY THIS KEEP THE INDEX ENTRIES UP TO DATE BELOW */
+ * IF YOU MODIFY THIS KEEP THE INDEX ENTRY UP TO DATE BELOW */
 Command gCommandList[] = {{"?", {&commandHelp}, true, "display command help"},
 						  {"X", {&commandExit}, false, "exit this program"}, /* Exit must be a non-displaying menu item */
 						  {"I", {&displayCurrents}, true, "display current readings"},
@@ -134,7 +137,8 @@ Command gCommandList[] = {{"?", {&commandHelp}, true, "display command help"},
  						  {"HM+", {&setOPwr12VOn}, false, "switch hindbrain (AKA Orangutan) mains power on"},
  						  {"HM-", {&setOPwr12VOff}, false, "switch hindbrain (AKA Orangutan) mains power off"},
                           {"HS", {&sendOString}, true, "send hindbrain (AKA Orangutan) a string"},
-                          {"T", {&sendOTask}, true, "send a task to hindbrain (AKA Orangutan)"},
+                          {"TH", {&sendOTask}, true, "task sent to hindbrain (AKA Orangutan)"},
+                          {"TM", {&sendMotionTask}, true, "task to do with motion"},
  						  {"CX+", {&setAllBatteryChargersOn}, false, "switch all chargers on"},
  						  {"CX-", {&setAllBatteryChargersOff}, false, "switch all chargers off"},
  						  {"CP+", {&setRioBatteryChargerOn}, false, "switch RIO/Pi charger on"},
@@ -923,6 +927,86 @@ static Bool sendOTask (WINDOW *pWin)
                 printHelper (pWin, "\nSend failed.\n");
             }
         }
+        free (pTaskReq);
+    }
+     
+    return success;
+}
+
+/*
+ * Helper function to parse a string that represents
+ * a Motion task into a RoboOneMotionTaskReq structure.
+ * 
+ * pString         the input string, null terminated.
+ * pMotionTaskReq  pointer to a structure to fill in.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+static Bool getMotionTask (const char *pString, RoboOneMotionTaskReq *pMotionTaskReq)
+{
+    Bool success = false;
+    
+    return success;
+}
+
+/*
+ * Perform a Motion task.  This is more structured
+ * than the simple string tasks, involving chosing
+ * a command and adding a value.
+ *
+ * pWin     a window to send output to,
+ *          may be PNULL.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool sendMotionTask (WINDOW *pWin)
+{
+    Bool success = false;
+    RoboOneTaskReq *pTaskReq;
+    char input[MAX_LEN_INPUT_STRING];
+
+    pTaskReq = malloc (sizeof (*pTaskReq));
+    if (pTaskReq != PNULL)
+    {
+        /* Put in a header so that the task handler knows where to send indications of progress */
+        pTaskReq->headerPresent = true;
+        pTaskReq->header.sourceServerPort = LOCAL_SERVER_PORT;
+        pTaskReq->header.sourceServerIpAddressStringPresent = false;
+        pTaskReq->header.handle = gRoboOneGlobals.roboOneTaskInfo.taskCounter;
+        pTaskReq->body.protocol = TASK_PROTOCOL_MOTION;
+
+        if (getStringInput (pWin, "Command (? for help): ", &(input[0]), sizeof (input)) != PNULL)
+        {
+            if (input[0] == '?')
+            {
+                printHelper (pWin, "\n");
+                printHelper (pWin, " M[-]x: Move x mm or -x mm,\n");
+                printHelper (pWin, " T[-]x: Turn x degrees or -x degrees,\n");
+                printHelper (pWin, " Sx:    Stop command x,\n");
+                printHelper (pWin, " A:     stop All commands.\n");
+            }
+            else
+            {
+                if (getMotionTask (&(input[0]), (RoboOneMotionTaskReq *) &pTaskReq->body.detail))
+                {
+                    gRoboOneGlobals.roboOneTaskInfo.lastResultReceivedIsValid = false;
+                    gRoboOneGlobals.roboOneTaskInfo.lastIndString[0] = 0;
+                    
+                    /* Send the task via the state machine */
+                    success = stateMachineServerSendReceive (STATE_MACHINE_EVENT_TASKS_AVAILABLE, pTaskReq, sizeof (*pTaskReq), PNULL, PNULL);
+                    if (success)
+                    {
+                        gRoboOneGlobals.roboOneTaskInfo.taskCounter++;
+                        printHelper (pWin, "\nSent task '%s'.\n", &(gRoboOneGlobals.roboOneTaskInfo.lastTaskSent[0]));
+                    }
+                    else
+                    {
+                        gRoboOneGlobals.roboOneTaskInfo.lastTaskSent[0] = 0;
+                        printHelper (pWin, "\nSend failed.\n");
+                    }
+                }                
+            }
+        }            
         free (pTaskReq);
     }
      

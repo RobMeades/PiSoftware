@@ -107,7 +107,7 @@
 </XPD:OBJ>
 <XPD:ATTR name="#DoActivities" type="integer">1</XPD:ATTR>
 <XPD:OBJ name="DoActivities[0]" type="UMLUninterpretedAction" guid="Qays0LLsVkqInevPos5rsgAA">
-<XPD:ATTR name="Name" type="string">Monitor each charger, switch off when solid green for X minutes</XPD:ATTR>
+<XPD:ATTR name="Name" type="string">Monitor each charger, switch off when enough coulombs counted</XPD:ATTR>
 <XPD:REF name="DoActivityState">ok6IE8+6OkyYdvR63rggHAAA</XPD:REF>
 </XPD:OBJ>
 <XPD:ATTR name="#Subvertices" type="integer">1</XPD:ATTR>
@@ -307,7 +307,7 @@
 <XPD:REF name="DiagramOwner">Ld5zdch2dUecqqTRLZS9EQAA</XPD:REF>
 <XPD:OBJ name="DiagramView" type="UMLStatechartDiagramView" guid="LZ0AJBD6iESEIpno9q6BbAAA">
 <XPD:REF name="Diagram">W57OmPg0AkS+8do5ESabBQAA</XPD:REF>
-<XPD:ATTR name="#OwnedViews" type="integer">20</XPD:ATTR>
+<XPD:ATTR name="#OwnedViews" type="integer">19</XPD:ATTR>
 <XPD:OBJ name="OwnedViews[0]" type="UMLStateView" guid="usDGP+uhGkWPKwd3lN3GEwAA">
 <XPD:ATTR name="LineColor" type="string">clMaroon</XPD:ATTR>
 <XPD:ATTR name="FillColor" type="string">$00B9FFFF</XPD:ATTR>
@@ -363,7 +363,7 @@
 <XPD:ATTR name="FillColor" type="string">$00B9FFFF</XPD:ATTR>
 <XPD:ATTR name="Left" type="integer">492</XPD:ATTR>
 <XPD:ATTR name="Top" type="integer">276</XPD:ATTR>
-<XPD:ATTR name="Width" type="integer">332</XPD:ATTR>
+<XPD:ATTR name="Width" type="integer">339</XPD:ATTR>
 <XPD:ATTR name="Height" type="integer">88</XPD:ATTR>
 <XPD:REF name="Model">ok6IE8+6OkyYdvR63rggHAAA</XPD:REF>
 <XPD:REF name="ContainerView">usDGP+uhGkWPKwd3lN3GEwAA</XPD:REF>
@@ -581,7 +581,7 @@
 <XPD:OBJ name="OwnedViews[8]" type="UMLTransitionView" guid="jKCP2HCvTEWdJCvzJuzT7AAA">
 <XPD:ATTR name="LineColor" type="string">clMaroon</XPD:ATTR>
 <XPD:ATTR name="FillColor" type="string">$00B9FFFF</XPD:ATTR>
-<XPD:ATTR name="Points" type="Points">586,363;540,392;586,424</XPD:ATTR>
+<XPD:ATTR name="Points" type="Points">588,363;540,392;586,424</XPD:ATTR>
 <XPD:REF name="Model">FNtPx4T+C0yAXBLoyPlWawAA</XPD:REF>
 <XPD:REF name="Head">xOQ46q1K90m9z/ijTMBjowAA</XPD:REF>
 <XPD:REF name="Tail">+jXmG/cd3U+5mEOZc8RwfgAA</XPD:REF>
@@ -607,14 +607,14 @@
 <XPD:OBJ name="OwnedViews[9]" type="UMLTransitionView" guid="KHt9kDxW70aaBFMIagQBAgAA">
 <XPD:ATTR name="LineColor" type="string">clMaroon</XPD:ATTR>
 <XPD:ATTR name="FillColor" type="string">$00B9FFFF</XPD:ATTR>
-<XPD:ATTR name="Points" type="Points">717,424;756,400;711,363</XPD:ATTR>
+<XPD:ATTR name="Points" type="Points">717,424;756,400;713,363</XPD:ATTR>
 <XPD:REF name="Model">jYOnQsvkp0ScNKhexqp1OgAA</XPD:REF>
 <XPD:REF name="Head">+jXmG/cd3U+5mEOZc8RwfgAA</XPD:REF>
 <XPD:REF name="Tail">xOQ46q1K90m9z/ijTMBjowAA</XPD:REF>
 <XPD:OBJ name="NameLabel" type="EdgeLabelView" guid="QMADwA7PdU2MGPKH2zUrsgAA">
-<XPD:ATTR name="Alpha" type="real">3.99049977208303</XPD:ATTR>
-<XPD:ATTR name="Distance" type="real">37.4833296279826</XPD:ATTR>
-<XPD:ATTR name="Text" type="string">Timer expiry</XPD:ATTR>
+<XPD:ATTR name="Alpha" type="real">3.86745501951883</XPD:ATTR>
+<XPD:ATTR name="Distance" type="real">53.0377224247045</XPD:ATTR>
+<XPD:ATTR name="Text" type="string">Insufficient Charge</XPD:ATTR>
 <XPD:REF name="Model">jYOnQsvkp0ScNKhexqp1OgAA</XPD:REF>
 </XPD:OBJ>
 <XPD:OBJ name="StereotypeLabel" type="EdgeLabelView" guid="DgAaDyWDqE2XNkNovZTYqQAA">
@@ -734,34 +734,7 @@
 <XPD:REF name="Model">nwdVkCbNEEiadsf8iAq0MwAA</XPD:REF>
 </XPD:OBJ>
 </XPD:OBJ>
-<XPD:OBJ name="OwnedViews[14]" type="UMLTransitionView" guid="Y7SoT1YIoEWDxvrkOti9gAAA">
-<XPD:ATTR name="LineColor" type="string">clMaroon</XPD:ATTR>
-<XPD:ATTR name="FillColor" type="string">$00B9FFFF</XPD:ATTR>
-<XPD:ATTR name="LineStyle" type="LineStyleKind">lsRectilinear</XPD:ATTR>
-<XPD:ATTR name="Points" type="Points">575,136;575,116;732,116;732,136</XPD:ATTR>
-<XPD:REF name="Model">ADPwa8moGkK4xR7nu3+rsQAA</XPD:REF>
-<XPD:REF name="Head">usDGP+uhGkWPKwd3lN3GEwAA</XPD:REF>
-<XPD:REF name="Tail">usDGP+uhGkWPKwd3lN3GEwAA</XPD:REF>
-<XPD:OBJ name="NameLabel" type="EdgeLabelView" guid="7OsoAJJU4UaMmohNM+25WwAA">
-<XPD:ATTR name="Alpha" type="real">1.35970231064542</XPD:ATTR>
-<XPD:ATTR name="Distance" type="real">14.3178210632764</XPD:ATTR>
-<XPD:ATTR name="Text" type="string">Insufficient charge</XPD:ATTR>
-<XPD:REF name="Model">ADPwa8moGkK4xR7nu3+rsQAA</XPD:REF>
-</XPD:OBJ>
-<XPD:OBJ name="StereotypeLabel" type="EdgeLabelView" guid="B4eCEnBYik6/GTnRqLDcfgAA">
-<XPD:ATTR name="Visible" type="boolean">False</XPD:ATTR>
-<XPD:ATTR name="Alpha" type="real">1.5707963267949</XPD:ATTR>
-<XPD:ATTR name="Distance" type="real">30</XPD:ATTR>
-<XPD:REF name="Model">ADPwa8moGkK4xR7nu3+rsQAA</XPD:REF>
-</XPD:OBJ>
-<XPD:OBJ name="PropertyLabel" type="EdgeLabelView" guid="DYHMGioe3k6EWG/38MK/BwAA">
-<XPD:ATTR name="Visible" type="boolean">False</XPD:ATTR>
-<XPD:ATTR name="Alpha" type="real">-1.5707963267949</XPD:ATTR>
-<XPD:ATTR name="Distance" type="real">15</XPD:ATTR>
-<XPD:REF name="Model">ADPwa8moGkK4xR7nu3+rsQAA</XPD:REF>
-</XPD:OBJ>
-</XPD:OBJ>
-<XPD:OBJ name="OwnedViews[15]" type="UMLTransitionView" guid="DgBZUvPO+EuVouzbsu3s8wAA">
+<XPD:OBJ name="OwnedViews[14]" type="UMLTransitionView" guid="DgBZUvPO+EuVouzbsu3s8wAA">
 <XPD:ATTR name="LineColor" type="string">clMaroon</XPD:ATTR>
 <XPD:ATTR name="FillColor" type="string">$00B9FFFF</XPD:ATTR>
 <XPD:ATTR name="Points" type="Points">214,488;214,278</XPD:ATTR>
@@ -787,7 +760,7 @@
 <XPD:REF name="Model">bGUTbvpEHEmYUSTN09TZfAAA</XPD:REF>
 </XPD:OBJ>
 </XPD:OBJ>
-<XPD:OBJ name="OwnedViews[16]" type="UMLTransitionView" guid="pGQnAjCN9kSwBG30ER6SZQAA">
+<XPD:OBJ name="OwnedViews[15]" type="UMLTransitionView" guid="pGQnAjCN9kSwBG30ER6SZQAA">
 <XPD:ATTR name="LineColor" type="string">clMaroon</XPD:ATTR>
 <XPD:ATTR name="FillColor" type="string">$00B9FFFF</XPD:ATTR>
 <XPD:ATTR name="Points" type="Points">1096,468;1140,340;1093,204</XPD:ATTR>
@@ -813,7 +786,7 @@
 <XPD:REF name="Model">D9rh7bD9Tke1WM9yH9siXgAA</XPD:REF>
 </XPD:OBJ>
 </XPD:OBJ>
-<XPD:OBJ name="OwnedViews[17]" type="UMLTransitionView" guid="gJ4manrnxEmMRd8CZHp+tAAA">
+<XPD:OBJ name="OwnedViews[16]" type="UMLTransitionView" guid="gJ4manrnxEmMRd8CZHp+tAAA">
 <XPD:ATTR name="LineColor" type="string">clMaroon</XPD:ATTR>
 <XPD:ATTR name="FillColor" type="string">$00B9FFFF</XPD:ATTR>
 <XPD:ATTR name="Points" type="Points">924,103;608,28;368,119</XPD:ATTR>
@@ -839,7 +812,7 @@
 <XPD:REF name="Model">ZsVZI967AU+Ds7UCzXUoUgAA</XPD:REF>
 </XPD:OBJ>
 </XPD:OBJ>
-<XPD:OBJ name="OwnedViews[18]" type="UMLPseudostateView" guid="eemefJ8vukW/IUClpuqfngAA">
+<XPD:OBJ name="OwnedViews[17]" type="UMLPseudostateView" guid="eemefJ8vukW/IUClpuqfngAA">
 <XPD:ATTR name="LineColor" type="string">clMaroon</XPD:ATTR>
 <XPD:ATTR name="FillColor" type="string">$00B9FFFF</XPD:ATTR>
 <XPD:ATTR name="Left" type="integer">800</XPD:ATTR>
@@ -848,7 +821,7 @@
 <XPD:ATTR name="Height" type="integer">20</XPD:ATTR>
 <XPD:REF name="Model">lTPLNKLSb0W18hmvMDSVVwAA</XPD:REF>
 </XPD:OBJ>
-<XPD:OBJ name="OwnedViews[19]" type="UMLTransitionView" guid="rwb0YdGdxk+cwNRHC7XrcwAA">
+<XPD:OBJ name="OwnedViews[18]" type="UMLTransitionView" guid="rwb0YdGdxk+cwNRHC7XrcwAA">
 <XPD:ATTR name="LineColor" type="string">clMaroon</XPD:ATTR>
 <XPD:ATTR name="FillColor" type="string">$00B9FFFF</XPD:ATTR>
 <XPD:ATTR name="LineStyle" type="LineStyleKind">lsRectilinear</XPD:ATTR>
@@ -928,7 +901,7 @@
 <XPD:REF name="Views[3]">/NT02NJLw0G+aKqpevVGSAAA</XPD:REF>
 </XPD:OBJ>
 <XPD:OBJ name="Transitions[5]" type="UMLTransition" guid="jYOnQsvkp0ScNKhexqp1OgAA">
-<XPD:ATTR name="Name" type="string">Timer expiry</XPD:ATTR>
+<XPD:ATTR name="Name" type="string">Insufficient Charge</XPD:ATTR>
 <XPD:REF name="StateMachine">Ld5zdch2dUecqqTRLZS9EQAA</XPD:REF>
 <XPD:REF name="Source">7DaWh3fTnUGhYO1LdyKFpAAA</XPD:REF>
 <XPD:REF name="Target">ok6IE8+6OkyYdvR63rggHAAA</XPD:REF>
@@ -1004,11 +977,6 @@
 <XPD:REF name="StateMachine">Ld5zdch2dUecqqTRLZS9EQAA</XPD:REF>
 <XPD:REF name="Source">SCunKcaLWEyUZh/AhshyfAAA</XPD:REF>
 <XPD:REF name="Target">SCunKcaLWEyUZh/AhshyfAAA</XPD:REF>
-<XPD:ATTR name="#Views" type="integer">4</XPD:ATTR>
-<XPD:REF name="Views[0]">Y7SoT1YIoEWDxvrkOti9gAAA</XPD:REF>
-<XPD:REF name="Views[1]">7OsoAJJU4UaMmohNM+25WwAA</XPD:REF>
-<XPD:REF name="Views[2]">B4eCEnBYik6/GTnRqLDcfgAA</XPD:REF>
-<XPD:REF name="Views[3]">DYHMGioe3k6EWG/38MK/BwAA</XPD:REF>
 </XPD:OBJ>
 <XPD:OBJ name="Transitions[14]" type="UMLTransition" guid="bGUTbvpEHEmYUSTN09TZfAAA">
 <XPD:ATTR name="Name" type="string">Supervisor action</XPD:ATTR>

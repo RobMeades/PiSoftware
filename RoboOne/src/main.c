@@ -1,5 +1,5 @@
 /*
- * One Wire bus handling thread for RoboOne.
+ * Main for RoboOne.
  */ 
  
 #include <stdio.h>
@@ -22,9 +22,13 @@
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
 #include <state_machine_client.h>
+#include <hardware_types.h>
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>
+#include <battery_manager_server.h>
+#include <battery_manager_msg_auto.h>
+#include <battery_manager_client.h>
 #include <main.h>
 
 /*
@@ -159,6 +163,26 @@ static Bool stopTaskHandlerServer (void)
 }
 
 /*
+ * Send a message to start the battery manager server.
+ * 
+ * @return true if successful, otherwise false.
+ */
+static Bool startBatteryManagerServer (void)
+{
+    return batteryManagerServerSendReceive (BATTERY_MANAGER_SERVER_START, PNULL, 0, PNULL);
+}
+
+/*
+ * Send a message to stop the battery manager server.
+ * 
+ * @return true if successful, otherwise false.
+ */
+static Bool stopBatteryManagerServer (void)
+{
+    return batteryManagerServerSendReceive (BATTERY_MANAGER_SERVER_STOP, PNULL, 0, PNULL);
+}
+
+/*
  * Send a message to start the state machine server.
  * 
  * @return true if successful, otherwise false.
@@ -227,8 +251,9 @@ int main (int argc, char **argv)
 {
     Bool   success = false;
     pid_t  hwServerPID;
-    pid_t  smServerPID;
     pid_t  thServerPID;
+    pid_t  smServerPID;
+    pid_t  bmServerPID;
     pthread_t localServerThread;
     
     setDebugPrintsOnToFile ("roboone.log");
@@ -279,43 +304,74 @@ int main (int argc, char **argv)
                     usleep (TASK_HANDLER_SERVER_START_DELAY_PI_US);
                     success = startTaskHandlerServer();
 
-                    /* Spawn a child that will become the RoboOne state machine. */
-                    smServerPID = fork();
-                    if (smServerPID == 0)
+                    if (success)
                     {
-                        /* Start RoboOne state machine process */
-                        static char *argv2[] = {STATE_MACHINE_SERVER_EXE, STATE_MACHINE_SERVER_PORT_STRING, PNULL};
-                          
-                        execv (STATE_MACHINE_SERVER_EXE, argv2);
-                        printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", STATE_MACHINE_SERVER_EXE, strerror (errno));
-                    }
-                    else
-                    {
-                        if (smServerPID < 0)
+                        /* Spawn a child that will become the RoboOne Battery Manager server. */
+                        bmServerPID = fork();
+                        if (bmServerPID == 0)
                         {
-                            printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", STATE_MACHINE_SERVER_EXE, strerror (errno));
+                            /* Start RoboOne Battery Manager server process */
+                            static char *argv2[] = {BATTERY_MANAGER_SERVER_EXE, BATTERY_MANAGER_SERVER_PORT_STRING, PNULL};
+                              
+                            execv (BATTERY_MANAGER_SERVER_EXE, argv2);
+                            printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", BATTERY_MANAGER_SERVER_EXE, strerror (errno));
                         }
                         else
-                        {   /* Parent process again */
-                            /* Now setup the state machine */
-                            usleep (STATE_MACHINE_SERVER_START_DELAY_PI_US); /* Wait for the server to be ready before messaging it */
-                            success = startStateMachineServer();
-                            
-                            if (success)
+                        {
+                            if (bmServerPID < 0)
                             {
-                                /* Start the local server that listens out for task progress indications */
-                                success = startLocalServerThread (&localServerThread, LOCAL_SERVER_PORT);
-                                
-                                if (success)
+                                printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", BATTERY_MANAGER_SERVER_EXE, strerror (errno));
+                            }
+                            else
+                            {   /* Parent process again */
+                                /* Now setup the RoboOne Battery Manager server */
+                                usleep (BATTERY_MANAGER_SERVER_START_DELAY_PI_US); /* Wait for the server to be ready before messaging it */
+                                success = startBatteryManagerServer();
+                                        
+                                /* Spawn a child that will become the RoboOne state machine. */
+                                smServerPID = fork();
+                                if (smServerPID == 0)
                                 {
-                                    /* Finally, display the monitor to display things and generate events */
-                                    success = runMonitor();
-                                    
-                                    /* Tidy up the local server now that we're done */
-                                    stopLocalServerThread (&localServerThread);
+                                    /* Start RoboOne state machine process */
+                                    static char *argv2[] = {STATE_MACHINE_SERVER_EXE, STATE_MACHINE_SERVER_PORT_STRING, PNULL};
+                                      
+                                    execv (STATE_MACHINE_SERVER_EXE, argv2);
+                                    printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", STATE_MACHINE_SERVER_EXE, strerror (errno));
                                 }
-                                
-                                printProgress ("\nDone.\n");
+                                else
+                                {
+                                    if (smServerPID < 0)
+                                    {
+                                        printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", STATE_MACHINE_SERVER_EXE, strerror (errno));
+                                    }
+                                    else
+                                    {   /* Parent process again */
+                                        /* Now setup the state machine */
+                                        usleep (STATE_MACHINE_SERVER_START_DELAY_PI_US); /* Wait for the server to be ready before messaging it */
+                                        success = startStateMachineServer();
+
+                                        if (success)
+                                        {
+                                            /* Start the local server that listens out for task progress indications */
+                                            success = startLocalServerThread (&localServerThread, LOCAL_SERVER_PORT);
+                                            
+                                            if (success)
+                                            {
+                                                /* Finally, display the monitor to display things and generate events */
+                                                success = runMonitor();
+                                                
+                                                /* Tidy up the local server now that we're done */
+                                                stopLocalServerThread (&localServerThread);
+                                            }
+                                            
+                                            printProgress ("\nDone.\n");
+                                            
+                                            /* When done, tidy up the battery manager server */
+                                            stopBatteryManagerServer();
+                                            waitpid (bmServerPID, 0, 0); /* wait for state machine to exit */
+                                        }
+                                    }
+                                }
                             }
                             
                             /* When done, tidy up the state machine */

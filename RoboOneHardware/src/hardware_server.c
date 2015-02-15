@@ -9,6 +9,7 @@
 #include <rob_system.h>
 #include <one_wire.h>
 #include <messaging_server.h>
+#include <hardware_types.h>
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>

@@ -11,6 +11,7 @@
  */
 
 #include <hindbrain_direct_task_protocol.h>
+#include <motion_task_protocol.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -26,7 +27,8 @@
 /* The task protocols that can be employed */ 
 typedef enum RoboOneTaskProtocolTag
 {
-    TASK_PROTOCOL_HD, /* Hindbrain Direct */
+    TASK_PROTOCOL_HD,     /* Hindbrain Direct */
+    TASK_PROTOCOL_MOTION, /* Motion */
     MAX_NUM_TASK_PROTOCOL_TYPES
 } RoboOneTaskProtocol;
 
@@ -35,6 +37,8 @@ typedef union RoboOneTaskUnionTag
 {
     RoboOneHDTaskReq hdReq;
     RoboOneHDTaskInd hdInd;
+    RoboOneMotionTaskReq motionReq;
+    RoboOneMotionTaskInd motionInd;
 } RoboOneTaskUnion;
 
 /* Generic container for both task REQ and task IND */

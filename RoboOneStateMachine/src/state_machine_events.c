@@ -70,6 +70,12 @@ void eventFullyChargedRoboOne (RoboOneContext *pInstance)
     pInstance->state.pEventFullyCharged (&(pInstance->state));
 }
 
+void eventInsufficientChargeRoboOne (RoboOneContext *pInstance)
+{
+    ASSERT_PARAM (pInstance != PNULL, (unsigned long) pInstance);
+    pInstance->state.pEventInsufficientCharge (&(pInstance->state));
+}
+
 void eventShutdownRoboOne (RoboOneContext *pInstance)
 {
     ASSERT_PARAM (pInstance != PNULL, (unsigned long) pInstance);

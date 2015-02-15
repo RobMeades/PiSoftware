@@ -1,13 +1,20 @@
 /*
- * Docked state
+ * Docked state - should be a transitory state, will shift to one
+ * of the two substates when the battery state has been determined.
  */
 #include <stdio.h>
 #include <string.h>
 #include <rob_system.h>
 #include <task_handler_types.h>
+#include <hardware_types.h>
+#include <battery_manager_server.h>
+#include <battery_manager_msg_auto.h>
+#include <battery_manager_client.h>
 #include <state_machine_server.h>
 #include <actions.h>
 #include <docked_state.h>
+#include <docked_charging_state.h>
+#include <docked_mainsidle_state.h>
 #include <shutdown_state.h>
 #include <mobile_state.h>
 /*
@@ -30,6 +37,7 @@
 void transitionToDocked (RoboOneState *pState)
 {
     Bool success;
+    Bool chargingPermitted = true;
     
     /* Fill in default handlers and name first */
     defaultImplementation (pState);
@@ -40,6 +48,8 @@ void transitionToDocked (RoboOneState *pState)
     pState->pEventTasksAvailable = transitionToMobile;
     pState->pEventInsufficientPower = transitionToShutdown;
     pState->pEventShutdown = transitionToShutdown;
+    pState->pEventFullyCharged = transitionToDocked_MainsIdle;
+    pState->pEventInsufficientCharge = transitionToDocked_Charging;
 
     /* Do the entry actions */
 
@@ -58,5 +68,6 @@ void transitionToDocked (RoboOneState *pState)
         actionSwitchOffHindbrain();
     }
     
-    /* TODO: enter the relevant sub-state */
+    /* Let the Battery Manager know that charging is possible */
+    batteryManagerServerSendReceive (BATTERY_MANAGER_CHARGING_PERMITTED, &chargingPermitted, sizeof (chargingPermitted), PNULL);
 }

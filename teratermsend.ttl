@@ -1,6 +1,6 @@
 ;Baud rates etc. can be found in teraterm.ini in the teraterm directory (should be 38400, 8N1, no flow control)
 timeout = 5
-connect '/C=6'
+connect '/C=4'
 
 try = 0
 successFile = "WriteToPiSuccess.txt"

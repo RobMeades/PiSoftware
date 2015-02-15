@@ -1,5 +1,5 @@
 /*
- *  Messages that go from/to the state machine server.
+ *  Messages that go from/to the hardware server.
  */
 
 /* This file is included in the hardware_msg_auto header and

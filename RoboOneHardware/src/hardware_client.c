@@ -8,6 +8,7 @@
 #include <rob_system.h>
 #include <messaging_server.h>
 #include <messaging_client.h>
+#include <hardware_types.h>
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 

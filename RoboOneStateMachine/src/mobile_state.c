@@ -8,6 +8,10 @@
 #include <task_handler_server.h>
 #include <task_handler_msg_auto.h>
 #include <task_handler_client.h>
+#include <hardware_types.h>
+#include <battery_manager_server.h>
+#include <battery_manager_msg_auto.h>
+#include <battery_manager_client.h>
 #include <state_machine_server.h>
 #include <state_machine_msg_auto.h>
 #include <state_machine_client.h>
@@ -60,6 +64,7 @@ static void eventTasksAvailable (RoboOneState *pState, RoboOneTaskReq *pTaskReq)
 void transitionToMobile (RoboOneState *pState, RoboOneTaskReq *pTaskReq)
 {
     Bool success = false;
+    Bool chargingPermitted = false;
     
     /* Fill in default handlers and name first */
     defaultImplementation (pState);
@@ -75,6 +80,9 @@ void transitionToMobile (RoboOneState *pState, RoboOneTaskReq *pTaskReq)
 
     /* Do the entry actions */
 
+    /* Let the Battery Manager know that charging is no longer possible */
+    batteryManagerServerSendReceive (BATTERY_MANAGER_CHARGING_PERMITTED, &chargingPermitted, sizeof (chargingPermitted), PNULL);
+    
     /* Switch Pi to battery power */
     success = actionSwitchPiRioToBatteryPower();
     

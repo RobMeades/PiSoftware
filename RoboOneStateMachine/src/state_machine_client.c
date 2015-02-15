@@ -44,7 +44,7 @@ extern Char *pgStateMachineMessageNames[];
  * 
  * sendMsgType       the message type to send.
  * pSendMsgBody      pointer to the body of the
- *                   send REquest message beyond the
+ *                   send REQuest.
  *                   May be PNULL.
  * sendMsgBodyLength the length of the bit that
  *                   pSendMsgBody points to.

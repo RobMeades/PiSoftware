@@ -10,6 +10,7 @@
 #include <task_handler_msg_auto.h>
 #include <task_handler_responder.h>
 #include <hindbrain_direct_task_handler.h>
+#include <motion_task_handler.h>
 
 /*
  * MANIFEST CONSTANTS
@@ -39,7 +40,7 @@ static TaskItem gTaskListRoot;
  */
 
 /*
- * Initialise and entry in the list
+ * Initialise an entry in the list
  * 
  * pTaskItem  the item to initialise.
  */
@@ -87,12 +88,12 @@ static void addTaskToList (TaskItem *pTaskItem)
 /*
  * Walk the task list, doing several possible things.
  * 
- * removeUnusedTasks  if true, remove the any unused
+ * removeUnusedTasks  if true, remove any unused
  *                    tasks, freeing their memory.
  *                    An unused task is one that is
  *                    completed and has a null result
  *                    pointer
- * clearAllTasks      if true, remove all tasks,
+ * clearAllTasks      if true, remove ALL tasks,
  *                    freeing memory.
  * 
  * @return  number of tasks left in the list;
@@ -165,6 +166,31 @@ static Bool doHDTask (TaskItem *pTaskItem)
     {
         pTaskItem->pResult->body.protocol = TASK_PROTOCOL_HD;
         pTaskItem->pResult->body.detail.hdInd.result = handleHDTaskReq (&pTaskItem->task.body.detail.hdReq, &pTaskItem->pResult->body.detail.hdInd);
+        success = true;
+    }
+    
+    return success;
+}
+
+/*
+ * Do a task related to motion.
+ * 
+ * pTaskItem  pointer to the task in the linked
+ *            list.
+ * 
+ * @return    true if the task was completed.
+ */
+static Bool doMotionTask (TaskItem *pTaskItem)
+{
+    Bool success = false;
+    ASSERT_PARAM (pTaskItem != PNULL, (unsigned long) pTaskItem);
+    ASSERT_PARAM (pTaskItem->pResult == PNULL, (unsigned long) pTaskItem->pResult);
+
+    pTaskItem->pResult = malloc (sizeof (*pTaskItem->pResult));
+    if (pTaskItem->pResult != PNULL)
+    {
+        pTaskItem->pResult->body.protocol = TASK_PROTOCOL_MOTION;
+        pTaskItem->pResult->body.detail.motionInd.result = handleMotionTaskReq (&pTaskItem->task.body.detail.motionReq, &pTaskItem->pResult->body.detail.motionInd);
         success = true;
     }
     
@@ -274,6 +300,11 @@ Bool tickTaskHandler (void)
                 case TASK_PROTOCOL_HD:
                 {
                     pT->taskCompleted = doHDTask (pT);
+                }
+                break;
+                case TASK_PROTOCOL_MOTION:
+                {
+                    pT->taskCompleted = doMotionTask (pT);
                 }
                 break;
                 default:

@@ -9,4 +9,4 @@
 /*
  * FUNCTION PROTOTYPES
  */
-Bool handleHDTaskReq (RoboOneHDTaskReq *pTaskReq, RoboOneHDTaskInd *pTaskInd);
+RoboOneHDResult handleHDTaskReq (RoboOneHDTaskReq *pHDTaskReq, RoboOneHDTaskInd *pHDTaskInd);

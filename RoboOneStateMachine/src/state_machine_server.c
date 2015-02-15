@@ -220,6 +220,11 @@ static ServerReturnCode doAction (StateMachineMsgType receivedMsgType, UInt8 * p
             eventFullyChargedRoboOne (pgRoboOneContext);
         }
         break;
+        case STATE_MACHINE_EVENT_INSUFFICIENT_CHARGE:
+        {
+            eventInsufficientChargeRoboOne (pgRoboOneContext);
+        }
+        break;
         case STATE_MACHINE_EVENT_SHUTDOWN:
         {
             eventShutdownRoboOne (pgRoboOneContext);

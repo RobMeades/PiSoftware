@@ -1,5 +1,5 @@
 /*
- *  Public stuff for the OneWire server
+ *  Public stuff for the Hardware server
  */
 
 /*
@@ -72,12 +72,6 @@ typedef struct HardwareChargeStateTag
     Bool flashDetectPossible;
     ChargeState state[NUM_CHARGERS];
 } HardwareChargeState;
-
-typedef struct HardwareChargeDischargeTag
-{
-    UInt32 charge;
-    UInt32 discharge;
-} HardwareChargeDischarge;
 
 typedef struct OResponseStringTag
 {

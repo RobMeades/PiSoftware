@@ -28,6 +28,7 @@ typedef struct RoboOneStateTag
     void (*pEventMainsPowerAvailable) (struct RoboOneStateTag *pState);
     void (*pEventInsufficientPower) (struct RoboOneStateTag *pState);
     void (*pEventFullyCharged) (struct RoboOneStateTag *pState);
+    void (*pEventInsufficientCharge) (struct RoboOneStateTag *pState);
     void (*pEventShutdown) (struct RoboOneStateTag *pState);
 } RoboOneState;
 
