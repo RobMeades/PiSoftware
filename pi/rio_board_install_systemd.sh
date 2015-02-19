@@ -15,8 +15,8 @@ DAEMON_STARTUP_SCRIPT_INSTALL_PATH=/etc/systemd/system
 INSTALL_ARCHIVE_NAME=RioBoardInstallFiles.zip
 INSTALL_URL=http://www.roboteq.com/riofiles
 
-WIRING_PI_SHARED_LIB=libwiringPi.so.1.0 
-WIRING_PI_LINK_NAME=libwiringPi.so.1
+WIRING_PI_SHARED_LIB=libwiringPi.so.2.25 
+WIRING_PI_LINK_NAME=libwiringPi.so.2.25
 #systemd doesn't look in /usr/local/lib so need to make this usr/lib
 WIRING_PI_INSTALL_PATH=/usr/lib
 
