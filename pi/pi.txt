@@ -205,6 +205,7 @@ pacman -S picocom
 pacman -S minicom
 pacman -S unzip
 pacman -S setserial
+pacman -S wget
 
 INSTALL/SET-UP AUDIO OUTPUT
 
@@ -219,7 +220,7 @@ amixer cset numid=3 1
 
 (the 1 is for analogue out).
 
-Set volume to maximum by running alsamixer end pressing the arrow keys.
+Set volume to maximum by running alsamixer and pressing the arrow keys.
 
 Plug a speaker into the audio output jack and test that it works by entering:
 
@@ -453,6 +454,9 @@ ExecStart=-/sbin/agetty --keep-baud %I 115200,38400,9600 $TERM
 ...becomes:
 
 ExecStart=-/sbin/agetty --local-line --noclear %I 38400 $TERM
+
+NOTE: software updates can tend to reset this back to what it was so if you see garbage on the XBee interface
+when you  use it after an update, look here first.
 
 Start the getty service by entering:
 
