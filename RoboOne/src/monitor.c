@@ -294,7 +294,7 @@ static Bool updateRioWindow (WINDOW *pWin, UInt8 count)
     if (count % SLOW_UPDATE_BACKOFF == 0)
     {
         hardwareServerSendReceive (HARDWARE_READ_RIO_REMAINING_CAPACITY, PNULL, 0, &(batteryData.remainingCapacity));
-        hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData.chargeDischarge.discharge));
+        hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData.chargeDischarge));
         wmove (pWin, row, col);
         wclrtoeol (pWin);
         wprintw (pWin, "%u mAhr(s) remain", batteryData.remainingCapacity);
@@ -347,7 +347,7 @@ static Bool updateOWindow (WINDOW *pWin, UInt8 count)
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
    
-    memset (&batteryData, 0, sizeof (batteryData));
+    memset (&(batteryData[0]), 0, sizeof (batteryData));
 
     hardwareServerSendReceive (HARDWARE_READ_O1_BATT_CURRENT, PNULL, 0, &(batteryData[0].current));
     hardwareServerSendReceive (HARDWARE_READ_O2_BATT_CURRENT, PNULL, 0, &(batteryData[1].current));
@@ -377,8 +377,8 @@ static Bool updateOWindow (WINDOW *pWin, UInt8 count)
         wclrtoeol (pWin);
         wprintw (pWin, "lifetime -%lu/%lu mAhr", batteryData[0].chargeDischarge.discharge + batteryData[1].chargeDischarge.discharge + batteryData[2].chargeDischarge.discharge,
                                                  batteryData[0].chargeDischarge.charge + batteryData[1].chargeDischarge.charge + batteryData[2].chargeDischarge.charge);
-        row++;        
-
+        row++;
+        
         batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O1, &(batteryData[0]), sizeof (batteryData[0]), PNULL);
         batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O2, &(batteryData[1]), sizeof (batteryData[1]), PNULL);
         batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O3, &(batteryData[2]), sizeof (batteryData[2]), PNULL);
@@ -387,7 +387,7 @@ static Bool updateOWindow (WINDOW *pWin, UInt8 count)
     {
         row += 2;
     }
-
+    
     wnoutrefresh (pWin);
     
     return false;

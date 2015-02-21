@@ -11,7 +11,8 @@ C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
 CC =  $(GCC_PREFIX)gcc.exe
 AR =  $(GCC_PREFIX)ar.exe
-CFLAGS = -Wall -pedantic -I. -I$(SRC_DIR) -I$(API_DIR)
+DFLAGS = -O0 -fbuiltin -g
+CFLAGS = $(DFLAGS) -Wall -pedantic -I. -I$(SRC_DIR) -I$(API_DIR)
 LDFLAGS =
 
 all: $(PROGRAM)

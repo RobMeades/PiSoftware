@@ -37,17 +37,17 @@ int main (int argc, char **argv)
     {
         /* Start up the server */
         batteryManagerServerPort = atoi (argv[1]);
-        printProgress ("Battery Manager server listening on port %d.\n", batteryManagerServerPort);
+        printProgress ("Battery manager server listening on port %d.\n", batteryManagerServerPort);
 
         returnCode = runMessagingServer (batteryManagerServerPort);
         
         if (returnCode == SERVER_EXIT_NORMALLY)
         {
-            printProgress ("Battery Manager server exiting normally.\n");            
+            printProgress ("Battery manager server exiting normally.\n");            
         }
         else
         {
-            printProgress ("Battery Manager server exiting with returnCode %d.\n", returnCode);                        
+            printProgress ("Battery manager server exiting with returnCode %d.\n", returnCode);                        
         }        
     }    
     else

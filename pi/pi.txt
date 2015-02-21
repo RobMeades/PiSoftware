@@ -374,7 +374,7 @@ Then use the menu to attach to the wifi network:
 
 wifi-menu wlan0
 
-During this process I was offered to save a configuration file name which had an initial capital letter; I chose to change this to lower case.  Not sure if it mattered or not.
+The profile will be saved, in my case, as wlan0-Meades18.
 
 After this I rebooted as things weren't working until I did so.  After rebooting enter:
 
@@ -384,7 +384,7 @@ iw dev wlan0 link
 
 If all is well, enable the service to start at boot by entering:
 
-netctl enable wlan0-meades18
+netctl enable wlan0-Meades18
 
 ...and reboot to check that it has persisted.
 

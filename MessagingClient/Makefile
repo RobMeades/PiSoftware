@@ -18,7 +18,8 @@ LIB_OBJ:= $(OBJ_DIR)/messaging_client.o
 TST_OBJ:= $(OBJ_DIR)/test.o
 CC = $(GCC_PREFIX)gcc.exe
 AR =  $(GCC_PREFIX)ar.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR)
+DFLAGS = -O0 -fbuiltin -g
+CFLAGS = $(DFLAGS) -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR)
 LDFLAGS = $(OBJ_DIR)/$(LIB) $(SHARED_PRE)/$(OBJ_DIR)/shared.a
 
 all: $(PROGRAM)

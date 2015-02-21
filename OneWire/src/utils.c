@@ -98,7 +98,7 @@ Bool oneWireAccessDevice (SInt32 portNumber, UInt8 *pAddress)
     Bool found;
     
     owSerialNum (portNumber, pAddress, false);
-    found = owAccess (portNumber);
+    found = owVerify (portNumber, false);
     
     return found;
 }

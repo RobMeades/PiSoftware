@@ -7,7 +7,7 @@
  */
 
 #define BATTERY_MANAGER_SERVER_EXE "./roboone_battery_manager_server"
-#define BATTERY_MANAGER_SERVER_PORT_STRING "5231"
+#define BATTERY_MANAGER_SERVER_PORT_STRING "5232"
 
 #pragma pack(push, 1) /* Force GCC to pack everything from here on as tightly as possible */
 

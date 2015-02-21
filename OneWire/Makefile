@@ -22,7 +22,8 @@ LIB_OBJ:= $(OBJ_DIR)/ds2438.o $(OBJ_DIR)/ds2408.o $(OBJ_DIR)/utils.o
 TST_OBJ:= $(OBJ_DIR)/test.o
 CC = $(GCC_PREFIX)gcc.exe
 AR =  $(GCC_PREFIX)ar.exe
-CFLAGS = -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) $(OW_LIBS_FLAGS)
+DFLAGS = -O0 -fbuiltin -g
+CFLAGS = $(DFLAGS) -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) $(OW_LIBS_FLAGS)
 LDFLAGS = $(OBJ_DIR)/$(LIB) $(OW_LIBS) $(OW_LIBS_OBJ_PRE)/findtype.o $(SHARED_PRE)/$(OBJ_DIR)/shared.a
 
 all: $(PROGRAM)

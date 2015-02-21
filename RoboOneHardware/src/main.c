@@ -44,7 +44,7 @@ int main (int argc, char **argv)
         /* Find and setup the devices on the OneWire bus */
         if (success)
         {
-            success = setupDevices();                  
+            success = setupDevices();
             if (success)
             {
                 /* Now start up the server */

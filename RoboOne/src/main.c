@@ -287,9 +287,9 @@ int main (int argc, char **argv)
             if (thServerPID == 0)
             {
                 /* Start Task Handler server process on a given port */
-                static char *argv1[] = {TASK_HANDLER_SERVER_EXE, TASK_HANDLER_SERVER_PORT_STRING, PNULL};
+                static char *argv2[] = {TASK_HANDLER_SERVER_EXE, TASK_HANDLER_SERVER_PORT_STRING, PNULL};
                 
-                execv (TASK_HANDLER_SERVER_EXE, argv1);
+                execv (TASK_HANDLER_SERVER_EXE, argv2);
                 printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", TASK_HANDLER_SERVER_EXE, strerror (errno));
             }
             else
@@ -311,9 +311,9 @@ int main (int argc, char **argv)
                         if (bmServerPID == 0)
                         {
                             /* Start RoboOne Battery Manager server process */
-                            static char *argv2[] = {BATTERY_MANAGER_SERVER_EXE, BATTERY_MANAGER_SERVER_PORT_STRING, PNULL};
+                            static char *argv3[] = {BATTERY_MANAGER_SERVER_EXE, BATTERY_MANAGER_SERVER_PORT_STRING, PNULL};
                               
-                            execv (BATTERY_MANAGER_SERVER_EXE, argv2);
+                            execv (BATTERY_MANAGER_SERVER_EXE, argv3);
                             printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", BATTERY_MANAGER_SERVER_EXE, strerror (errno));
                         }
                         else
@@ -328,61 +328,64 @@ int main (int argc, char **argv)
                                 usleep (BATTERY_MANAGER_SERVER_START_DELAY_PI_US); /* Wait for the server to be ready before messaging it */
                                 success = startBatteryManagerServer();
                                         
-                                /* Spawn a child that will become the RoboOne state machine. */
-                                smServerPID = fork();
-                                if (smServerPID == 0)
+                                if (success)
                                 {
-                                    /* Start RoboOne state machine process */
-                                    static char *argv2[] = {STATE_MACHINE_SERVER_EXE, STATE_MACHINE_SERVER_PORT_STRING, PNULL};
-                                      
-                                    execv (STATE_MACHINE_SERVER_EXE, argv2);
-                                    printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", STATE_MACHINE_SERVER_EXE, strerror (errno));
-                                }
-                                else
-                                {
-                                    if (smServerPID < 0)
+                                    /* Spawn a child that will become the RoboOne state machine. */
+                                    smServerPID = fork();
+                                    if (smServerPID == 0)
                                     {
-                                        printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", STATE_MACHINE_SERVER_EXE, strerror (errno));
+                                        /* Start RoboOne state machine process */
+                                        static char *argv4[] = {STATE_MACHINE_SERVER_EXE, STATE_MACHINE_SERVER_PORT_STRING, PNULL};
+                                          
+                                        execv (STATE_MACHINE_SERVER_EXE, argv4);
+                                        printDebug ("!!! Couldn't launch %s, err: %s. !!!\n", STATE_MACHINE_SERVER_EXE, strerror (errno));
                                     }
                                     else
-                                    {   /* Parent process again */
-                                        /* Now setup the state machine */
-                                        usleep (STATE_MACHINE_SERVER_START_DELAY_PI_US); /* Wait for the server to be ready before messaging it */
-                                        success = startStateMachineServer();
-
-                                        if (success)
+                                    {
+                                        if (smServerPID < 0)
                                         {
-                                            /* Start the local server that listens out for task progress indications */
-                                            success = startLocalServerThread (&localServerThread, LOCAL_SERVER_PORT);
-                                            
+                                            printDebug ("!!! Couldn't fork to launch %s, err: %s. !!!\n", STATE_MACHINE_SERVER_EXE, strerror (errno));
+                                        }
+                                        else
+                                        {   /* Parent process again */
+                                            /* Now setup the state machine */
+                                            usleep (STATE_MACHINE_SERVER_START_DELAY_PI_US); /* Wait for the server to be ready before messaging it */
+                                            success = startStateMachineServer();
+    
                                             if (success)
                                             {
-                                                /* Finally, display the monitor to display things and generate events */
-                                                success = runMonitor();
+                                                /* Start the local server that listens out for task progress indications */
+                                                success = startLocalServerThread (&localServerThread, LOCAL_SERVER_PORT);
                                                 
-                                                /* Tidy up the local server now that we're done */
-                                                stopLocalServerThread (&localServerThread);
+                                                if (success)
+                                                {
+                                                    /* Finally, display the monitor to display things and generate events */
+                                                    success = runMonitor();
+                                                    
+                                                    /* Tidy up the local server now that we're done */
+                                                    stopLocalServerThread (&localServerThread);
+                                                }
+                                                
+                                                printProgress ("\nDone.\n");
+                                                
+                                                /* When done, tidy up the state machine server */
+                                                stopStateMachineServer();
+                                                waitpid (smServerPID, 0, 0); /* wait for state machine to exit */
                                             }
-                                            
-                                            printProgress ("\nDone.\n");
-                                            
-                                            /* When done, tidy up the battery manager server */
-                                            stopBatteryManagerServer();
-                                            waitpid (bmServerPID, 0, 0); /* wait for state machine to exit */
                                         }
                                     }
+                                    
+                                    /* When done, tidy up the battery manager server */
+                                    stopBatteryManagerServer();
+                                    waitpid (bmServerPID, 0, 0); /* wait for state machine to exit */
                                 }
-                            }
-                            
-                            /* When done, tidy up the state machine */
-                            stopStateMachineServer();
-                            waitpid (smServerPID, 0, 0); /* wait for state machine to exit */
+                            }                            
                         }
-                    }
-                    
-                    /* Tidy up the task handler */
-                    stopTaskHandlerServer();
-                    waitpid (thServerPID, 0, 0); /* wait for state machine to exit */
+                        
+                        /* Tidy up the task handler */
+                        stopTaskHandlerServer();
+                        waitpid (thServerPID, 0, 0); /* wait for state machine to exit */
+                    }                    
                 }
             }
                 

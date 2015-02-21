@@ -7,8 +7,9 @@ APPS   = $(PRE)/apps
 COMMON = $(PRE)/common
 LINK   = $(PRE)/lib/userial/link/Linux
 SHARED = $(PRE)/lib/userial/shared
+DFLAGS = -O0 -fbuiltin -g
 
-CFLAGS = -I $(COMMON) -I $(SHARED) -I $(LINK) -DDEBUG -c
+CFLAGS = -I $(COMMON) -I $(SHARED) -I $(LINK) $(DFLAGS) -DDEBUG -c
 LFLAGS = -I $(COMMON) -DDEBUG -g -o $@
 
 ONEWIREOBJS = obj/owlinkobjs

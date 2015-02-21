@@ -69,5 +69,5 @@ void transitionToDocked (RoboOneState *pState)
     }
     
     /* Let the Battery Manager know that charging is possible */
-    batteryManagerServerSendReceive (BATTERY_MANAGER_CHARGING_PERMITTED, &chargingPermitted, sizeof (chargingPermitted), PNULL);
+     batteryManagerServerSendReceive (BATTERY_MANAGER_CHARGING_PERMITTED, &chargingPermitted, sizeof (chargingPermitted), PNULL);
 }
