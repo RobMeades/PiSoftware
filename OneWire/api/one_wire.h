@@ -67,8 +67,9 @@ Bool readCurrentDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, SInt16 *pCurren
 Bool readBatteryDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage, SInt16 *pCurrent);
 Bool readNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pConfig, UInt8 *pThreshold);
 Bool writeNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pConfig, UInt8 *pThreshold);
-Bool readTimeCapacityCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity, SInt16 *pOffsetCal);
-Bool writeTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity);
+Bool initTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber);
+Bool readTimeCapacityCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity, SInt16 *pOffsetCal, Bool writeShadow);
+Bool writeTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity, Bool writeShadow);
 Bool readTimePiOffChargingStoppedDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pPiOff, UInt32 *pChargingStopped);
 Bool readNVChargeDischargeDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pCharge, UInt32 *pDischarge);
 Bool writeNVChargeDischargeDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pCharge, UInt32 *pDischarge);

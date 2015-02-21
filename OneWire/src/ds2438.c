@@ -38,6 +38,9 @@
 
 #define DS2438_FIRST_USER_DATA_PAGE     3
 
+#define DS2438_USER_DATA_ETM_ICA_PAGE   0
+#define DS2438_USER_DATA_ETM_ICA_SIZE   5
+
 #define DS2438_CCA_DCA_PAGE             7
 #define DS2438_CCA_REG_OFFSET           4
 #define DS2438_DCA_REG_OFFSET           6
@@ -773,6 +776,7 @@ Bool readNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8
 Bool writeNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt8 *pConfig, UInt8 *pThreshold)
 {
     Bool success;
+    Bool iadSuccess = true;
     UInt8 buffer[DS2438_THRESHOLD_REG_OFFSET + sizeof (*pThreshold)]; /* Leave enough room in buffer for both */
     UInt8 size = DS2438_CONFIG_REG_OFFSET + sizeof (*pConfig);         /* but only size for the first for now */
     UInt8 storedConfig;
@@ -803,7 +807,34 @@ Bool writeNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt
     if (iadWasEnabled) /* Don't bother checking success here, we changed the value successfully so really need to write it back */
     {
         /* Put IAD back as it was */
-        success = writeNVConfigThresholdDS2438 (portNumber, pSerialNumber, &storedConfig, PNULL);
+        iadSuccess = writeNVConfigThresholdDS2438 (portNumber, pSerialNumber, &storedConfig, PNULL);
+    }
+    
+    return success && iadSuccess;
+}
+
+/*
+ * Read the elapsed time and remaining capacity from their
+ * shadow page on the DS2438 device and write them back into
+ * the non-volatile area.
+ *
+ * portNumber          the port number of the port being used for the
+ *                     1-Wire Network.
+ * pSerialNumber       the serial number for the part that the read is
+ *                     to be done on.
+ * 
+ * @return  true if the operation succeeded, otherwise false.
+ */
+Bool initTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber)
+{
+    Bool success;
+    UInt8 buffer[DS2438_NUM_BYTES_IN_PAGE];
+    
+    success = readNVUserDataDS2438 (portNumber, pSerialNumber, DS2438_USER_DATA_ETM_ICA_PAGE, &buffer[0]);
+    
+    if (success)
+    {
+        success = writeNVPageDS2438 (portNumber, pSerialNumber, DS2438_ETM_ICA_OFFSET_PAGE, &buffer[0], DS2438_USER_DATA_ETM_ICA_SIZE);
     }
     
     return success;
@@ -826,10 +857,12 @@ Bool writeNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt
  *                     (may be PNULL).  Note that the number returned is
  *                     exactly that stored in the register (which is
  *                     stored shifted left three bits).
- *
+ * writeShadow         if true then store the values back into the user
+ *                     non-volatile data area of the DS2438.
+ * 
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool readTimeCapacityCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity, SInt16 *pOffsetCal)
+Bool readTimeCapacityCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity, SInt16 *pOffsetCal, Bool writeShadow)
 {
     Bool success;
     UInt8 buffer[DS2438_NUM_BYTES_IN_PAGE];
@@ -850,6 +883,12 @@ Bool readTimeCapacityCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 
         {
             *pOffsetCal = buffer[DS2438_CAL_REG_OFFSET] | (buffer[DS2438_CAL_REG_OFFSET + 1] << 8);
         }
+        
+        if (writeShadow)
+        {
+            /* TODO: add a checksum */
+            success = writeNVUserDataDS2438 (portNumber, pSerialNumber, DS2438_USER_DATA_ETM_ICA_PAGE, &buffer[0], DS2438_USER_DATA_ETM_ICA_SIZE);
+        }
     }
     
     return success;
@@ -857,8 +896,7 @@ Bool readTimeCapacityCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 
 
 /*
  * Write the elapsed time and (optionally) remaining capacity data
- * to the DS2438 device.  Note that these numbers are not stored in
- * non-volatile memory.  
+ * to the DS2438 device. 
  *
  * portNumber          the port number of the port being used for the
  *                     1-Wire Network.
@@ -869,10 +907,12 @@ Bool readTimeCapacityCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 
  * pRemainingCapacity  a pointer to a location to store the Integrated
  *                     Current Accumulator data (in mA hours).  May be
  *                     PNULL.
+ * writeShadow         if true then store the values back into the user
+ *                     non-volatile data area of the DS2438.
  *
  * @return  true if the operation succeeded, otherwise false.
  */
-Bool writeTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity)
+Bool writeTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity, Bool writeShadow)
 {
     Bool success;
     UInt8 ica;
@@ -895,6 +935,12 @@ Bool writeTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *p
     }
     
     success = writeNVPageDS2438 (portNumber, pSerialNumber, DS2438_ETM_ICA_OFFSET_PAGE, &buffer[0], size);
+    
+    if (success && writeShadow)
+    {
+        /* TODO: add a checksum */
+        success = writeNVUserDataDS2438 (portNumber, pSerialNumber, DS2438_USER_DATA_ETM_ICA_PAGE, &buffer[0], size);
+    }
     
     return success;
 }

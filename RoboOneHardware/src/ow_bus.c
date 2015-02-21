@@ -820,13 +820,21 @@ Bool setupDevices (void)
                     UInt32 elapsedTime;
 
                     /* Write the config register and the threshold register */
+                    printDebug ("Writing config 0x%.2x, threshold %d to DS2438.\n", gDeviceStaticConfigList[i].specifics.ds2438.config, threshold);
                     success = writeNVConfigThresholdDS2438 (gPortNumber, pAddress, &(gDeviceStaticConfigList[i].specifics.ds2438.config), &threshold);
                     if (success)
                     {
-                        /* Set the time */
-                        elapsedTime = getSystemTicks ();
-                        printDebug ("Writing time/capacity to DS2438.\n");
-                        success = writeTimeCapacityDS2438 (gPortNumber, pAddress, &elapsedTime, PNULL);
+                        /* Initialise the remaining capacity and time which are otherwise volatile fields*/
+                        printDebug ("Initialising time and remaining capacity in DS2438.\n");
+                        success = initTimeCapacityDS2438 (gPortNumber, pAddress);                        
+
+                        if (success)
+                        {
+                            /* Set time */
+                            elapsedTime = getSystemTicks ();
+                            printDebug ("Writing time %d to DS2438.\n", elapsedTime);
+                            success = writeTimeCapacityDS2438 (gPortNumber, pAddress, &elapsedTime, PNULL, true);
+                        }
                     }
                 }
                 break;
@@ -1869,7 +1877,7 @@ Bool readO3BattVoltage (UInt16 *pVoltage)
  */
 Bool readRioRemainingCapacity (UInt16 *pRemainingCapacity)
 {
-    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL);
+    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL, true);
 }
 
 /*
@@ -1881,7 +1889,7 @@ Bool readRioRemainingCapacity (UInt16 *pRemainingCapacity)
  */
 Bool readO1RemainingCapacity (UInt16 *pRemainingCapacity)
 {
-    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL);
+    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL, true);
 }
 
 /*
@@ -1893,7 +1901,7 @@ Bool readO1RemainingCapacity (UInt16 *pRemainingCapacity)
  */
 Bool readO2RemainingCapacity (UInt16 *pRemainingCapacity)
 {
-    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL);
+    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL, true);
 }
 
 /*
@@ -1905,7 +1913,7 @@ Bool readO2RemainingCapacity (UInt16 *pRemainingCapacity)
  */
 Bool readO3RemainingCapacity (UInt16 *pRemainingCapacity)
 {
-    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL);
+    return readTimeCapacityCalDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], PNULL, pRemainingCapacity, PNULL, true);
 }
 
 /*
@@ -2050,15 +2058,16 @@ Bool performCalAllBatteryMonitors (void)
 Bool swapRioBattery (UInt32 systemTime, UInt16 remainingCapacity)
 {
     Bool success;
-    UInt32 zero = 0;
+    UInt32 charge = remainingCapacity;
+    UInt32 discharge = 0;
 
-    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity);
+    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity, true);
     
     if (success)
     {
-        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &zero, &zero);
+        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], &charge, &discharge);
     }
-    
+
     return success;
 }
 
@@ -2075,13 +2084,14 @@ Bool swapRioBattery (UInt32 systemTime, UInt16 remainingCapacity)
 Bool swapO1Battery (UInt32 systemTime, UInt16 remainingCapacity)
 {
     Bool success;
-    UInt32 zero = 0;
+    UInt32 charge = remainingCapacity;
+    UInt32 discharge = 0;
 
-    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity);
+    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity, true);
     
     if (success)
     {
-        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &zero, &zero);
+        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O1_BATTERY_MONITOR].address.value[0], &charge, &discharge);
     }
     
     return success;
@@ -2100,13 +2110,14 @@ Bool swapO1Battery (UInt32 systemTime, UInt16 remainingCapacity)
 Bool swapO2Battery (UInt32 systemTime, UInt16 remainingCapacity)
 {
     Bool success;
-    UInt32 zero = 0;
+    UInt32 charge = remainingCapacity;
+    UInt32 discharge = 0;
 
-    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity);
+    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity, true);
     
     if (success)
     {
-        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &zero, &zero);
+        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O2_BATTERY_MONITOR].address.value[0], &charge, &discharge);
     }
     
     return success;
@@ -2125,13 +2136,14 @@ Bool swapO2Battery (UInt32 systemTime, UInt16 remainingCapacity)
 Bool swapO3Battery (UInt32 systemTime, UInt16 remainingCapacity)
 {
     Bool success;
-    UInt32 zero = 0;
+    UInt32 charge = remainingCapacity;
+    UInt32 discharge = 0;
 
-    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity);
+    success = writeTimeCapacityDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &systemTime, &remainingCapacity, true);
     
     if (success)
     {
-        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &zero, &zero);
+        success = writeNVChargeDischargeDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_O3_BATTERY_MONITOR].address.value[0], &charge, &discharge);
     }
     
     return success;
