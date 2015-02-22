@@ -22,7 +22,7 @@ C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
 CC = $(GCC_PREFIX)gcc.exe
 DFLAGS = -O0 -fbuiltin -g
-CFLAGS = $(DFLAGS) -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(PI_IO_PRE)/$(API_DIR) $(FLAGS) -I$(ONEWIRE_PRE)/$(API_DIR) $(OW_LIBS_FLAGS)
+CFLAGS = -O2 -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(PI_IO_PRE)/$(API_DIR) $(FLAGS) -I$(ONEWIRE_PRE)/$(API_DIR) $(OW_LIBS_FLAGS)
 LDFLAGS = -lncurses -pthread $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(PI_IO_PRE)/$(OBJ_DIR)/pi_io.a  $(ONEWIRE_PRE)/$(OBJ_DIR)/one_wire.a  $(OW_LIBS_OBJ_PRE)/findtype.o $(OW_LIBS) 
 
 all: $(PROGRAM)

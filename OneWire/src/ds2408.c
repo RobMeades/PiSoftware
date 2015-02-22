@@ -67,7 +67,7 @@ static Bool readMemoryDS2408 (SInt32 portNumber, UInt8 *pSerialNumber, UInt16 pa
     UInt8 buffer[DS2408_NUM_PAGES + DS2408_NUM_BYTES_IN_OVERHEAD];
     UInt8 count=0;
     UInt8 i;
-    UInt16 lastCrc16;
+    UInt16 lastCrc16 = 0;
 
     ASSERT_PARAM (page >= DS2408_FIRST_PAGE, page);
     ASSERT_PARAM (page <= DS2408_LAST_USEFUL_PAGE, page);
