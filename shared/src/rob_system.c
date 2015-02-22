@@ -99,6 +99,8 @@ void setDebugPrintsOff (void)
     gDebugPrintsAreOn = false;
     if (pgDebugPrintsStream != PNULL)
     {
+        time_t timeNow = time (NULL);
+        printDebug ("Stopped debug prints on %s", asctime (localtime (&timeNow))); 
         fclose (pgDebugPrintsStream);
         pgDebugPrintsStream = PNULL;
     }
@@ -136,7 +138,10 @@ void setDebugPrintsOnToFile (Char * pFilename)
   
     if (pgDebugPrintsStream != PNULL)
     {
+        time_t timeNow = time (NULL);
+        
         gDebugPrintsAreOn = true;
+        printDebug ("Started debug prints on %s", asctime (localtime (&timeNow))); 
     }
 }
 

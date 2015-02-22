@@ -815,8 +815,9 @@ Bool writeNVConfigThresholdDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt
 
 /*
  * Read the elapsed time and remaining capacity from their
- * shadow page on the DS2438 device and write them back into
- * the non-volatile area.
+ * shadow page on the DS2438 device and, if these are more recent
+ * than those in the volatile area (which will be the case if the
+ * chip has been powered off), update the ones in the volatile area.
  *
  * portNumber          the port number of the port being used for the
  *                     1-Wire Network.
@@ -829,12 +830,24 @@ Bool initTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber)
 {
     Bool success;
     UInt8 buffer[DS2438_NUM_BYTES_IN_PAGE];
+    UInt32 shadowElapsedTime;
+    UInt32 volatileElapsedTime;
     
     success = readNVUserDataDS2438 (portNumber, pSerialNumber, DS2438_USER_DATA_ETM_ICA_PAGE, &buffer[0]);
     
     if (success)
     {
-        success = writeNVPageDS2438 (portNumber, pSerialNumber, DS2438_ETM_ICA_OFFSET_PAGE, &buffer[0], DS2438_USER_DATA_ETM_ICA_SIZE);
+        shadowElapsedTime = buffer[DS2438_ETM_REG_OFFSET] | (buffer[DS2438_ETM_REG_OFFSET + 1] << 8) | (buffer[DS2438_ETM_REG_OFFSET + 2] << 16) | (buffer[DS2438_ETM_REG_OFFSET + 3] << 24);
+        
+        success = readTimeCapacityCalDS2438 (portNumber, pSerialNumber, &volatileElapsedTime, PNULL, PNULL, false);
+        
+        if (success)
+        {
+            if (shadowElapsedTime > volatileElapsedTime)
+            {
+                success = writeNVPageDS2438 (portNumber, pSerialNumber, DS2438_ETM_ICA_OFFSET_PAGE, &buffer[0], DS2438_USER_DATA_ETM_ICA_SIZE);                
+            }
+        }
     }
     
     return success;
