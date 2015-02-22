@@ -70,7 +70,7 @@ int main (int argc, char **argv)
                 UInt16 capacity = 1000;                
                 
                 printProgress ("Writing time %lu and capacity %d.\n", longOne1, capacity);
-                success = writeTimeCapacityDS2438 (portNumber, &batteryDeviceArray[i][0], &longOne1, &capacity);
+                success = writeTimeCapacityDS2438 (portNumber, &batteryDeviceArray[i][0], &longOne1, &capacity, false);
                 if (success)
                 {
                     printProgress ("Writing something to DISC/EOC page.\n");
@@ -274,7 +274,7 @@ int main (int argc, char **argv)
                         UInt32 accumulatedCharge;
                         UInt32 accumulatedDischarge;
                         
-                        success = readTimeCapacityCalDS2438 (portNumber, &batteryDeviceArray[i][0], &elapsedTime, &remainingCapacity, &offsetCalibration);
+                        success = readTimeCapacityCalDS2438 (portNumber, &batteryDeviceArray[i][0], &elapsedTime, &remainingCapacity, &offsetCalibration, false);
                         if (success)
                         {
                             printProgress ("Elapsed time: %lu secs, remaining capacity: %u mAHr, cal. offset: %d\n", elapsedTime, remainingCapacity, offsetCalibration);
