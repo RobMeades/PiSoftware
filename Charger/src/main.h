@@ -12,12 +12,14 @@
 #define GPIO_MOTOR_DIRECTION  25 /* CLR for anti-clockwise SET for clockwise */
 #define GPIO_MOTOR_ENABLE_BAR 18 /* CLR to enable, SET to disable */
 #define GPIO_IR_ENABLE        4  /* SET this to enable the IR unit */
-/* The IR detect pins: each go _low_ when something is detected */
-#define GPIO_IR_DETECT_NORTH  23 /* North is the direction in which the charging socket is mounted */
-#define GPIO_IR_DETECT_SOUTH  27
-#define GPIO_IR_DETECT_EAST   22
-#define GPIO_IR_DETECT_WEST   17
-                            
+
+/* The IR detect pins connected to the OneWire IO chip. */
+/* Each goes _low_ when something is detected */
+#define OW_PIN_IR_DETECT_NORTH 0x01  /* North is the direction in which the charging socket is mounted */
+#define OW_PIN_IR_DETECT_EAST  0x02
+#define OW_PIN_IR_DETECT_SOUTH 0x04
+#define OW_PIN_IR_DETECT_WEST  0x08
+
 /*
  * TYPES
  */

@@ -31,7 +31,7 @@
 #define MAX_BATTERY_DEVICES 1
 
 /* The maximum number of IO devices on the One Wire bus */
-#define MAX_IO_DEVICES 2
+#define MAX_IO_DEVICES 1
 
 /* Convert a microstep to an angle in degrees, rounding down */
 #define MICROSTEPS_TO_ANGLE(m) (m * 360 /1600)
@@ -67,6 +67,63 @@ SInt16 gOffsetCalibration;
  * STATIC FUNCTIONS
  */
 
+
+/*
+ * Set the GPIOs on the PI to the correct initial state.   
+ */
+static void setupPiGpios(void)
+{    
+    GPIO_CONFIG_OUTPUT (GPIO_IR_ENABLE);
+    GPIO_CONFIG_OUTPUT (GPIO_MOTOR_MICRO_STEP);
+    GPIO_CONFIG_OUTPUT (GPIO_MOTOR_DIRECTION);
+    GPIO_CONFIG_OUTPUT (GPIO_MOTOR_ENABLE_BAR);
+
+    GPIO_SET (GPIO_IR_ENABLE);
+    GPIO_SET (GPIO_MOTOR_ENABLE_BAR);
+}
+
+/*
+ * Setup the OneWire IO device.  
+ * the OneWire bus, using the configuration data in
+ * gDeviceStaticConfigList[].
+ *
+ * pAddress  the address of the IO device.
+ *
+ * @return  true if successful, otherwise false.
+ */
+static Bool setupIoDevice(UInt8 *pAddress)
+{
+    Bool success;
+
+    printProgress ("Disabling test mode...\n");
+    success = disableTestModeDS2408 (gPortNumber, pAddress);
+
+    if (success)
+    {
+        printProgress ("Resetting activity latches...\n");
+        success = resetActivityLatchesDS2408 (gPortNumber, pAddress);
+        if (success)
+        {
+            UInt8 controlByte = 0;
+
+            controlByte &= ~(DS2408_DEVICE_HAS_POWER_ON_RESET | DS2408_RSTZ_IS_STROBE);
+            controlByte |= (DS2408_SEARCH_IS_AND | DS2408_SEARCH_IS_ACTIVITY_LATCHED);
+            
+            printProgress ("Setting up the control registers...\n");
+            success = writeControlRegisterDS2408 (gPortNumber, pAddress, controlByte);
+            if (success)
+            {
+                UInt8 pinsState = OW_PIN_IR_DETECT_NORTH | OW_PIN_IR_DETECT_SOUTH | OW_PIN_IR_DETECT_EAST | OW_PIN_IR_DETECT_WEST;
+
+                printDebug ("Writing 0x%.2x to pins.\n", pinsState);
+                success = channelAccessWriteDS2408 (gPortNumber, pAddress, &pinsState);
+            }
+        }
+    }
+    
+    return success;
+}
+
 /*
  * PUBLIC FUNCTIONS
  */
@@ -78,6 +135,7 @@ int main (int argc, char **argv)
 {
     Bool success = false;
     UInt8 numBatteryDevices;
+    UInt8 numIoDevices;
     SInt32 angleMicrosteps = 0;
     UInt32 x;
         
@@ -98,7 +156,7 @@ int main (int argc, char **argv)
 
     if (gPortNumber < 0)
     {
-        ASSERT_ALWAYS_STRING ("Failed to acquire port");
+        ASSERT_ALWAYS_STRING ("Failed to acquire port for OneWire interface.");
     }
     else
     {  
@@ -106,125 +164,148 @@ int main (int argc, char **argv)
 
         if (numBatteryDevices == 0)
         {
-            ASSERT_ALWAYS_STRING ("No battery monitoring devices found.\n");
+            ASSERT_ALWAYS_STRING ("OneWire battery monitoring device not found.");
         }
         else
-        {
-            printProgress ("Found %d battery monitoring device(s).\n", numBatteryDevices);
+        {            
+            printProgress ("Found %d OneWire battery monitoring device(s).\n", numBatteryDevices);
             
-            /* Initialise the GPIOs */
-            success = openIo();
-            if (success)
+            numIoDevices = FindDevices (gPortNumber, &gIoDeviceArray[0], FAMILY_PIO, MAX_IO_DEVICES);
+
+            if (numIoDevices == 0)
             {
-                printProgress ("Setting up GPIOs...\n");
-                GPIO_CONFIG_INPUT (GPIO_IR_DETECT_NORTH);
-                GPIO_CONFIG_INPUT (GPIO_IR_DETECT_SOUTH);
-                GPIO_CONFIG_INPUT (GPIO_IR_DETECT_EAST);
-                GPIO_CONFIG_INPUT (GPIO_IR_DETECT_WEST);
-                
-                GPIO_CONFIG_OUTPUT (GPIO_IR_ENABLE);
-                GPIO_CONFIG_OUTPUT (GPIO_MOTOR_MICRO_STEP);
-                GPIO_CONFIG_OUTPUT (GPIO_MOTOR_DIRECTION);
-                GPIO_CONFIG_OUTPUT (GPIO_MOTOR_ENABLE_BAR);
-        
-                GPIO_SET (GPIO_IR_ENABLE);
-                GPIO_SET (GPIO_MOTOR_ENABLE_BAR);
-                
-                /*
-                 * The charger should be placed against a wall,
-                 * oriented so that it can only be approached
-                 * from the North.  The code here should then
-                 * line the charging point (which is mounted at
-                 * North) up with an approaching IR.
-                 */
-                printProgress ("Starting main loop...\n");
-                do
-                {
-                    UInt32 clockwiseVote;
-                    UInt32 antiClockwiseVote;
-                    UInt32 moveVote;
-                    
-                    clockwiseVote = 0;
-                    antiClockwiseVote = 0;
-                    moveVote = 0;
-                    
-                    /* Count over a number of readings to avoid glitches */
-                    for (x = 0; x < MIN_READINGS; x++)
-                    {
-                        Bool isNorth = !GPIO_READ (GPIO_IR_DETECT_NORTH);
-                        Bool isEast = !GPIO_READ (GPIO_IR_DETECT_EAST);
-                        Bool isWest = !GPIO_READ (GPIO_IR_DETECT_WEST);
-                        
-                        if (isWest && !isEast)
-                        {
-                            /* If West LED is on, and not East, go anticlockwise */
-                            antiClockwiseVote++;
-                        }
-                        else
-                        {
-                            /* If East LED is on, and not West, go clockwise */
-                            if (isEast && !isWest)
-                            {
-                                clockwiseVote++;
-                            }
-                        }
-                        
-                        if (isNorth && ((!isWest && !isEast) || (isWest && isEast)))
-                        {
-                            /* We're lined up, do nothing */
-                        }
-                        else
-                        {
-                            moveVote++;
-                        }
-                    }
-                                            
-                    /* If there has been a decisive set of readings indicating a
-                     * need to move, do something */
-                    if ((moveVote == MIN_READINGS) && (clockwiseVote != antiClockwiseVote))
-                    {
-                        SInt8 microstepChange;
-                        
-                        /* Set the direction */
-                        if (clockwiseVote > antiClockwiseVote)
-                        {
-                            GPIO_SET (GPIO_MOTOR_DIRECTION);
-                            microstepChange = 1;
-                        }
-                        else
-                        {
-                            GPIO_CLR (GPIO_MOTOR_DIRECTION);
-                            microstepChange = -1;
-                        }
-        
-                        /* Move the minimum number of microsteps in the given direction */
-                        for (x = 0; x < MIN_ANGLE_MICROSTEPS; x++)
-                        {
-                            if ((angleMicrosteps + microstepChange < LIMIT_ANGLE_MICROSTEPS) &&
-                                (angleMicrosteps + microstepChange > -LIMIT_ANGLE_MICROSTEPS))
-                            {
-                                GPIO_CLR (GPIO_MOTOR_ENABLE_BAR);
-                                GPIO_SET (GPIO_MOTOR_MICRO_STEP);
-                                usleep (10000);                        
-                                GPIO_CLR (GPIO_MOTOR_MICRO_STEP);
-                                usleep (10000);
-                                angleMicrosteps += microstepChange;
-                                GPIO_SET (GPIO_MOTOR_ENABLE_BAR);
-                            }
-                        }
-                    }
-                }
-                while (!key_abort() && success);
-                printProgress ("Exiting...\n");
-                GPIO_CLR (GPIO_IR_ENABLE);
-                closeIo();
+                ASSERT_ALWAYS_STRING ("OneWire IO device not found.");
             }
             else
             {
-                printProgress ("Initialisation failure, is this program running as root?\n");        
+                printProgress ("Setting up OneWire IO device...\n");
+                success = setupIoDevice (&gIoDeviceArray[0][0]);
+
+                if (success)
+                {
+                    /* Initialise the GPIOs */
+                    success = openIo();
+                    
+                    if (success)
+                    {
+                        printProgress ("Setting up PI GPIOs...\n");       
+                        setupPiGpios ();
+                        
+                        /*
+                         * The charger should be placed against a wall,
+                         * oriented so that it can only be approached
+                         * from the North.  The code here should then
+                         * line the charging point (which is mounted at
+                         * North) up with an approaching IR.
+                         */
+                        printProgress ("Starting main loop...\n");
+                        do
+                        {
+                            UInt32 clockwiseVote;
+                            UInt32 antiClockwiseVote;
+                            UInt32 moveVote;
+                            
+                            clockwiseVote = 0;
+                            antiClockwiseVote = 0;
+                            moveVote = 0;
+                            
+                            /* Count over a number of readings to avoid glitches */
+                            for (x = 0; (x < MIN_READINGS) && success; x++)
+                            {
+                                Bool isNorth;
+                                Bool isEast;
+                                Bool isWest;
+                                UInt8 pinsState;
+                                
+                                success = readPIOLogicStateDS2408 (gPortNumber, &gIoDeviceArray[0][0], &pinsState);
+                                if (success)
+                                {
+                                    isNorth = !(pinsState & OW_PIN_IR_DETECT_NORTH);
+                                    isEast = !(pinsState & OW_PIN_IR_DETECT_EAST);
+                                    isWest = !(pinsState & OW_PIN_IR_DETECT_WEST);
+                                    
+                                    if (isWest && !isEast)
+                                    {
+                                        /* If West LED is on, and not East, go anticlockwise */
+                                        antiClockwiseVote++;
+                                    }
+                                    else
+                                    {
+                                        /* If East LED is on, and not West, go clockwise */
+                                        if (isEast && !isWest)
+                                        {
+                                            clockwiseVote++;
+                                        }
+                                    }
+                                    
+                                    if (isNorth && ((!isWest && !isEast) || (isWest && isEast)))
+                                    {
+                                        /* We're lined up, do nothing */
+                                    }
+                                    else
+                                    {
+                                        moveVote++;
+                                    }
+                                }
+                                else
+                                {
+                                    ASSERT_ALWAYS_STRING ("Failed to read OneWire IO device.\n");
+                                }
+                            }
+                                                    
+                            /* If there has been a decisive set of readings indicating a
+                             * need to move, do something */
+                            if ((moveVote == MIN_READINGS) && (clockwiseVote != antiClockwiseVote))
+                            {
+                                SInt8 microstepChange;
+                                
+                                /* Set the direction */
+                                if (clockwiseVote > antiClockwiseVote)
+                                {
+                                    GPIO_SET (GPIO_MOTOR_DIRECTION);
+                                    microstepChange = 1;
+                                }
+                                else
+                                {
+                                    GPIO_CLR (GPIO_MOTOR_DIRECTION);
+                                    microstepChange = -1;
+                                }
+                
+                                /* Move the minimum number of microsteps in the given direction */
+                                for (x = 0; x < MIN_ANGLE_MICROSTEPS; x++)
+                                {
+                                    if ((angleMicrosteps + microstepChange < LIMIT_ANGLE_MICROSTEPS) &&
+                                        (angleMicrosteps + microstepChange > -LIMIT_ANGLE_MICROSTEPS))
+                                    {
+                                        GPIO_CLR (GPIO_MOTOR_ENABLE_BAR);
+                                        GPIO_SET (GPIO_MOTOR_MICRO_STEP);
+                                        usleep (10000);                        
+                                        GPIO_CLR (GPIO_MOTOR_MICRO_STEP);
+                                        usleep (10000);
+                                        angleMicrosteps += microstepChange;
+                                        GPIO_SET (GPIO_MOTOR_ENABLE_BAR);
+                                    }
+                                }
+                            }
+                        }
+                        while (!key_abort() && success);
+                        printProgress ("Exiting...\n");
+                        GPIO_CLR (GPIO_IR_ENABLE);
+                        closeIo();
+                    }
+                    else
+                    {
+                        printProgress ("PI GPIO initialisation failure, is this program running as root?\n");
+                    }
+                }
+                else
+                {
+                    ASSERT_ALWAYS_STRING ("Failed to set up OneWire IO device.");
+                }
             }
         }
         
+        printProgress ("Closing OneWire port...\n");
         oneWireStopBus (gPortNumber);
     }
     
