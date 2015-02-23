@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <rob_system.h>
 #include <curses.h> /* Has to be ahead of rob_system.h in the list as it fiddles with bool */
@@ -804,18 +805,76 @@ static Bool updateStateWindow (WINDOW *pWin, UInt8 count)
     return false;
 }
 
+
+/*
+ * Set the attributes of a terminal window.
+ * 
+ * fd      file descriptor of the terminal.
+ * baud    the required baud rate as in the form 
+ *         of termios (e.g. B38400).  If set to B0
+ *         then the baudRate is left unchanged.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool setTerminalAttributes (UInt32 fd, UInt32 baudRate)
+{
+    Bool success = false;
+    struct termios tty;
+    
+    memset (&tty, 0, sizeof tty);
+    
+    if (tcgetattr (fd, &tty) == 0)
+    {
+        if (baudRate != B0)
+        {
+            cfsetospeed (&tty, baudRate);
+            cfsetispeed (&tty, baudRate);
+        }
+
+        tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;  /* 8-bit chars */
+        tty.c_iflag &= ~IGNBRK;         /* disable break processing */
+        tty.c_lflag = 0;                /* no signaling chars, no echo */
+                                        /* no canonical processing */
+        tty.c_oflag = 0;                /* no remapping, no delays */
+        tty.c_cc[VMIN]  = 0;            /* read doesn't block */
+        tty.c_cc[VTIME] = 0;
+
+        tty.c_iflag &= ~(IXON | IXOFF | IXANY); /* shut off xon/xoff ctrl */
+
+        tty.c_cflag |= (CLOCAL | CREAD); /* ignore modem controls */
+                                         /* and enable reading */
+        tty.c_cflag &= ~(PARENB | PARODD); /* shut off parity */
+        tty.c_cflag &= ~CSTOPB;
+        tty.c_cflag &= ~CRTSCTS;
+
+        if (tcsetattr (fd, TCSANOW, &tty) == 0)
+        {
+            success = true;
+        }
+    }
+
+    return success;
+}
+
 /*
  * PUBLIC FUNCTIONS
  */
 
 /*
  * Display a dashboard of useful information.
+ * 
+ * pTerminal  pointer to a terminal to use, may
+ *            be NULL (in which case stdout/stdin
+ *            is used.
+ * baudRate   baud rate to use with the given
+ *            terminal, only relevant if pTerminal
+ *            is not NULL.
  *
  * @return  true if successful, otherwise false.
  */
-Bool runMonitor (void)
+Bool runMonitor (char *pTerminal, UInt32 baudRate)
 {
-    Bool success = true;
+    Bool success = false;
     Bool exitDashboard = false;
     UInt8 leftCol;
     UInt8 rightCol;
@@ -825,87 +884,136 @@ Bool runMonitor (void)
     UInt8 i;
     UInt8 x;
     int savedCursor;
+    int fd = -1;
+    FILE * pTtyOut = stdout;
+    FILE * pTtyIn = stdin;
 
-    /* Set up curses for unbuffered input with no delay */
-    initscr();
-    cbreak();
-    noecho();
-    nodelay (stdscr, TRUE);
-    
-    /* Set the cursor to invisible, if possible */
-    savedCursor = curs_set (0);
-
-    /* Setup the boundaries */
-    getbegyx (stdscr, topRow, leftCol);
-    getmaxyx (stdscr, botRow, rightCol);
-    topRow += BORDER_WIDTH;
-    botRow -= BORDER_WIDTH;
-    leftCol += BORDER_WIDTH;
-    rightCol -= BORDER_WIDTH;
-    scrCols = rightCol - leftCol;
-    
-    /* Bound the main screen */
-    mvprintw (SET_ROW (ROW_HEADING), SET_COL (leftCol + NUM_SPACES_TO_CENTRE_STRING (STRING_MAIN_HEADING, scrCols)), STRING_MAIN_HEADING);
-    box (stdscr, 0, 0);
-    refresh();
-    
-    /* Start sub-windows for the status reports, print their headings, call their init functions */
-    for (i = 0; (i < (sizeof (gWindowList) / sizeof (WindowInfo))) && success; i++)
+    /* If we have been given terminal attributes, use them */
+    if (pTerminal != NULL)
     {
-        if (gWindowList[i].enabled)
+        printProgress ("NOTE: Output is going to %s, make sure it is open...\n", pTerminal);
+        fd = open (pTerminal, O_RDWR);
+        if (fd >= 0)
         {
-            gWindowList[i].pWin = newwin (gWindowList[i].dimensions.height, gWindowList[i].dimensions.width, gWindowList[i].dimensions.startRow, gWindowList[i].dimensions.startCol);
-            if (gWindowList[i].pWin)
+            success = setTerminalAttributes (fd, baudRate);
+            
+            if (success)
             {
-                if (strlen(gWindowList[i].windowHeading) > 0)
+                pTtyOut = fdopen (fd, "w");
+                if (pTtyOut != NULL)
                 {
-                    mvwprintw (stdscr, gWindowList[i].dimensions.startRow - HEADING_HEIGHT, gWindowList[i].dimensions.startCol, "%s:", gWindowList[i].windowHeading);
+                    pTtyIn = fdopen (fd, "r");
+                    if (pTtyIn != NULL)
+                    {
+                        success = true;
+                    }
                 }
-                gWindowList[i].pWinInit(gWindowList[i].pWin);
-            }
-            else
-            {
-                success = false;
             }
         }
     }
+    else
+    {
+        success = true;
+    }
     
+    /* Now do the curses stuff */
     if (success)
     {
-        /* Now show stuff in the sub-windows */
-        for (i = 0; !exitDashboard; i++) /* i is not meant to be in the condition here */
+        /* Set up curses for unbuffered input with no delay */
+        newterm (NULL, pTtyOut, pTtyIn);
+        cbreak();
+        noecho();
+        nodelay (stdscr, TRUE);
+        
+        /* Set the cursor to invisible, if possible */
+        savedCursor = curs_set (0);
+
+        /* Setup the boundaries */
+        getbegyx (stdscr, topRow, leftCol);
+        getmaxyx (stdscr, botRow, rightCol);
+        topRow += BORDER_WIDTH;
+        botRow -= BORDER_WIDTH;
+        leftCol += BORDER_WIDTH;
+        rightCol -= BORDER_WIDTH;
+        scrCols = rightCol - leftCol;
+        
+        /* Bound the main screen */
+        mvprintw (SET_ROW (ROW_HEADING), SET_COL (leftCol + NUM_SPACES_TO_CENTRE_STRING (STRING_MAIN_HEADING, scrCols)), STRING_MAIN_HEADING);
+        box (stdscr, 0, 0);
+        refresh();
+        
+        /* Start sub-windows for the status reports, print their headings, call their init functions */
+        for (i = 0; (i < (sizeof (gWindowList) / sizeof (WindowInfo))) && success; i++)
         {
-            for (x = 0; (x < (sizeof (gWindowList) / sizeof (gWindowList[0])) && !exitDashboard); x++)
+            if (gWindowList[i].enabled)
             {
-                if (gWindowList[x].enabled)
+                gWindowList[i].pWin = newwin (gWindowList[i].dimensions.height, gWindowList[i].dimensions.width, gWindowList[i].dimensions.startRow, gWindowList[i].dimensions.startCol);
+                if (gWindowList[i].pWin)
                 {
-                    exitDashboard = gWindowList[x].pWinUpdate (gWindowList[x].pWin, i);
+                    if (strlen(gWindowList[i].windowHeading) > 0)
+                    {
+                        mvwprintw (stdscr, gWindowList[i].dimensions.startRow - HEADING_HEIGHT, gWindowList[i].dimensions.startCol, "%s:", gWindowList[i].windowHeading);
+                    }
+                    gWindowList[i].pWinInit(gWindowList[i].pWin);
                 }
-                
-                /* Tick the Task Handler server after each window update */
-                /* TODO: do this with a timer in the Mobile State code instead */
-                taskHandlerServerSendReceive (TASK_HANDLER_TICK, PNULL, 0);
+                else
+                {
+                    success = false;
+                }
             }
-            doupdate();
-        }        
+        }
+        
+        if (success)
+        {
+            /* Now show stuff in the sub-windows */
+            for (i = 0; !exitDashboard; i++) /* i is not meant to be in the condition here */
+            {
+                for (x = 0; (x < (sizeof (gWindowList) / sizeof (gWindowList[0])) && !exitDashboard); x++)
+                {
+                    if (gWindowList[x].enabled)
+                    {
+                        exitDashboard = gWindowList[x].pWinUpdate (gWindowList[x].pWin, i);
+                    }
+                    
+                    /* Tick the Task Handler server after each window update */
+                    /* TODO: do this with a timer in the Mobile State code instead */
+                    taskHandlerServerSendReceive (TASK_HANDLER_TICK, PNULL, 0);
+                }
+                doupdate();
+            }        
+        }
+        
+        /* clean up */
+        echo(); /* endwin() doesn't seem to turn echo back on for me, so call this first */
+        if (savedCursor != ERR)
+        {
+            curs_set (savedCursor);
+        }
+        for (i = 0; i < sizeof (gWindowList) / sizeof (WindowInfo); i++)
+        {
+            if (gWindowList[i].pWin != PNULL)
+            {
+                delwin (gWindowList[i].pWin);
+                gWindowList[i].pWin = PNULL;
+            }
+        }
+        endwin();
+        fflush (stdout);
     }
     
-    /* clean up */
-    echo(); /* endwin() doesn't seem to turn echo back on for me, so call this first */
-    if (savedCursor != ERR)
+    /* Tidy up the terminal stuff */
+    if (fd >= 0)
     {
-        curs_set (savedCursor);
-    }
-    for (i = 0; i < sizeof (gWindowList) / sizeof (WindowInfo); i++)
+        close (fd);
+    }    
+    if (pTtyOut != stdout)
     {
-        if (gWindowList[i].pWin != PNULL)
-        {
-            delwin (gWindowList[i].pWin);
-            gWindowList[i].pWin = PNULL;
-        }
+        fclose (pTtyOut);
     }
-    endwin();
-    fflush (stdout);
-
+    if (pTtyIn != stdin)
+    {
+        fclose (pTtyIn);
+    }
+    
     return success;    
 }

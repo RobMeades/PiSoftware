@@ -2,4 +2,4 @@
  * Entry point for the monitor.
  */ 
 
-Bool runMonitor (void);
+Bool runMonitor (char *pTerminal, UInt32 baudRate);

@@ -19,9 +19,17 @@ typedef struct RoboOneTaskInfoTag
     Char lastIndString[MAX_O_STRING_LENGTH];    
 } RoboOneTaskInfo;
 
+/* Settings, driven by the command line */
+typedef struct RoboOneSettingsTag
+{
+    char * pTerminal;
+    UInt32 baudRate;
+} RoboOneSettings;
+
 typedef struct RoboOneGlobalsTag
 {
-    RoboOneTaskInfo roboOneTaskInfo;    
+    RoboOneTaskInfo roboOneTaskInfo;
+    RoboOneSettings roboOneSettings;
 } RoboOneGlobals;
 
 /*
