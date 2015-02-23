@@ -12,7 +12,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <errno.h>
 #include <rob_system.h>
 #include <one_wire.h>
 #include <messaging_server.h>
@@ -705,14 +704,7 @@ Bool startOneWireBus (void)
     if (!success || (gPortNumber < 0))
     {
         success = false; 
-        if (errno != 0)
-        {
-            printProgress (" failed, file open() error cause %s.\n", strerror (errno));
-        }
-        else
-        {
-            printProgress (" failed, couldn't detect DS2480!\n");            
-        }
+        printProgress (" failed, couldn't detect DS2480!\n");            
     }
     else
     {
