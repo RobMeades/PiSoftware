@@ -6,8 +6,8 @@
  * MANIFEST CONSTANTS
  */
 
-/* Suggested 500ms delay before task handler server is ready */
-#define TASK_HANDLER_SERVER_START_DELAY_PI_US 500000L
+/* Suggested 1s delay before task handler server is ready */
+#define TASK_HANDLER_SERVER_START_DELAY_PI_US 1000000L
 
 /*
  * TYPES

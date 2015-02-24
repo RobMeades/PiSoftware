@@ -516,3 +516,19 @@ POSTSCRIPT
 Other things I found I needed after doing all the above:
 
 In order to program my Orangutan board from the Pi: pacman -S avrdude
+
+ADDING SOME ROBOONE SPECIFICS
+
+To add the startup/shutdown script that synchronises the battery capacity measurements from NVRAM on the DS2438 chips, do the following:
+
+Copy remaining_capacity_sync.service to /etc/systemd/system.
+Copy roboone_remaining_capacity_sync and roboone_hardware_server (both binaries) to /usr/bin.
+
+Make sure both of the executables have chmod +x, then enter:
+
+systemctl enable remaining_capacity_sync.service
+
+to enable them to run at startup.
+
+
+

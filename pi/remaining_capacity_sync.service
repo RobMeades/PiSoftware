@@ -1,0 +1,10 @@
+[Unit]
+Description=RoboOne Remaining Capacity Sync
+
+[Service]
+RemainAfterExit=yes
+ExecStart=/usr/bin/remaining_capacity_sync
+ExecStop=/usr/bin/remaining_capacity_sync
+
+[Install]
+WantedBy=multi-user.target 
