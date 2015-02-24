@@ -80,6 +80,7 @@ void closeOrangutan (void)
         /* Restore terminal settings */
         tcsetattr (gFd, TCSANOW, &gSavedSettings);
         close (gFd);
+        gFd = -1;
     }
 }
 

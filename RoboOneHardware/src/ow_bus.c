@@ -12,6 +12,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <errno.h>
 #include <rob_system.h>
 #include <one_wire.h>
 #include <messaging_server.h>
@@ -28,8 +29,9 @@
  */
 
 #define ONEWIRE_PORT_STRING    "/dev/USBSerial"
-#define MAX_NUM_DEVICES 8    /* This MUST be the same as the number of elements in the gDeviceStaticConfigList[] below */
-#define TOGGLE_DELAY_US 500000L  /* How long to toggle a set of pins from current state to opposite and back again */
+#define MAX_NUM_DEVICES         8  /* This MUST be the same as the number of elements in the gDeviceStaticConfigList[] below */
+#define MAX_NUM_BATTERY_DEVICES 4
+#define TOGGLE_DELAY_US         500000L   /* How long to toggle a set of pins from current state to opposite and back again */
 #define SERIAL_NUM_BUFFER_SIZE (NUM_BYTES_IN_SERIAL_NUM * 2) + 3 /* string representation of serial num with 0x in front and terminator on the end */
 
 /* The maximum number of devices that oneWireFindAllDevices() can report */
@@ -226,7 +228,8 @@ typedef struct OwDevicesStaticConfigTag
  */
 
 /* ORDER IS IMPORTANT - the OwDeviceName enum is used to index into the
- * gDeviceStaticConfigList array */
+ * gDeviceStaticConfigList array and the FAMILY_SBATTERY devices must
+ * come first */
 
 static OwDevicesStaticConfig gDeviceStaticConfigList[] =
          {{OW_NAME_RIO_BATTERY_MONITOR, {{FAMILY_SBATTERY, 0xcf, 0xe0, 0xa6, 0x01, 0x00, 0x00, 0x0b}}, {{RIO_BATTERY_MONITOR_CONFIG}}},
@@ -705,6 +708,7 @@ Bool startOneWireBus (void)
     {
         success = false; 
         printProgress (" failed, couldn't detect DS2480!\n");            
+
     }
     else
     {
@@ -721,8 +725,12 @@ Bool startOneWireBus (void)
  */
 void stopOneWireBus (void)
 {
-    printProgress ("Closing port.\n");
-    oneWireStopBus (gPortNumber);
+    if (gPortNumber >=0 )
+    {
+        printProgress ("Closing port.\n");
+        oneWireStopBus (gPortNumber);
+        gPortNumber = -1;
+    }
 }
 
 /*
@@ -780,19 +788,31 @@ UInt8 findAllDevices ()
  * the OneWire bus, using the configuration data in
  * gDeviceStaticConfigList[].
  *
- * @return  true if successful, otherwise false.
+ * batteriesOnly  if true, only setup the ds2438 devices,
+ *                otherwise setup the lot.
+ * @return        true if successful, otherwise false.
  */
-Bool setupDevices (void)
+Bool setupDevices (Bool batteriesOnly)
 {
     Bool  success = true;
     Bool  found[MAX_NUM_DEVICES];
     UInt8 *pAddress;
     UInt8 pinsState;
     UInt8 i;
+    UInt8 numDevices = MAX_NUM_DEVICES;
     Char  serialNumBuffer[SERIAL_NUM_BUFFER_SIZE];
     
-    printProgress ("Setting up OneWire devices...\n");
-    for (i = 0; (i < MAX_NUM_DEVICES); i++)
+    if (batteriesOnly)
+    {
+        printProgress ("Setting up OneWire battery devices...\n");
+        numDevices = MAX_NUM_BATTERY_DEVICES;
+    }
+    else
+    {
+        printProgress ("Setting up all OneWire devices...\n");
+    }
+    
+    for (i = 0; (i < numDevices); i++)
     {
         pAddress = &gDeviceStaticConfigList[i].address.value[0];
         
@@ -832,6 +852,7 @@ Bool setupDevices (void)
                 break;
                 case OW_TYPE_DS2408_PIO:
                 {
+                    ASSERT_PARAM (!batteriesOnly, batteriesOnly);
                     /* Disable test mode, just in case, then write the control register and
                      * the pin configuration, using an intermediate variable for the latter
                      * as the write function also reads the result back and I'd rather avoid
@@ -874,7 +895,7 @@ Bool setupDevices (void)
     }
     
     /* Check whether we found everything and say so if not */
-    for (i = 0; i < MAX_NUM_DEVICES; i++)
+    for (i = 0; i < numDevices; i++)
     {
         if (!found[i])
         {

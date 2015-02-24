@@ -18,7 +18,8 @@
 /*
  * Definitions
  */
-HARDWARE_MSG_DEF (HARDWARE_SERVER_EXIT, HardwareServerExit, hardwareServerExit, HARDWARE_EMPTY, HARDWARE_EMPTY)
+HARDWARE_MSG_DEF (HARDWARE_SERVER_START, HardwareServerStart, hardwareServerStart, Bool batteriesOnly, HARDWARE_EMPTY)
+HARDWARE_MSG_DEF (HARDWARE_SERVER_STOP, HardwareServerStop, hardwareServerStop, HARDWARE_EMPTY, HARDWARE_EMPTY)
 HARDWARE_MSG_DEF (HARDWARE_READ_MAINS_12V, HardwareReadMains12V, hardwareReadMains12V, HARDWARE_EMPTY, Bool mains12VIsPresent)
 HARDWARE_MSG_DEF (HARDWARE_READ_CHARGER_STATE_PINS, HardwareReadChargerStatePins, hardwareReadChargerStatePins, HARDWARE_EMPTY, UInt8 pinsState)
 HARDWARE_MSG_DEF (HARDWARE_READ_CHARGER_STATE, HardwareReadChargerState, hardwareReadChargerState, HARDWARE_EMPTY, HardwareChargeState chargeState)

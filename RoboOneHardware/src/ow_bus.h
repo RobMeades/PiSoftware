@@ -18,7 +18,7 @@
 
 Bool startOneWireBus (void);
 void stopOneWireBus (void);
-Bool setupDevices (void);
+Bool setupDevices (Bool batteriesOnly);
 UInt8 findAllDevices (void);
 
 Bool readMains12VPin (Bool *pMains12VIsPresent);

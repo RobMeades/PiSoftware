@@ -38,7 +38,49 @@ extern Char *pgHardwareMessageNames[];
  */
 
 /*
- * Handle a message that will cause us to exit.
+ * Handle a message that will cause us to start.
+ * 
+ * batteriesOnly if true, only start up the battery
+ *               related items on the OneWire bus
+ *               (useful when just synchronising
+ *               remaining battery capacity values),
+ *               otherwise setup the PIOs as well.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
+ * 
+ * @return       the length of the message body
+ *               to send back.
+ */
+static UInt16 actionHardwareServerStart (Bool batteriesOnly, HardwareServerStartCnf *pSendMsgBody)
+{
+    Bool success;
+    UInt16 sendMsgBodyLength = 0;
+
+    ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+    
+   /* First of all, start up the OneWire bus */
+    success = startOneWireBus();      
+    if (success)
+    {
+        /* Find and setup the devices on the OneWire bus */
+        success = setupDevices (batteriesOnly);
+        if (!success)
+        {
+            /* If the setup fails, print out what devices we can find */
+            findAllDevices();
+        }
+    }
+    
+    pSendMsgBody->success = success;
+    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    
+    return sendMsgBodyLength;
+}
+
+/*
+ * Handle a message that will cause us to stop.
  * 
  * pSendMsgBody  pointer to the relevant message
  *               type to fill in with a response,
@@ -48,11 +90,17 @@ extern Char *pgHardwareMessageNames[];
  * @return       the length of the message body
  *               to send back.
  */
-static UInt16 actionHardwareServerExit (HardwareServerExitCnf *pSendMsgBody)
+static UInt16 actionHardwareServerStop (HardwareServerStopCnf *pSendMsgBody)
 {
     UInt16 sendMsgBodyLength = 0;
 
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
+    
+    /* Shut the OneWire stuff down gracefully */
+    stopOneWireBus ();
+    
+    /* Shut the Orangutan down in case it was up */
+    closeOrangutan();
     
     pSendMsgBody->success = true;
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
@@ -136,7 +184,7 @@ static UInt16 actionReadChargerState (HardwareReadChargerStateCnf *pSendMsgBody)
  */
 static UInt16 actionSetBool (HardwareMsgType msgType, UInt8 *pSendMsgBody)
 {
-    Bool success;
+    Bool success = false;
     UInt16 sendMsgBodyLength = 0;
     
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
@@ -780,7 +828,7 @@ static UInt16 actionReadChargeDischarge (HardwareMsgType msgType, UInt8 *pSendMs
  * 
  * msgType          the msgType, extracted from the
  *                  received mesage.
- * pBatterySwapData a pointer to the data to be
+ * pReceivedMsgBody a pointer to the data to be
  *                  passed to the battery swap
  *                  function.
  * pSendMsgBody     pointer to the relevant message
@@ -959,9 +1007,15 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
     /* Now handle each message specifically */
     switch (receivedMsgType)
     {
-        case HARDWARE_SERVER_EXIT:
+        case HARDWARE_SERVER_START:
         {
-            pSendMsg->msgLength += actionHardwareServerExit ((HardwareServerExitCnf *) &(pSendMsg->msgBody[0]));
+            Bool batteriesOnly = ((HardwareServerStartReq *) pReceivedMsgBody)->batteriesOnly;
+            pSendMsg->msgLength += actionHardwareServerStart (batteriesOnly, (HardwareServerStartCnf *) &(pSendMsg->msgBody[0]));
+        }
+        break;
+        case HARDWARE_SERVER_STOP:
+        {
+            pSendMsg->msgLength += actionHardwareServerStop ((HardwareServerStopCnf *) &(pSendMsg->msgBody[0]));
             returnCode = SERVER_EXIT_NORMALLY;
         }
         break;

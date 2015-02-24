@@ -13,7 +13,6 @@
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>
 #include <orangutan.h>
-#include <ow_bus.h>
 
 /*
  * STATIC FUNCTIONS
@@ -29,7 +28,6 @@
  */
 int main (int argc, char **argv)
 {
-    Bool success = false;
     ServerReturnCode returnCode = SERVER_ERR_GENERAL_FAILURE;
     UInt16 hardwareServerPort;
 
@@ -38,32 +36,11 @@ int main (int argc, char **argv)
 
     if (argc == 2)
     {
-        /* First of all, start up the OneWire bus */
-        success = startOneWireBus();
-          
-        /* Find and setup the devices on the OneWire bus */
-        if (success)
-        {
-            success = setupDevices();
-            if (success)
-            {
-                /* Now start up the server */
-                hardwareServerPort = atoi (argv[1]);
-                printProgress ("Hardware server listening on port %d.\n", hardwareServerPort);
+        /* Start up the server */
+        hardwareServerPort = atoi (argv[1]);
+        printProgress ("Hardware server listening on port %d.\n", hardwareServerPort);
 
-                returnCode = runMessagingServer (hardwareServerPort);
-                
-                closeOrangutan();
-            }
-            else
-            {
-                /* If the setup fails, print out what devices we can find */
-                findAllDevices();
-            }
-            
-            /* Shut the OneWire stuff down gracefully */
-            stopOneWireBus ();
-        }
+        returnCode = runMessagingServer (hardwareServerPort);
         
         if (returnCode == SERVER_EXIT_NORMALLY)
         {

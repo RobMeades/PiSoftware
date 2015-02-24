@@ -3,7 +3,8 @@ ifneq (,)
 This makefile requires GNU Make.
 endif
 
-PROGRAM = roboone_hardware_server
+PROGRAM1 = roboone_hardware_server
+PROGRAM2 = roboone_remaining_capacity_sync
 LIB = roboone_hardware_client.a
 SRC_DIR = src
 OBJ_DIR = obj
@@ -22,17 +23,21 @@ OW_LIBS = $(OW_LIBS_OBJ_PRE)/owlinkobjs
 C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
 LIB_OBJ:= $(OBJ_DIR)/hardware_client.o $(OBJ_DIR)/hardware_msg_names.o
-EXE_OBJ:= $(OBJ_DIR)/main.o $(OBJ_DIR)/hardware_server.o $(OBJ_DIR)/orangutan.o $(OBJ_DIR)/ow_bus.o $(OBJ_DIR)/hardware_msg_names.o
+EXE1_OBJ:= $(OBJ_DIR)/main.o $(OBJ_DIR)/hardware_server.o $(OBJ_DIR)/orangutan.o $(OBJ_DIR)/ow_bus.o $(OBJ_DIR)/hardware_msg_names.o
+EXE2_OBJ:= $(OBJ_DIR)/remaining_capacity_sync.o
 CC = $(GCC_PREFIX)gcc.exe
 AR =  $(GCC_PREFIX)ar.exe
 DFLAGS = -O0 -fbuiltin -g
 CFLAGS = -O2 -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ONEWIRE_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR) $(OW_LIBS_FLAGS)
 LDFLAGS = $(SHARED_PRE)/$(OBJ_DIR)/shared.a  $(ONEWIRE_PRE)/$(OBJ_DIR)/one_wire.a  $(OW_LIBS) $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a
 
-all: $(PROGRAM)
+all: $(PROGRAM1) $(PROGRAM2)
 
-$(PROGRAM): $(LIB)
-	$(CC) $(EXE_OBJ) $(LDFLAGS) -o $(OBJ_DIR)/$(PROGRAM)
+$(PROGRAM1): $(LIB)
+	$(CC) $(EXE1_OBJ) $(LDFLAGS) -o $(OBJ_DIR)/$(PROGRAM1)
+
+$(PROGRAM2): $(LIB)
+	$(CC) $(EXE2_OBJ) $(LDFLAGS) $(OBJ_DIR)/$(LIB) $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a -o $(OBJ_DIR)/$(PROGRAM2)
 
 $(LIB): .depend $(OBJS)
 	$(AR) r $(OBJ_DIR)/$(LIB) $(LIB_OBJ)
@@ -59,6 +64,6 @@ $(OBJ_DIR)/%.o:$(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
-	rm -f depend $(OBJ_DIR)/.depend $(OBJ_DIR)/*.o $(OBJ_DIR)/$(LIB) $(OBJ_DIR)/$(PROGRAM)
+	rm -f depend $(OBJ_DIR)/.depend $(OBJ_DIR)/*.o $(OBJ_DIR)/$(LIB) $(OBJ_DIR)/$(PROGRAM1) $(OBJ_DIR)/$(PROGRAM2)
 
 .PHONY: clean depend
