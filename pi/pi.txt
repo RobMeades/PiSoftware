@@ -473,20 +473,29 @@ We'll be fiddling with boot things again, so shut down the Pi and make a back-up
 
 INSTALL ROBOTEQ SOFTWARE FOR RIO/AHRS
 
-The original RIO install script is not compatible with Arch Linux so you will need to run rio_board_install_systemd.sh and install the script rioboard_d.service instead.  Make sure you are in the directory where rio_board_install_systemd.sh and rioboard_d.service are located and enter:
+You will need to run rio_board_install_Arch_Linux.sh  Enter:
 
-chmod 755 rio_board_install_systemd.sh
-sh ./rio_board_install_systemd.sh
+chmod 755 rio_board_install_Arch_Linux.sh
+
+Then edit /boot/config.txt and make sure that the line:
+
+device_tree_param=spi=on
+
+is not commented out.
+
+Now run the script:
+
+sh ./rio_board_install_Arch_Linux.sh
 
 Follow the instructions given and, when done, reboot.
 
 If you have been successful the green LED on the RIO/AHRS should be flashing at 4 Hz rather than 1 Hz.  Now run the test program provided by RIO:
 
 cd /riofiles
-chomd 755 riboard_test
+chmod 755 rioboard_test
 sudo ./rioboard_test
 
-Note that the test program MUST be run with root privileges or it won't be able to access shared memory.  If a load of numbers stream up your screen, you're done.
+Note that the test program MUST be run with root privileges or it won't be able to access shared memory.  If a load of non-zero numbers stream up your screen, you're done.
 
 ENVIRONMENT VARIABLES
 Using curses, which I do on RoboOne, has the unfortunate effect of fiddling with the way output is buffered and this is something that cannot be modified within the execution of a program.  To stop it doing this, edit /etc/profile and add at the end of it:
