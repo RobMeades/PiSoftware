@@ -70,45 +70,53 @@ BatteryContainerData gBatteryDataContainerO3;
 static void signalChargeStateAll (void)
 {
     if (!gAllInsufficientCharge)
-    {        
+    {
+        printDebug ("Sufficient charge.\n");
         if ((gBatteryDataContainerRio.insufficientCharge) ||
             (gBatteryDataContainerO1.insufficientCharge) ||
             (gBatteryDataContainerO2.insufficientCharge) ||
             (gBatteryDataContainerO3.insufficientCharge))
         {
+            printDebug ("...but now a battery is insufficiently charged.\n");
             gAllInsufficientCharge = true;
             stateMachineServerSendReceive (STATE_MACHINE_EVENT_INSUFFICIENT_CHARGE, PNULL, 0, PNULL, 0);    
         }
     }
     else
     {
+        printDebug ("Insufficient charge.\n");
         if ((gBatteryDataContainerRio.batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS) ||
             (gBatteryDataContainerO1.batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS) ||
             (gBatteryDataContainerO2.batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS) ||
             (gBatteryDataContainerO3.batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS))
         {
+            printDebug ("...but now a battery is sufficiently charged.\n");
             gAllInsufficientCharge = false;                
         }
     }
     
     if (!gAllFullyCharged)
     {
+        printDebug ("Not all fully charged.\n");
         if ((gBatteryDataContainerRio.batteryData.remainingCapacity > FULL_CHARGE) &&
             (gBatteryDataContainerO1.batteryData.remainingCapacity > FULL_CHARGE) &&
             (gBatteryDataContainerO2.batteryData.remainingCapacity > FULL_CHARGE) &&
             (gBatteryDataContainerO3.batteryData.remainingCapacity > FULL_CHARGE))
         {
+            printDebug ("...but now all batteries are fully charged.\n");
             gAllFullyCharged = true;
             stateMachineServerSendReceive (STATE_MACHINE_EVENT_FULLY_CHARGED, PNULL, 0, PNULL, 0);    
         }
     }
     else
     {
+        printDebug ("All fully charged.\n");
         if ((gBatteryDataContainerRio.batteryData.remainingCapacity < FULL_CHARGE - CHARGE_HYSTERESIS) ||
             (gBatteryDataContainerO1.batteryData.remainingCapacity < FULL_CHARGE - CHARGE_HYSTERESIS) ||
             (gBatteryDataContainerO2.batteryData.remainingCapacity < FULL_CHARGE - CHARGE_HYSTERESIS) ||
             (gBatteryDataContainerO3.batteryData.remainingCapacity < FULL_CHARGE - CHARGE_HYSTERESIS))
         {
+            printDebug ("...but now one battery is not fully charged.\n");
             gAllFullyCharged = false;                
         }
     }
@@ -385,6 +393,15 @@ static UInt16 actionBatteryManagerData (BatteryManagerMsgType msgType, BatteryDa
  */
 static UInt16 actionBatteryManagerChargingPermitted (Bool isPermitted)
 {
+    if (isPermitted)
+    {
+        printDebug ("Battery charging is permitted.\n");
+    }
+    else
+    {
+        printDebug ("Battery charging is NOT permitted.\n");       
+    }
+    
     if (gChargingPermitted && !isPermitted)
     {
         hardwareServerSendReceive (HARDWARE_SET_RIO_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);
@@ -459,7 +476,8 @@ static ServerReturnCode doAction (BatteryManagerMsgType receivedMsgType, UInt8 *
         break;
         case BATTERY_MANAGER_CHARGING_PERMITTED:
         {
-            pSendMsg->msgLength += actionBatteryManagerChargingPermitted ((Bool *) pReceivedMsgBody);            
+            Bool isPermitted = ((BatteryManagerChargingPermittedInd *) pReceivedMsgBody)->isPermitted;
+            pSendMsg->msgLength += actionBatteryManagerChargingPermitted (isPermitted);            
         }
         break;
         default:
