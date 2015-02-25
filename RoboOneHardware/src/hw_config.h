@@ -58,3 +58,10 @@
 #define GENERAL_PURPOSE_IO_MUX_A2         GENERAL_PURPOSE_IO_6 /* If J4 is connected, General Purpose IO 6 is connected to A2 of the mux chip */
 #define GENERAL_PURPOSE_IO_MUX_SHIFT      4                    /* How much to shift a number left by in order to overlay it on the mux select pins */
 #define GENERAL_PURPOSE_IO_MUX_ENABLE_BAR GENERAL_PURPOSE_IO_7 /* If J5 is connected, General Purpose IO 7 is connected to ~E of the mux chip */
+
+/* How the temperature sensors are connected to the analogue mux*/
+#define TEMPERATURE_SENSOR_RIO_BATT   0
+#define TEMPERATURE_SENSOR_O1_BATT    1
+#define TEMPERATURE_SENSOR_O2_BATT    2
+#define TEMPERATURE_SENSOR_O3_BATT    3
+

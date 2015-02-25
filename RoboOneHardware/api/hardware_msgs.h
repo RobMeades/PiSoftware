@@ -88,7 +88,9 @@ HARDWARE_MSG_DEF (HARDWARE_SWAP_RIO_BATTERY, HardwareSwapRioBattery, hardwareSwa
 HARDWARE_MSG_DEF (HARDWARE_SWAP_O1_BATTERY, HardwareSwapO1Battery, hardwareSwapO1Battery, HardwareBatterySwapData batterySwapData, HARDWARE_EMPTY)
 HARDWARE_MSG_DEF (HARDWARE_SWAP_O2_BATTERY, HardwareSwapO2Battery, hardwareSwapO2Battery, HardwareBatterySwapData batterySwapData, HARDWARE_EMPTY)
 HARDWARE_MSG_DEF (HARDWARE_SWAP_O3_BATTERY, HardwareSwapO3Battery, hardwareSwapO3Battery, HardwareBatterySwapData batterySwapData, HARDWARE_EMPTY)
-HARDWARE_MSG_DEF (HARDWARE_SET_ANALOGUE_MUX_INPUT, HardwareSetAnalogueMuxInput, hardwareSetAnalogueMuxInput, UInt8 input, HARDWARE_EMPTY)
-HARDWARE_MSG_DEF (HARDWARE_READ_ANALOGUE_MUX, HardwareReadAnalogueMux, hardwareReadAnalogueMux, HARDWARE_EMPTY, UInt16 voltage)
+HARDWARE_MSG_DEF (HARDWARE_READ_RIO_BATT_TEMPERATURE, HardwareReadRioBattTemperature, hardwareReadRioBattTemperature, HARDWARE_EMPTY, double temperature)
+HARDWARE_MSG_DEF (HARDWARE_READ_O1_BATT_TEMPERATURE, HardwareReadO1BattTemperature, hardwareReadO1BattTemperature, HARDWARE_EMPTY, double temperature)
+HARDWARE_MSG_DEF (HARDWARE_READ_O2_BATT_TEMPERATURE, HardwareReadO2BattTemperature, hardwareReadO2BattTemperature, HARDWARE_EMPTY, double temperature)
+HARDWARE_MSG_DEF (HARDWARE_READ_O3_BATT_TEMPERATURE, HardwareReadO3BattTemperature, hardwareReadO3BattTemperature, HARDWARE_EMPTY, double temperature)
 HARDWARE_MSG_DEF (HARDWARE_SEND_O_STRING, HardwareSendOString, hardwareSendOString, OInputContainer string, OResponseString string)
 

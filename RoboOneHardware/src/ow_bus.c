@@ -68,7 +68,7 @@
 #    define CHARGER_STATE_IO_PIN_INPUTS   0xFF
 #    define DARLINGTON_IO_PIN_INPUTS      0x00
 #    define RELAY_IO_PIN_INPUTS           RELAY_12V_DETECT
-#    define GENERAL_PURPOSE_IO_PIN_INPUTS 0xFF
+#    define GENERAL_PURPOSE_IO_PIN_INPUTS 0x00  /* Default to outputs so as to drive the analogue mux */
 #endif
 
 /* Pins generally low to begin with apart from charger state which is allowed to float as an input,
@@ -84,7 +84,7 @@
 #    define CHARGER_STATE_IO_PIN_INITIAL_STATE   0xFF
 #    define DARLINGTON_IO_PIN_INITIAL_STATE      (UInt8) (~(DARLINGTON_RIO_PWR_BATT_OFF | DARLINGTON_RIO_PWR_12V_ON | DARLINGTON_O_PWR_TOGGLE | DARLINGTON_O_RESET_TOGGLE) | DARLINGTON_ENABLE_BAR)
 #    define RELAY_IO_PIN_INITIAL_STATE           RELAY_12V_DETECT | RELAY_ENABLE_BAR
-#    define GENERAL_PURPOSE_IO_PIN_INITIAL_STATE 0xFF
+#    define GENERAL_PURPOSE_IO_PIN_INITIAL_STATE 0x00
 #endif
 
 /* Which pin positions should have their state tracked through
@@ -1786,6 +1786,78 @@ Bool readGeneralPurposeIOs (UInt8 *pPinsState)
 }
 
 /*
+ * Set the input port used on the analogue mux.
+ * For this to be any use jumpers J1, J2, J3 and J4
+ * need to be shorted on the RoboOne PCB. 
+ * 
+ * input   the number of the input to be connected,
+ *         from 0 to 7.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool setAnalogueMuxInput (UInt8 input)
+{
+    Bool  success = true;
+    UInt8 pinsState;
+    UInt8 pinsStateToWrite;
+    
+    ASSERT_PARAM (input < 8, input);
+
+    /* Read the last state of the pins on the general purpose
+     * IO chip, which has the relevant output lines */
+    success = readPinsWithShadow (OW_NAME_GENERAL_PURPOSE_PIO, &pinsState);
+
+    /* First, disable the device while we change things */
+    if (success)
+    {
+        pinsState |= GENERAL_PURPOSE_IO_MUX_ENABLE_BAR;
+        pinsStateToWrite = pinsState;
+        success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite);
+        if (success)
+        {
+            /* Setup the shadow to match the result */
+            gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].specifics.ds2408.pinsState = pinsState;
+            /* Now set the IO lines attached to pins A0 to A2 of the HEF4051B */
+            pinsStateToWrite = pinsState;
+            pinsStateToWrite &= ~(GENERAL_PURPOSE_IO_MUX_A0 | GENERAL_PURPOSE_IO_MUX_A1 | GENERAL_PURPOSE_IO_MUX_A2);
+            pinsStateToWrite |= (input << GENERAL_PURPOSE_IO_MUX_SHIFT) & (GENERAL_PURPOSE_IO_MUX_A0 | GENERAL_PURPOSE_IO_MUX_A1 | GENERAL_PURPOSE_IO_MUX_A2); 
+            success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite);
+            
+            if (success)
+            {
+                /* Setup the shadow to match the result */
+                gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].specifics.ds2408.pinsState = pinsState;
+
+                /* Now enable the mux */
+                pinsState &= ~GENERAL_PURPOSE_IO_MUX_ENABLE_BAR;
+                pinsStateToWrite = pinsState;
+                success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite);
+                if (success)
+                {
+                    /* Setup the shadow to match the result */
+                    gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].specifics.ds2408.pinsState = pinsState;
+                }
+            }            
+        }
+    }
+    
+    return success;
+}
+
+/*
+ * Read the voltage of the analogue mux (which
+ * is connected to the RIO Battery Monitor A/D line).
+ * 
+ * pVoltage  a pointer to somewhere to put the Voltage reading.
+ *
+ * @return  true if successful, otherwise false.
+ */
+Bool readAnalogueMux (UInt16 *pVoltage)
+{
+    return readVadDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], pVoltage);
+}
+
+/*
  * Read the current being drawn from the Rio/Pi/5V battery.
  *
  * pCurrent  a pointer to somewhere to put the current reading.
@@ -2163,58 +2235,29 @@ Bool swapO3Battery (UInt32 systemTime, UInt16 remainingCapacity)
 }
 
 /*
- * Set the input port used on the analogue mux.
- * For this to be any use jumpers J1, J2, J3 and J4
- * need to be shorted on the RoboOne PCB. 
- * 
- * input   the number of the input to be connected,
- *         from 0 to 7.
+ * Read the temperature at the Rio/Pi battery.
  *
+ * pTemperature  a pointer to somewhere to put the temperature reading.
+ * 
  * @return  true if successful, otherwise false.
  */
-Bool setAnalogueMuxInput (UInt8 input)
+Bool readRioBattTemperature (double *pTemperature)
 {
-    Bool  success = true;
-    UInt8 pinsState;
-    UInt8 pinsStateToWrite;
+    Bool success;
+    UInt16 voltage;
     
-    ASSERT_PARAM (input < 8, input);
-
-    /* Read the last state of the pins on the general purpose
-     * IO chip, which has the relevant output lines */
-    success = readPinsWithShadow (OW_NAME_GENERAL_PURPOSE_PIO, &pinsState);
-
-    /* First, disable the device while we change things */
+    success = setAnalogueMuxInput (TEMPERATURE_SENSOR_RIO_BATT);
+    
     if (success)
     {
-        pinsState |= GENERAL_PURPOSE_IO_MUX_ENABLE_BAR;
-        pinsStateToWrite = pinsState;
-        success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite);
-        if (success)
+        success = readAnalogueMux (&voltage);
+        
+        if (success)            
         {
-            /* Setup the shadow to match the result */
-            gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].specifics.ds2408.pinsState = pinsState;
-            /* Now set the IO lines attached to pins A0 to A2 of the HEF4051B */
-            pinsStateToWrite = pinsState;
-            pinsStateToWrite &= ~(GENERAL_PURPOSE_IO_MUX_A0 | GENERAL_PURPOSE_IO_MUX_A1 | GENERAL_PURPOSE_IO_MUX_A2);
-            pinsStateToWrite |= (input << GENERAL_PURPOSE_IO_MUX_SHIFT) & (GENERAL_PURPOSE_IO_MUX_A0 | GENERAL_PURPOSE_IO_MUX_A1 | GENERAL_PURPOSE_IO_MUX_A2); 
-            success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite);
-            
-            if (success)
+            if (pTemperature != NULL)
             {
-                /* Setup the shadow to match the result */
-                gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].specifics.ds2408.pinsState = pinsState;
-
-                /* Now enable the mux */
-                pinsState &= ~GENERAL_PURPOSE_IO_MUX_ENABLE_BAR;
-                pinsStateToWrite = pinsState;
-                success = channelAccessWriteDS2408 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].address.value[0], &pinsStateToWrite);
-                if (success)
-                {
-                    /* Setup the shadow to match the result */
-                    gDeviceStaticConfigList[OW_NAME_GENERAL_PURPOSE_PIO].specifics.ds2408.pinsState = pinsState;
-                }
-            }            
+                *pTemperature = MV_TO_C (voltage);
+            }
         }
     }
     
@@ -2222,14 +2265,92 @@ Bool setAnalogueMuxInput (UInt8 input)
 }
 
 /*
- * Read the voltage of the analogue mux (which
- * is connected to the RIO Battery Monitor A/D line).
- * 
- * pVoltage  a pointer to somewhere to put the Voltage reading.
+ * Read the temperature at the O1 battery.
  *
+ * pTemperature  a pointer to somewhere to put the temperature reading.
+ * 
  * @return  true if successful, otherwise false.
  */
-Bool readAnalogueMux (UInt16 *pVoltage)
+Bool readO1BattTemperature (double *pTemperature)
 {
-    return readVadDS2438 (gPortNumber, &gDeviceStaticConfigList[OW_NAME_RIO_BATTERY_MONITOR].address.value[0], pVoltage);
+    Bool success;
+    UInt16 voltage;
+    
+    success = setAnalogueMuxInput (TEMPERATURE_SENSOR_O1_BATT);
+    
+    if (success)
+    {
+        success = readAnalogueMux (&voltage);
+        
+        if (success)            
+        {
+            if (pTemperature != NULL)
+            {
+                *pTemperature = MV_TO_C (voltage);
+            }
+        }
+    }
+    
+    return success;
 }
+
+/*
+ * Read the temperature at the O2 battery.
+ *
+ * pTemperature  a pointer to somewhere to put the temperature reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readO2BattTemperature (double *pTemperature)
+{
+    Bool success;
+    UInt16 voltage;
+    
+    success = setAnalogueMuxInput (TEMPERATURE_SENSOR_O2_BATT);
+    
+    if (success)
+    {
+        success = readAnalogueMux (&voltage);
+        
+        if (success)            
+        {
+            if (pTemperature != NULL)
+            {
+                *pTemperature = MV_TO_C (voltage);
+            }
+        }
+    }
+    
+    return success;
+}
+
+/*
+ * Read the temperature at the O3 battery.
+ *
+ * pTemperature  a pointer to somewhere to put the temperature reading.
+ * 
+ * @return  true if successful, otherwise false.
+ */
+Bool readO3BattTemperature (double *pTemperature)
+{
+    Bool success;
+    UInt16 voltage;
+    
+    success = setAnalogueMuxInput (TEMPERATURE_SENSOR_O3_BATT);
+    
+    if (success)
+    {
+        success = readAnalogueMux (&voltage);
+        
+        if (success)            
+        {
+            if (pTemperature != NULL)
+            {
+                *pTemperature = MV_TO_C (voltage);
+            }
+        }
+    }
+    
+    return success;
+}
+

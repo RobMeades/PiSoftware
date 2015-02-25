@@ -24,10 +24,11 @@
  * MANIFEST CONSTANTS
  */
 
-/* Charge thresholds */
+/* Thresholds */
 #define MINIMUM_CHARGE 1800
 #define FULL_CHARGE 2150
 #define CHARGE_HYSTERESIS 100
+#define MAXIMUM_TEMPERATURE_C 75
 
 /*
  * TYPES
@@ -135,35 +136,49 @@ static Bool setChargerOn (BatteryContainerData *pBatteryContainerData)
 {
     ASSERT_PARAM (pBatteryContainerData != PNULL, (unsigned long) pBatteryContainerData);
 
-    if (!pBatteryContainerData->insufficientCharge)
-    {
-        if (pBatteryContainerData->batteryData.remainingCapacity < MINIMUM_CHARGE)
-        {
-            pBatteryContainerData->insufficientCharge = true;
-            pBatteryContainerData->chargerOn = true;
-        }
-    }
-    else
-    {
-        if (pBatteryContainerData->batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS)
-        {
-            pBatteryContainerData->insufficientCharge = false;                
-        }
-    }
+    printDebug ("Voltage %d V.\n", pBatteryContainerData->batteryData.voltage);
+    printDebug ("Current %d mA.\n", pBatteryContainerData->batteryData.current);
+    printDebug ("Capacity %d mAh.\n", pBatteryContainerData->batteryData.remainingCapacity);
+    printDebug ("Temperature %f C.\n", pBatteryContainerData->batteryData.temperature);
+    printDebug ("Lifetime charge %d mAh.\n", pBatteryContainerData->batteryData.chargeDischarge.charge);
+    printDebug ("Lifetime discharge %d mAh.\n", pBatteryContainerData->batteryData.chargeDischarge.discharge);
     
-    if (!pBatteryContainerData->fullyCharged)
+    if (pBatteryContainerData->batteryData.temperature > MAXIMUM_TEMPERATURE_C)
     {
-        if (pBatteryContainerData->batteryData.remainingCapacity > FULL_CHARGE)
-        {
-            pBatteryContainerData->fullyCharged = true;
-            pBatteryContainerData->chargerOn = false;
-        }
+        pBatteryContainerData->chargerOn = false;        
     }
     else
     {
-        if (pBatteryContainerData->batteryData.remainingCapacity < FULL_CHARGE - CHARGE_HYSTERESIS)
+        if (!pBatteryContainerData->insufficientCharge)
         {
-            gBatteryDataContainerRio.fullyCharged = false;                
+            if (pBatteryContainerData->batteryData.remainingCapacity < MINIMUM_CHARGE)
+            {
+                pBatteryContainerData->insufficientCharge = true;
+                pBatteryContainerData->chargerOn = true;
+            }
+        }
+        else
+        {
+            if (pBatteryContainerData->batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS)
+            {
+                pBatteryContainerData->insufficientCharge = false;                
+            }
+        }
+        
+        if (!pBatteryContainerData->fullyCharged)
+        {
+            if (pBatteryContainerData->batteryData.remainingCapacity > FULL_CHARGE)
+            {
+                pBatteryContainerData->fullyCharged = true;
+                pBatteryContainerData->chargerOn = false;
+            }
+        }
+        else
+        {
+            if (pBatteryContainerData->batteryData.remainingCapacity < FULL_CHARGE - CHARGE_HYSTERESIS)
+            {
+                gBatteryDataContainerRio.fullyCharged = false;                
+            }
         }
     }
     
@@ -180,6 +195,7 @@ static Bool setRioChargerOn (void)
 {
     Bool success = true;
 
+    printDebug ("Pi/Rio battery data:\n");
     if (setChargerOn (&gBatteryDataContainerRio))
     {
         if (gChargingPermitted)
@@ -205,6 +221,7 @@ static Bool setO1ChargerOn (void)
 {
     Bool success = true;
     
+    printDebug ("O1 battery data:\n");
     if (setChargerOn (&gBatteryDataContainerO1))
     {
         if (gChargingPermitted)
@@ -230,6 +247,7 @@ static Bool setO2ChargerOn (void)
 {
     Bool success = true;
     
+    printDebug ("O2 battery data:\n");
     if (setChargerOn (&gBatteryDataContainerO2))
     {
         if (gChargingPermitted)
@@ -255,6 +273,7 @@ static Bool setO3ChargerOn (void)
 {
     Bool success = true;
     
+    printDebug ("O3 battery data:\n");
     if (setChargerOn (&gBatteryDataContainerO3))
     {
         if (gChargingPermitted)

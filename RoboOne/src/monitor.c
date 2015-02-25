@@ -49,11 +49,7 @@
 #define WIN_O_START_COL           35
 #define WIN_O_HEIGHT              5
 #define WIN_O_WIDTH               42
-#define WIN_MUX_START_ROW         9
-#define WIN_MUX_START_COL         2
-#define WIN_MUX_HEIGHT            1
-#define WIN_MUX_WIDTH             70
-#define WIN_POWER_START_ROW       9 /* sits on top of the mux window so move this if you ever want them both on */
+#define WIN_POWER_START_ROW       9
 #define WIN_POWER_START_COL       2
 #define WIN_POWER_HEIGHT          3
 #define WIN_POWER_WIDTH           35
@@ -69,7 +65,7 @@
 #define WIN_OUTPUT_START_COL      2
 #define WIN_OUTPUT_HEIGHT         42
 #define WIN_OUTPUT_WIDTH          76
-#define WIN_STATE_START_ROW       9 /* sits on top of the mux window so move this if you ever want them both on */
+#define WIN_STATE_START_ROW       9
 #define WIN_STATE_START_COL       35
 #define WIN_STATE_HEIGHT          3
 #define WIN_STATE_WIDTH           42
@@ -108,8 +104,6 @@ static void initOWindow (WINDOW *pWin);
 static Bool updateOWindow (WINDOW *pWin, UInt8 count);
 static void initPowerWindow (WINDOW *pWin);
 static Bool updatePowerWindow (WINDOW *pWin, UInt8 count);
-static void initMuxWindow (WINDOW *pWin);
-static Bool updateMuxWindow (WINDOW *pWin, UInt8 count);
 static void initChgWindow (WINDOW *pWin);
 static Bool updateChgWindow (WINDOW *pWin, UInt8 count);
 static void initStateWindow (WINDOW *pWin);
@@ -153,7 +147,6 @@ WindowInfo gWindowList[] = {{"Output", {WIN_OUTPUT_HEIGHT, WIN_OUTPUT_WIDTH, WIN
                             {"Pi/Rio", {WIN_RIO_HEIGHT, WIN_RIO_WIDTH, WIN_RIO_START_ROW, WIN_RIO_START_COL}, initRioWindow, updateRioWindow, PNULL, true},
                             {"Hindbrain", {WIN_O_HEIGHT, WIN_O_WIDTH, WIN_O_START_ROW, WIN_O_START_COL}, initOWindow, updateOWindow, PNULL, true},
                             {"Power", {WIN_POWER_HEIGHT, WIN_POWER_WIDTH, WIN_POWER_START_ROW, WIN_POWER_START_COL}, initPowerWindow, updatePowerWindow, PNULL, true},
-                            {"Analogue", {WIN_MUX_HEIGHT, WIN_MUX_WIDTH, WIN_MUX_START_ROW, WIN_MUX_START_COL}, initMuxWindow, updateMuxWindow, PNULL, false},
                             {"Chargers", {WIN_CHG_HEIGHT, WIN_CHG_WIDTH, WIN_CHG_START_ROW, WIN_CHG_START_COL}, initChgWindow, updateChgWindow, PNULL, true},
                             {"State", {WIN_STATE_HEIGHT, WIN_STATE_WIDTH, WIN_STATE_START_ROW, WIN_STATE_START_COL}, initStateWindow, updateStateWindow, PNULL, true},
                             {"", {WIN_CMD_HEIGHT, WIN_CMD_WIDTH, WIN_CMD_START_ROW, WIN_CMD_START_COL}, initCmdWindow, updateCmdWindow, PNULL, true}}; /* Should be last in the list so that display updates leave the cursor here */
@@ -296,6 +289,7 @@ static Bool updateRioWindow (WINDOW *pWin, UInt8 count)
     {
         hardwareServerSendReceive (HARDWARE_READ_RIO_REMAINING_CAPACITY, PNULL, 0, &(batteryData.remainingCapacity));
         hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData.chargeDischarge));
+        hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_TEMPERATURE, PNULL, 0, &(batteryData.temperature));
         wmove (pWin, row, col);
         wclrtoeol (pWin);
         wprintw (pWin, "%u mAhr(s) remain", batteryData.remainingCapacity);
@@ -305,7 +299,7 @@ static Bool updateRioWindow (WINDOW *pWin, UInt8 count)
         wprintw (pWin, "lifetime -%lu/%lu mAhr", batteryData.chargeDischarge.discharge, batteryData.chargeDischarge.charge);
         row++;
         
-        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_RIO, &batteryData, sizeof (batteryData), PNULL);        
+        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_RIO, &batteryData, sizeof (batteryData), PNULL);
     }
     else
     {
@@ -370,6 +364,9 @@ static Bool updateOWindow (WINDOW *pWin, UInt8 count)
         hardwareServerSendReceive (HARDWARE_READ_O1_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData[0].chargeDischarge));
         hardwareServerSendReceive (HARDWARE_READ_O2_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData[1].chargeDischarge));
         hardwareServerSendReceive (HARDWARE_READ_O3_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData[2].chargeDischarge));
+        hardwareServerSendReceive (HARDWARE_READ_O1_BATT_TEMPERATURE, PNULL, 0, &(batteryData[0].temperature));
+        hardwareServerSendReceive (HARDWARE_READ_O2_BATT_TEMPERATURE, PNULL, 0, &(batteryData[1].temperature));
+        hardwareServerSendReceive (HARDWARE_READ_O3_BATT_TEMPERATURE, PNULL, 0, &(batteryData[2].temperature));
         wmove (pWin, row, col);
         wclrtoeol (pWin);
         wprintw (pWin, "%u mAhr(s) remain", batteryData[0].remainingCapacity + batteryData[1].remainingCapacity + batteryData[2].remainingCapacity);
@@ -484,61 +481,6 @@ static Bool updatePowerWindow (WINDOW *pWin, UInt8 count)
             }
         }
         displayPowerStatesHelper (pWin, success, relaysEnabled, is12V, isBatt);
-        row++;
-    }
-    else
-    {
-        row++;
-    }
-
-    wnoutrefresh (pWin);
-    
-    return false;
-}
-
-/*
- * Init function for analogue mux window.
- * 
- * pWin    the window where the analogue
- *         mux stuff is to be displayed.
- */
-static void initMuxWindow (WINDOW *pWin)
-{
-}
-
-/*
- * Display the status of the analogue mux related
- * stuff.
- * 
- * pWin    the window where the analogue mux stuff
- *         can be displayed.
- * count   the number of times this function
- *         has been called.  This is used to
- *         update some items more often than
- *         others.
- * 
- * @return  always false, meaning "not finished".
- */
-static Bool updateMuxWindow (WINDOW *pWin, UInt8 count)
-{
-    UInt16 voltage = 0;
-    UInt8 row = 0;
-    UInt8 col = 0;
-    UInt8 i;
-
-    ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
-
-    if (count % SLOWER_UPDATE_BACKOFF == 0)
-    {
-        wmove (pWin, row, col);
-        wclrtoeol (pWin);
-        for (i = 0; i < 8; i++)
-        {
-            hardwareServerSendReceive (HARDWARE_SET_ANALOGUE_MUX_INPUT, &i, sizeof (i), PNULL);
-            hardwareServerSendReceive (HARDWARE_READ_ANALOGUE_MUX, PNULL, 0, &voltage);
-            wprintw (pWin, "%d: %u ", i, voltage);
-        }
-        wprintw (pWin, "mV");
         row++;
     }
     else

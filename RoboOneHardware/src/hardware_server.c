@@ -663,15 +663,6 @@ static UInt16 actionReadVoltage (HardwareMsgType msgType, UInt8 *pSendMsgBody)
             sendMsgBodyLength += sizeof (((HardwareReadO3BattVoltageCnf *) pSendMsgBody)->voltage);            
         }
         break;
-        case HARDWARE_READ_ANALOGUE_MUX:
-        {
-            success = readAnalogueMux (&voltage);
-            ((HardwareReadAnalogueMuxCnf *) pSendMsgBody)->success = success;
-            sendMsgBodyLength += sizeof (((HardwareReadAnalogueMuxCnf *) pSendMsgBody)->success);
-            ((HardwareReadAnalogueMuxCnf *) pSendMsgBody)->voltage = voltage;
-            sendMsgBodyLength += sizeof (((HardwareReadAnalogueMuxCnf *) pSendMsgBody)->voltage);            
-        }
-        break;
         default:
         {
             ASSERT_ALWAYS_PARAM (msgType);
@@ -893,28 +884,70 @@ static UInt16 actionSwapBattery (HardwareMsgType msgType, UInt8 *pReceivedMsgBod
 }
 
 /*
- * Handle a message that sets the input to the
- * analogue mux.
+ * Handle a message that reads temperature.
  * 
- * input            the input to use.
- * pSendMsgBody     pointer to the relevant message
- *                  type to fill in with a response,
- *                  which will be overlaid over the
- *                  body of the response message.
+ * msgType       the msgType, extracted from the
+ *               received mesage.
+ * pSendMsgBody  pointer to the relevant message
+ *               type to fill in with a response,
+ *               which will be overlaid over the
+ *               body of the response message.
  * 
- * @return          the length of the message body
- *                  to send back.
+ * @return       the length of the message body
+ *               to send back.
  */
-static UInt16 actionSetAnalogueMuxInput (UInt8 input, HardwareSetAnalogueMuxInputCnf *pSendMsgBody)
+static UInt16 actionReadTemperature (HardwareMsgType msgType, UInt8 *pSendMsgBody)
 {
     Bool success;
     UInt16 sendMsgBodyLength = 0;
+    double temperature = 0;
     
     ASSERT_PARAM (pSendMsgBody != PNULL, (unsigned long) pSendMsgBody);
 
-    success = setAnalogueMuxInput (input);
-    pSendMsgBody->success = success;
-    sendMsgBodyLength += sizeof (pSendMsgBody->success);
+    switch (msgType)
+    {
+        case HARDWARE_READ_RIO_BATT_TEMPERATURE:
+        {
+            success = readRioBattTemperature (&temperature);
+            ((HardwareReadRioBattTemperatureCnf *) pSendMsgBody)->success = success;
+            sendMsgBodyLength += sizeof (((HardwareReadRioBattTemperatureCnf *) pSendMsgBody)->success);
+            ((HardwareReadRioBattTemperatureCnf *) pSendMsgBody)->temperature = temperature;
+            sendMsgBodyLength += sizeof (((HardwareReadRioBattTemperatureCnf *) pSendMsgBody)->temperature);            
+        }
+        break;
+        case HARDWARE_READ_O1_BATT_TEMPERATURE:
+        {
+            success = readO1BattTemperature (&temperature);
+            ((HardwareReadO1BattTemperatureCnf *) pSendMsgBody)->success = success;
+            sendMsgBodyLength += sizeof (((HardwareReadO1BattTemperatureCnf *) pSendMsgBody)->success);
+            ((HardwareReadO1BattTemperatureCnf *) pSendMsgBody)->temperature = temperature;
+            sendMsgBodyLength += sizeof (((HardwareReadO1BattTemperatureCnf *) pSendMsgBody)->temperature);            
+        }
+        break;
+        case HARDWARE_READ_O2_BATT_TEMPERATURE:
+        {
+            success = readO2BattTemperature (&temperature);
+            ((HardwareReadO2BattTemperatureCnf *) pSendMsgBody)->success = success;
+            sendMsgBodyLength += sizeof (((HardwareReadO2BattTemperatureCnf *) pSendMsgBody)->success);
+            ((HardwareReadO2BattTemperatureCnf *) pSendMsgBody)->temperature = temperature;
+            sendMsgBodyLength += sizeof (((HardwareReadO2BattTemperatureCnf *) pSendMsgBody)->temperature);            
+        }
+        break;
+        case HARDWARE_READ_O3_BATT_TEMPERATURE:
+        {
+            success = readO3BattTemperature (&temperature);
+            ((HardwareReadO3BattTemperatureCnf *) pSendMsgBody)->success = success;
+            sendMsgBodyLength += sizeof (((HardwareReadO3BattTemperatureCnf *) pSendMsgBody)->success);
+            ((HardwareReadO3BattTemperatureCnf *) pSendMsgBody)->temperature = temperature;
+            sendMsgBodyLength += sizeof (((HardwareReadO3BattTemperatureCnf *) pSendMsgBody)->temperature);            
+        }
+        break;
+        default:
+        {
+            ASSERT_ALWAYS_PARAM (msgType);
+        }
+        break;
+    }
     
     return sendMsgBodyLength;
 }
@@ -1097,7 +1130,6 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
         case HARDWARE_READ_O1_BATT_VOLTAGE:
         case HARDWARE_READ_O2_BATT_VOLTAGE:
         case HARDWARE_READ_O3_BATT_VOLTAGE:
-        case HARDWARE_READ_ANALOGUE_MUX:
         {
             pSendMsg->msgLength += actionReadVoltage (receivedMsgType, &(pSendMsg->msgBody[0]));
         }
@@ -1126,10 +1158,12 @@ static ServerReturnCode doAction (HardwareMsgType receivedMsgType, UInt8 * pRece
             pSendMsg->msgLength += actionSwapBattery (receivedMsgType, pReceivedMsgBody, &(pSendMsg->msgBody[0]));
         }
         break;
-        case HARDWARE_SET_ANALOGUE_MUX_INPUT:
+        case HARDWARE_READ_RIO_BATT_TEMPERATURE:
+        case HARDWARE_READ_O1_BATT_TEMPERATURE:
+        case HARDWARE_READ_O2_BATT_TEMPERATURE:
+        case HARDWARE_READ_O3_BATT_TEMPERATURE:
         {
-            UInt8 input = ((HardwareSetAnalogueMuxInputReq *) pReceivedMsgBody)->input;
-            pSendMsg->msgLength += actionSetAnalogueMuxInput (input, (HardwareSetAnalogueMuxInputCnf *) &(pSendMsg->msgBody[0]));            
+            pSendMsg->msgLength += actionReadTemperature (receivedMsgType, &(pSendMsg->msgBody[0]));
         }
         break;
         case HARDWARE_SEND_O_STRING:

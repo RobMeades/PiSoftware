@@ -8,6 +8,11 @@
 
 #define PIO_MAX_BYTES_TO_READ        32   /* Should be the same as DS2408_MAX_BYTES_IN_CHANNEL_ACCESS */
 
+/* The Analogy Devices TMP36 temperature sensor
+ * has a range of -40C to +125C and reads
+ * 10mV per C with an offset of 0.5V */
+#define MV_TO_C(Mv) (((Mv) - 500) / 10)
+
 /*
  * TYPES
  */
@@ -64,6 +69,8 @@ Bool disableExternalRelays (void);
 Bool enableExternalRelays (void);
 Bool readExternalRelaysEnabled (Bool *pIsOn);
 Bool readGeneralPurposeIOs (UInt8 *pPinsState);
+Bool setAnalogueMuxInput (UInt8 input);
+Bool readAnalogueMux (UInt16 *pVoltage);
 Bool readRioBattCurrent (SInt16 *pCurrent);
 Bool readO1BattCurrent (SInt16 *pCurrent);
 Bool readO2BattCurrent (SInt16 *pCurrent);
@@ -89,5 +96,7 @@ Bool swapRioBattery (UInt32 systemTime, UInt16 remainingCapacity);
 Bool swapO1Battery (UInt32 systemTime, UInt16 remainingCapacity);
 Bool swapO2Battery (UInt32 systemTime, UInt16 remainingCapacity);
 Bool swapO3Battery (UInt32 systemTime, UInt16 remainingCapacity);
-Bool setAnalogueMuxInput (UInt8 input);
-Bool readAnalogueMux (UInt16 *pVoltage);
+Bool readRioBattTemperature (double *pTemperature);
+Bool readO1BattTemperature (double *pTemperature);
+Bool readO2BattTemperature (double *pTemperature);
+Bool readO3BattTemperature (double *pTemperature);

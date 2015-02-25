@@ -25,6 +25,7 @@ typedef struct BatteryDataTag
     UInt16 voltage;
     UInt16 remainingCapacity;
     HardwareChargeDischarge chargeDischarge;
+    double temperature;
 }  BatteryData;
 
 /*
