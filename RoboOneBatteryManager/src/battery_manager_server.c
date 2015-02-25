@@ -467,11 +467,27 @@ static ServerReturnCode doAction (BatteryManagerMsgType receivedMsgType, UInt8 *
         }
         break;
         case BATTERY_MANAGER_DATA_RIO:
+        {
+            BatteryData * pBatteryData = &(((BatteryManagerDataRioInd *) pReceivedMsgBody)->data);
+            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, pBatteryData);
+        }
+        break;
         case BATTERY_MANAGER_DATA_O1:
+        {
+            BatteryData * pBatteryData = &(((BatteryManagerDataO1Ind *) pReceivedMsgBody)->data);
+            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, pBatteryData);
+        }
+        break;
         case BATTERY_MANAGER_DATA_O2:
+        {
+            BatteryData * pBatteryData = &(((BatteryManagerDataO2Ind *) pReceivedMsgBody)->data);
+            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, pBatteryData);
+        }
+        break;
         case BATTERY_MANAGER_DATA_O3:
         {
-            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, (BatteryData *) pReceivedMsgBody);
+            BatteryData * pBatteryData = &(((BatteryManagerDataO3Ind *) pReceivedMsgBody)->data);
+            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, pBatteryData);
         }
         break;
         case BATTERY_MANAGER_CHARGING_PERMITTED:
