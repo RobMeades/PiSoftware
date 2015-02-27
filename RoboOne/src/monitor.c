@@ -245,6 +245,55 @@ static Char * displayTaskResultHelper (RoboOneHDResult result)
     return pString;
 }
 
+/* Helper function to display a character that
+ * represents the status of a battery.
+ * 
+ * pBatteryStatus    the status to represent.
+ * 
+ * @return   Char to display.
+ */
+static Char displayBatteryStatusHelper (BatteryStatus * pBatteryStatus)
+{
+    Char statusChar = '.';
+    
+    ASSERT_PARAM (pBatteryStatus != PNULL, (unsigned long) pBatteryStatus);
+
+    if (pBatteryStatus->overTemperature)
+    {
+        statusChar = '!';
+    }
+    else
+    {
+        if (pBatteryStatus->temperatureBroken)
+        {
+            statusChar = '#';
+        }
+        else
+        {
+            if (pBatteryStatus->chargerOn)
+            {
+                statusChar = 'c';
+            }
+            else
+            {
+                if (pBatteryStatus->fullyCharged)
+                {
+                    statusChar = '+';
+                }
+                else
+                {
+                    if (pBatteryStatus->insufficientCharge)
+                    {
+                        statusChar = '-';
+                    }
+                }                    
+            }
+        }
+    }
+    
+    return statusChar;
+}
+
 /*
  * Init function for Rio window.
  * 
@@ -271,12 +320,14 @@ static void initRioWindow (WINDOW *pWin)
 static Bool updateRioWindow (WINDOW *pWin, UInt8 count)
 {
     BatteryData batteryData;
+    BatteryStatus batteryStatus;
     UInt8 row = 0;
     UInt8 col = 0;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
 
     memset (&batteryData, 0, sizeof (batteryData));
+    memset (&batteryStatus, false, sizeof (batteryStatus));
 
     hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_CURRENT, PNULL, 0, &(batteryData.current));
     hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_VOLTAGE, PNULL, 0, &(batteryData.voltage));
@@ -290,16 +341,15 @@ static Bool updateRioWindow (WINDOW *pWin, UInt8 count)
         hardwareServerSendReceive (HARDWARE_READ_RIO_REMAINING_CAPACITY, PNULL, 0, &(batteryData.remainingCapacity));
         hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData.chargeDischarge));
         hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_TEMPERATURE, PNULL, 0, &(batteryData.temperature));
+        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_RIO, &batteryData, sizeof (batteryData), &batteryStatus);
         wmove (pWin, row, col);
         wclrtoeol (pWin);
-        wprintw (pWin, "%u mAhr(s) remain", batteryData.remainingCapacity);
+        wprintw (pWin, "%u mAhr(s) remain [%c]", batteryData.remainingCapacity, displayBatteryStatusHelper (&batteryStatus));
         row++;
         wmove (pWin, row, col);
         wclrtoeol (pWin);
         wprintw (pWin, "lifetime -%lu/%lu mAhr", batteryData.chargeDischarge.discharge, batteryData.chargeDischarge.charge);
-        row++;
-        
-        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_RIO, &batteryData, sizeof (batteryData), PNULL);
+        row++;        
     }
     else
     {
@@ -337,12 +387,14 @@ static void initOWindow (WINDOW *pWin)
 static Bool updateOWindow (WINDOW *pWin, UInt8 count)
 {
     BatteryData batteryData[3];
+    BatteryStatus batteryStatus[3];
     UInt8 row = 0;
     UInt8 col = 0;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
    
     memset (&(batteryData[0]), 0, sizeof (batteryData));
+    memset (&(batteryStatus[0]), false, sizeof (batteryStatus));
 
     hardwareServerSendReceive (HARDWARE_READ_O1_BATT_CURRENT, PNULL, 0, &(batteryData[0].current));
     hardwareServerSendReceive (HARDWARE_READ_O2_BATT_CURRENT, PNULL, 0, &(batteryData[1].current));
@@ -367,9 +419,13 @@ static Bool updateOWindow (WINDOW *pWin, UInt8 count)
         hardwareServerSendReceive (HARDWARE_READ_O1_BATT_TEMPERATURE, PNULL, 0, &(batteryData[0].temperature));
         hardwareServerSendReceive (HARDWARE_READ_O2_BATT_TEMPERATURE, PNULL, 0, &(batteryData[1].temperature));
         hardwareServerSendReceive (HARDWARE_READ_O3_BATT_TEMPERATURE, PNULL, 0, &(batteryData[2].temperature));
+        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O1, &(batteryData[0]), sizeof (batteryData[0]), &(batteryStatus[0]));
+        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O2, &(batteryData[1]), sizeof (batteryData[1]), &(batteryStatus[1]));
+        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O3, &(batteryData[2]), sizeof (batteryData[2]), &(batteryStatus[2]));
         wmove (pWin, row, col);
         wclrtoeol (pWin);
-        wprintw (pWin, "%u mAhr(s) remain", batteryData[0].remainingCapacity + batteryData[1].remainingCapacity + batteryData[2].remainingCapacity);
+        wprintw (pWin, "%u mAhr(s) remain [%c%c%c]", batteryData[0].remainingCapacity + batteryData[1].remainingCapacity + batteryData[2].remainingCapacity,
+                                                     displayBatteryStatusHelper (&(batteryStatus[0])), displayBatteryStatusHelper (&(batteryStatus[1])), displayBatteryStatusHelper (&(batteryStatus[2])));        
         row++;
         wmove (pWin, row, col);
         wclrtoeol (pWin);
@@ -377,9 +433,6 @@ static Bool updateOWindow (WINDOW *pWin, UInt8 count)
                                                  batteryData[0].chargeDischarge.charge + batteryData[1].chargeDischarge.charge + batteryData[2].chargeDischarge.charge);
         row++;
         
-        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O1, &(batteryData[0]), sizeof (batteryData[0]), PNULL);
-        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O2, &(batteryData[1]), sizeof (batteryData[1]), PNULL);
-        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O3, &(batteryData[2]), sizeof (batteryData[2]), PNULL);
     }
     else
     {

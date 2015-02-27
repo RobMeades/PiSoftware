@@ -32,6 +32,15 @@ typedef struct BatteryDataTag
  * TYPES FOR RSP MESSAGES
  */
 
+typedef struct BatteryStatusTag
+{
+    Bool fullyCharged;
+    Bool insufficientCharge;
+    Bool chargerOn;
+    Bool overTemperature;
+    Bool temperatureBroken;
+} BatteryStatus;
+
 /*
  * TYPES FOR REQ MESSAGES
  */

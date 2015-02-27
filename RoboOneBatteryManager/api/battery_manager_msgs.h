@@ -20,8 +20,8 @@
  */
 BATTERY_MANAGER_MSG_DEF (BATTERY_MANAGER_SERVER_START, BatteryManagerServerStart, batteryManagerServerStart, BATTERY_MANAGER_EMPTY, BATTERY_MANAGER_EMPTY)
 BATTERY_MANAGER_MSG_DEF (BATTERY_MANAGER_SERVER_STOP, BatteryManagerServerStop, batteryManagerServerStop, BATTERY_MANAGER_EMPTY, BATTERY_MANAGER_EMPTY)
-BATTERY_MANAGER_MSG_DEF (BATTERY_MANAGER_DATA_RIO, BatteryManagerDataRio, batteryManagerDataRio, BatteryData data, BATTERY_MANAGER_EMPTY)
-BATTERY_MANAGER_MSG_DEF (BATTERY_MANAGER_DATA_O1, BatteryManagerDataO1, batteryManagerDataO1, BatteryData data, BATTERY_MANAGER_EMPTY)
-BATTERY_MANAGER_MSG_DEF (BATTERY_MANAGER_DATA_O2, BatteryManagerDataO2, batteryManagerDataO2, BatteryData data, BATTERY_MANAGER_EMPTY)
-BATTERY_MANAGER_MSG_DEF (BATTERY_MANAGER_DATA_O3, BatteryManagerDataO3, batteryManagerDataO3, BatteryData data, BATTERY_MANAGER_EMPTY)
+BATTERY_MANAGER_MSG_DEF (BATTERY_MANAGER_DATA_RIO, BatteryManagerDataRio, batteryManagerDataRio, BatteryData data, BatteryStatus status)
+BATTERY_MANAGER_MSG_DEF (BATTERY_MANAGER_DATA_O1, BatteryManagerDataO1, batteryManagerDataO1, BatteryData data, BatteryStatus status)
+BATTERY_MANAGER_MSG_DEF (BATTERY_MANAGER_DATA_O2, BatteryManagerDataO2, batteryManagerDataO2, BatteryData data, BatteryStatus status)
+BATTERY_MANAGER_MSG_DEF (BATTERY_MANAGER_DATA_O3, BatteryManagerDataO3, batteryManagerDataO3, BatteryData data, BatteryStatus status)
 BATTERY_MANAGER_MSG_DEF (BATTERY_MANAGER_CHARGING_PERMITTED, BatteryManagerChargingPermitted, batteryManagerChargingPermitted, Bool isPermitted, BATTERY_MANAGER_EMPTY)

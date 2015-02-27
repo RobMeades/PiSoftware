@@ -25,10 +25,12 @@
  */
 
 /* Thresholds */
-#define MINIMUM_CHARGE 1800
+#define MINIMUM_CHARGE 1900
 #define FULL_CHARGE 2150
 #define CHARGE_HYSTERESIS 100
-#define MAXIMUM_TEMPERATURE_C 75
+#define MAXIMUM_TEMPERATURE_C 60
+#define TEMPERATURE_BROKEN_C -20
+#define TEMPERATURE_HYSTERESIS_C 10
 
 /*
  * TYPES
@@ -37,9 +39,7 @@
 typedef struct BatteryDataContainerTag
 {
     Bool updated;
-    Bool fullyCharged;
-    Bool insufficientCharge;
-    Bool chargerOn;
+    BatteryStatus batteryStatus;
     BatteryData batteryData;
 }  BatteryContainerData;
 
@@ -73,10 +73,10 @@ static void signalChargeStateAll (void)
     if (!gAllInsufficientCharge)
     {
         printDebug ("Sufficient charge.\n");
-        if ((gBatteryDataContainerRio.insufficientCharge) ||
-            (gBatteryDataContainerO1.insufficientCharge) ||
-            (gBatteryDataContainerO2.insufficientCharge) ||
-            (gBatteryDataContainerO3.insufficientCharge))
+        if ((gBatteryDataContainerRio.batteryStatus.insufficientCharge) ||
+            (gBatteryDataContainerO1.batteryStatus.insufficientCharge) ||
+            (gBatteryDataContainerO2.batteryStatus.insufficientCharge) ||
+            (gBatteryDataContainerO3.batteryStatus.insufficientCharge))
         {
             printDebug ("...but now a battery is insufficiently charged.\n");
             gAllInsufficientCharge = true;
@@ -132,7 +132,7 @@ static void signalChargeStateAll (void)
  * @return                true if the battery charger should be
  *                        on, otherwise false.
  */
-static Bool setChargerOn (BatteryContainerData *pBatteryContainerData)
+static Bool setChargerStatus (BatteryContainerData *pBatteryContainerData)
 {
     ASSERT_PARAM (pBatteryContainerData != PNULL, (unsigned long) pBatteryContainerData);
 
@@ -143,46 +143,93 @@ static Bool setChargerOn (BatteryContainerData *pBatteryContainerData)
     printDebug ("Lifetime charge %d mAh.\n", pBatteryContainerData->batteryData.chargeDischarge.charge);
     printDebug ("Lifetime discharge %d mAh.\n", pBatteryContainerData->batteryData.chargeDischarge.discharge);
     
-    if (pBatteryContainerData->batteryData.temperature > MAXIMUM_TEMPERATURE_C)
+    if (!pBatteryContainerData->batteryStatus.overTemperature)
     {
-        pBatteryContainerData->chargerOn = false;        
+        if (pBatteryContainerData->batteryData.temperature > MAXIMUM_TEMPERATURE_C)
+        {
+            printDebug ("!!! now over-temperature.\n");
+            pBatteryContainerData->batteryStatus.overTemperature = true;
+            pBatteryContainerData->batteryStatus.chargerOn = false;        
+        }
+        else
+        {            
+            if (!pBatteryContainerData->batteryStatus.temperatureBroken)
+            {
+                if (pBatteryContainerData->batteryData.temperature < TEMPERATURE_BROKEN_C)
+                {
+                    printDebug ("### temperature reading now broken.\n");
+                    pBatteryContainerData->batteryStatus.temperatureBroken = true;
+                    pBatteryContainerData->batteryStatus.chargerOn = false;        
+                }
+                else
+                {
+                    
+                    if (!pBatteryContainerData->batteryStatus.insufficientCharge)
+                    {
+                        if (pBatteryContainerData->batteryData.remainingCapacity < MINIMUM_CHARGE)
+                        {
+                            printDebug ("--- now insufficiently charged.\n");
+                            pBatteryContainerData->batteryStatus.insufficientCharge = true;
+                            pBatteryContainerData->batteryStatus.chargerOn = true;
+                        }
+                    }
+                    else
+                    {
+                        if (pBatteryContainerData->batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS)
+                        {
+                            printDebug ("... now sufficiently charged.\n");
+                            pBatteryContainerData->batteryStatus.insufficientCharge = false;                
+                        }
+                    }
+                    
+                    if (!pBatteryContainerData->batteryStatus.fullyCharged)
+                    {
+                        if (pBatteryContainerData->batteryData.remainingCapacity > FULL_CHARGE)
+                        {
+                            printDebug ("+++ now fully charged.\n");
+                            pBatteryContainerData->batteryStatus.fullyCharged = true;
+                            pBatteryContainerData->batteryStatus.chargerOn = false;
+                        }
+                    }
+                    else
+                    {
+                        if (pBatteryContainerData->batteryData.remainingCapacity < FULL_CHARGE - CHARGE_HYSTERESIS)
+                        {
+                            printDebug ("... no longer fully charged.\n");
+                            gBatteryDataContainerRio.batteryStatus.fullyCharged = false;                
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (pBatteryContainerData->batteryData.temperature > TEMPERATURE_BROKEN_C + TEMPERATURE_HYSTERESIS_C)
+                {
+                    printDebug ("    temperature reading no longer broken.\n");
+                    pBatteryContainerData->batteryStatus.temperatureBroken = false;
+                }                
+            }
+        }
     }
     else
     {
-        if (!pBatteryContainerData->insufficientCharge)
+        if (pBatteryContainerData->batteryData.temperature < MAXIMUM_TEMPERATURE_C - TEMPERATURE_HYSTERESIS_C)
         {
-            if (pBatteryContainerData->batteryData.remainingCapacity < MINIMUM_CHARGE)
-            {
-                pBatteryContainerData->insufficientCharge = true;
-                pBatteryContainerData->chargerOn = true;
-            }
-        }
-        else
-        {
-            if (pBatteryContainerData->batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS)
-            {
-                pBatteryContainerData->insufficientCharge = false;                
-            }
-        }
-        
-        if (!pBatteryContainerData->fullyCharged)
-        {
-            if (pBatteryContainerData->batteryData.remainingCapacity > FULL_CHARGE)
-            {
-                pBatteryContainerData->fullyCharged = true;
-                pBatteryContainerData->chargerOn = false;
-            }
-        }
-        else
-        {
-            if (pBatteryContainerData->batteryData.remainingCapacity < FULL_CHARGE - CHARGE_HYSTERESIS)
-            {
-                gBatteryDataContainerRio.fullyCharged = false;                
-            }
+            printDebug ("    no longer over-temperature.\n");
+            pBatteryContainerData->batteryStatus.overTemperature = false;
         }
     }
     
-    return pBatteryContainerData->chargerOn;
+    if (pBatteryContainerData->batteryStatus.chargerOn)
+    {
+        printDebug ("So: this charger ON.\n");
+    }
+    else
+    {
+        printDebug ("So: this charger OFF.\n");        
+    }
+    
+    return pBatteryContainerData->batteryStatus.chargerOn;
 }
 
 /*
@@ -191,12 +238,12 @@ static Bool setChargerOn (BatteryContainerData *pBatteryContainerData)
  * 
  * @return  true if successful, otherwise false.
  */
-static Bool setRioChargerOn (void)
+static Bool setRioChargerStatus (void)
 {
     Bool success = true;
 
     printDebug ("Pi/Rio battery data:\n");
-    if (setChargerOn (&gBatteryDataContainerRio))
+    if (setChargerStatus (&gBatteryDataContainerRio))
     {
         if (gChargingPermitted)
         {
@@ -217,12 +264,12 @@ static Bool setRioChargerOn (void)
  * 
  * @return  true if successful, otherwise false.
  */
-static Bool setO1ChargerOn (void)
+static Bool setO1ChargerStatus (void)
 {
     Bool success = true;
     
     printDebug ("O1 battery data:\n");
-    if (setChargerOn (&gBatteryDataContainerO1))
+    if (setChargerStatus (&gBatteryDataContainerO1))
     {
         if (gChargingPermitted)
         {
@@ -243,12 +290,12 @@ static Bool setO1ChargerOn (void)
  * 
  * @return  true if successful, otherwise false.
  */
-static Bool setO2ChargerOn (void)
+static Bool setO2ChargerStatus (void)
 {
     Bool success = true;
     
     printDebug ("O2 battery data:\n");
-    if (setChargerOn (&gBatteryDataContainerO2))
+    if (setChargerStatus (&gBatteryDataContainerO2))
     {
         if (gChargingPermitted)
         {
@@ -269,12 +316,12 @@ static Bool setO2ChargerOn (void)
  * 
  * @return  true if successful, otherwise false.
  */
-static Bool setO3ChargerOn (void)
+static Bool setO3ChargerStatus (void)
 {
     Bool success = true;
     
     printDebug ("O3 battery data:\n");
-    if (setChargerOn (&gBatteryDataContainerO3))
+    if (setChargerStatus (&gBatteryDataContainerO3))
     {
         if (gChargingPermitted)
         {
@@ -310,10 +357,10 @@ static UInt16 actionBatteryManagerServerStart (BatteryManagerServerStartCnf *pSe
     gAllFullyCharged = false;
     gAllInsufficientCharge = false;
     
-    memset (&gBatteryDataContainerRio, 0, sizeof (gBatteryDataContainerRio));
-    memset (&gBatteryDataContainerO1, 0, sizeof (gBatteryDataContainerO1));
-    memset (&gBatteryDataContainerO2, 0, sizeof (gBatteryDataContainerO2));
-    memset (&gBatteryDataContainerO3, 0, sizeof (gBatteryDataContainerO3));
+    memset (&gBatteryDataContainerRio, false, sizeof (gBatteryDataContainerRio));
+    memset (&gBatteryDataContainerO1, false, sizeof (gBatteryDataContainerO1));
+    memset (&gBatteryDataContainerO2, false, sizeof (gBatteryDataContainerO2));
+    memset (&gBatteryDataContainerO3, false, sizeof (gBatteryDataContainerO3));
     
     pSendMsgBody->success = true;
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
@@ -353,38 +400,49 @@ static UInt16 actionBatteryManagerServerStop (BatteryManagerServerStopCnf *pSend
  * @return  the length of the message body
  *          to send back.
  */
-static UInt16 actionBatteryManagerData (BatteryManagerMsgType msgType, BatteryData * pData)
+static UInt16 actionBatteryManagerData (BatteryManagerMsgType msgType, BatteryData * pData, BatteryStatus * pStatus)
 {
+    UInt16 sendMsgBodyLength = 0;
+
     ASSERT_PARAM (pData != PNULL, (unsigned long) pData);
+    ASSERT_PARAM (pStatus != PNULL, (unsigned long) pStatus);
 
     switch (msgType)
     {
         case BATTERY_MANAGER_DATA_RIO:
         {
             gBatteryDataContainerRio.updated = true;
-            memcpy (&(gBatteryDataContainerRio.batteryData), pData, sizeof (gBatteryDataContainerRio));
-            setRioChargerOn();
+            memcpy (&(gBatteryDataContainerRio.batteryData), pData, sizeof (gBatteryDataContainerRio.batteryData));
+            setRioChargerStatus();
+            memcpy (pStatus, &(gBatteryDataContainerRio.batteryStatus), sizeof (*pStatus));
+            sendMsgBodyLength += sizeof (*pStatus);
         }
         break;
         case BATTERY_MANAGER_DATA_O1:
         {
             gBatteryDataContainerO1.updated = true;
-            memcpy (&(gBatteryDataContainerO1.batteryData), pData, sizeof (gBatteryDataContainerO1));
-            setO1ChargerOn();
+            memcpy (&(gBatteryDataContainerO1.batteryData), pData, sizeof (gBatteryDataContainerO1.batteryData));
+            setO1ChargerStatus();
+            memcpy (pStatus, &(gBatteryDataContainerO1.batteryStatus), sizeof (*pStatus));
+            sendMsgBodyLength += sizeof (*pStatus);
         }
         break;
         case BATTERY_MANAGER_DATA_O2:
         {
             gBatteryDataContainerO2.updated = true;
-            memcpy (&(gBatteryDataContainerO2.batteryData), pData, sizeof (gBatteryDataContainerO2));
-            setO2ChargerOn();
+            memcpy (&(gBatteryDataContainerO2.batteryData), pData, sizeof (gBatteryDataContainerO2.batteryData));
+            setO2ChargerStatus();
+            memcpy (pStatus, &(gBatteryDataContainerO2.batteryStatus), sizeof (*pStatus));
+            sendMsgBodyLength += sizeof (*pStatus);
         }
         break;
         case BATTERY_MANAGER_DATA_O3:
         {
             gBatteryDataContainerO3.updated = true;
-            memcpy (&(gBatteryDataContainerO3.batteryData), pData, sizeof (gBatteryDataContainerO3));
-            setO3ChargerOn();
+            memcpy (&(gBatteryDataContainerO3.batteryData), pData, sizeof (gBatteryDataContainerO3.batteryData));
+            setO3ChargerStatus();
+            memcpy (pStatus, &(gBatteryDataContainerO3.batteryStatus), sizeof (*pStatus));
+            sendMsgBodyLength += sizeof (*pStatus);
         }
         break;
         default:
@@ -397,7 +455,7 @@ static UInt16 actionBatteryManagerData (BatteryManagerMsgType msgType, BatteryDa
     /* Tell whoever needs to know about the charge state */
     signalChargeStateAll();
     
-    return 0;
+    return sendMsgBodyLength;
 }
 
 /*
@@ -434,10 +492,10 @@ static UInt16 actionBatteryManagerChargingPermitted (Bool isPermitted)
     
     gChargingPermitted = isPermitted;
     
-    setRioChargerOn();
-    setO1ChargerOn();
-    setO2ChargerOn();
-    setO3ChargerOn();
+    setRioChargerStatus();
+    setO1ChargerStatus();
+    setO2ChargerStatus();
+    setO3ChargerStatus();
     
     signalChargeStateAll();
     
@@ -488,25 +546,29 @@ static ServerReturnCode doAction (BatteryManagerMsgType receivedMsgType, UInt8 *
         case BATTERY_MANAGER_DATA_RIO:
         {
             BatteryData * pBatteryData = &(((BatteryManagerDataRioInd *) pReceivedMsgBody)->data);
-            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, pBatteryData);
+            BatteryManagerDataRioRsp *pRsp = (BatteryManagerDataRioRsp *) &(pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, pBatteryData, &(pRsp->status));
         }
         break;
         case BATTERY_MANAGER_DATA_O1:
         {
             BatteryData * pBatteryData = &(((BatteryManagerDataO1Ind *) pReceivedMsgBody)->data);
-            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, pBatteryData);
+            BatteryManagerDataO1Rsp *pRsp = (BatteryManagerDataO1Rsp *) &(pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, pBatteryData, &(pRsp->status));
         }
         break;
         case BATTERY_MANAGER_DATA_O2:
         {
             BatteryData * pBatteryData = &(((BatteryManagerDataO2Ind *) pReceivedMsgBody)->data);
-            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, pBatteryData);
+            BatteryManagerDataO2Rsp *pRsp = (BatteryManagerDataO2Rsp *) &(pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, pBatteryData, &(pRsp->status));
         }
         break;
         case BATTERY_MANAGER_DATA_O3:
         {
             BatteryData * pBatteryData = &(((BatteryManagerDataO3Ind *) pReceivedMsgBody)->data);
-            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, pBatteryData);
+            BatteryManagerDataO3Rsp *pRsp = (BatteryManagerDataO3Rsp *) &(pSendMsg->msgBody[0]);
+            pSendMsg->msgLength += actionBatteryManagerData (receivedMsgType, pBatteryData, &(pRsp->status));
         }
         break;
         case BATTERY_MANAGER_CHARGING_PERMITTED:
