@@ -3,6 +3,7 @@ Description=RoboOne Remaining Capacity Sync
 
 [Service]
 RemainAfterExit=yes
+Restart=on-failure
 ExecStart=/usr/bin/remaining_capacity_sync
 ExecStop=/usr/bin/remaining_capacity_sync
 
