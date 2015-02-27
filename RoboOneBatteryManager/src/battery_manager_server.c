@@ -25,7 +25,8 @@
  */
 
 /* Thresholds */
-#define MINIMUM_CHARGE 1900
+#define MINIMUM_CHARGE_CHARGING_PERMITTED 2000
+#define MINIMUM_CHARGE_CHARGING_NOT_PERMITTED 1800
 #define FULL_CHARGE 2150
 #define CHARGE_HYSTERESIS 100
 #define MAXIMUM_TEMPERATURE_C 60
@@ -55,6 +56,7 @@ extern Char *pgBatteryManagerMessageNames[];
 Bool gChargingPermitted = false;
 Bool gAllFullyCharged = false;
 Bool gAllInsufficientCharge = false;
+Bool gInsufficientChargeThreshold = MINIMUM_CHARGE_CHARGING_NOT_PERMITTED;
 BatteryContainerData gBatteryDataContainerRio;
 BatteryContainerData gBatteryDataContainerO1;
 BatteryContainerData gBatteryDataContainerO2;
@@ -86,10 +88,10 @@ static void signalChargeStateAll (void)
     else
     {
         printDebug ("Insufficient charge.\n");
-        if ((gBatteryDataContainerRio.batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS) ||
-            (gBatteryDataContainerO1.batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS) ||
-            (gBatteryDataContainerO2.batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS) ||
-            (gBatteryDataContainerO3.batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS))
+        if ((gBatteryDataContainerRio.batteryData.remainingCapacity > gInsufficientChargeThreshold + CHARGE_HYSTERESIS) ||
+            (gBatteryDataContainerO1.batteryData.remainingCapacity > gInsufficientChargeThreshold + CHARGE_HYSTERESIS) ||
+            (gBatteryDataContainerO2.batteryData.remainingCapacity > gInsufficientChargeThreshold + CHARGE_HYSTERESIS) ||
+            (gBatteryDataContainerO3.batteryData.remainingCapacity > gInsufficientChargeThreshold + CHARGE_HYSTERESIS))
         {
             printDebug ("...but now a battery is sufficiently charged.\n");
             gAllInsufficientCharge = false;                
@@ -166,7 +168,7 @@ static Bool setChargerStatus (BatteryContainerData *pBatteryContainerData)
                     
                     if (!pBatteryContainerData->batteryStatus.insufficientCharge)
                     {
-                        if (pBatteryContainerData->batteryData.remainingCapacity < MINIMUM_CHARGE)
+                        if (pBatteryContainerData->batteryData.remainingCapacity < gInsufficientChargeThreshold)
                         {
                             printDebug ("--- now insufficiently charged.\n");
                             pBatteryContainerData->batteryStatus.insufficientCharge = true;
@@ -175,7 +177,7 @@ static Bool setChargerStatus (BatteryContainerData *pBatteryContainerData)
                     }
                     else
                     {
-                        if (pBatteryContainerData->batteryData.remainingCapacity > MINIMUM_CHARGE + CHARGE_HYSTERESIS)
+                        if (pBatteryContainerData->batteryData.remainingCapacity > gInsufficientChargeThreshold + CHARGE_HYSTERESIS)
                         {
                             printDebug ("... now sufficiently charged.\n");
                             pBatteryContainerData->batteryStatus.insufficientCharge = false;                
@@ -473,10 +475,12 @@ static UInt16 actionBatteryManagerChargingPermitted (Bool isPermitted)
     if (isPermitted)
     {
         printDebug ("Battery charging is permitted.\n");
+        gInsufficientChargeThreshold = MINIMUM_CHARGE_CHARGING_PERMITTED;
     }
     else
     {
         printDebug ("Battery charging is NOT permitted.\n");       
+        gInsufficientChargeThreshold = MINIMUM_CHARGE_CHARGING_NOT_PERMITTED;
     }
     
     if (gChargingPermitted && !isPermitted)
@@ -487,7 +491,7 @@ static UInt16 actionBatteryManagerChargingPermitted (Bool isPermitted)
         hardwareServerSendReceive (HARDWARE_SET_O3_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);       
     }
     
-    /* No need to check if charging is permited now, the function calls
+    /* No need to check if charging is permitted now, the function calls
      * below will do that anyway */ 
     
     gChargingPermitted = isPermitted;
