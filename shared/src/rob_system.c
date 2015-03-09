@@ -169,6 +169,7 @@ void printProgress (const Char * pFormat, ...)
             vfprintf (pgDebugPrintsStream, pFormat, args);
         }
         va_end (args);
+        fflush (stdout);
     }
 }
 
