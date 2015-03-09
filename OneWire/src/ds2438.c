@@ -570,7 +570,7 @@ Bool readCurrentDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, SInt16 *pCurren
  */
 Bool readBatteryDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt16 *pVoltage, SInt16 *pCurrent)
 {
-    Bool success;
+    Bool success = true;
     Bool done = false;
     UInt8 buffer[20];
     UInt8 busyByte;
