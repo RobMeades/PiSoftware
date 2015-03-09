@@ -164,13 +164,10 @@ Bool actionSwitchOffHindbrain (void)
         {
             /* Toggle the power */
             printDebug ("ACTION: toggling power to Hindbrain with the aim of switching OFF.\n");
-            success = hardwareServerSendReceive (HARDWARE_TOGGLE_O_PWR, PNULL, 0, PNULL);
-            if (success)
-            {
-                printDebug ("ACTION: Pinging Hindbrain.\n");
-                /* Send the ping string - it should *fail* to send */
-                hindbrainOn = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputContainer, sizeof (*pInputContainer), PNULL);
-            }
+            hardwareServerSendReceive (HARDWARE_TOGGLE_O_PWR, PNULL, 0, PNULL); /* Deliberately ignore return value, rely on failure to ping */
+            printDebug ("ACTION: Pinging Hindbrain.\n");
+            /* Send the ping string - it should *fail* to send */
+            hindbrainOn = hardwareServerSendReceive (HARDWARE_SEND_O_STRING, pInputContainer, sizeof (*pInputContainer), PNULL);
         }
         free (pInputContainer);
     }

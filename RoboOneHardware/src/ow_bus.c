@@ -33,6 +33,7 @@
 #define MAX_NUM_BATTERY_DEVICES 4
 #define TOGGLE_DELAY_US         500000L   /* How long to toggle a set of pins from current state to opposite and back again */
 #define SERIAL_NUM_BUFFER_SIZE (NUM_BYTES_IN_SERIAL_NUM * 2) + 3 /* string representation of serial num with 0x in front and terminator on the end */
+#define WAIT_BEFORE_ORANGUTAN_OPEN_AFTER_TOGGLE_US 100000
 
 /* The maximum number of devices that oneWireFindAllDevices() can report */
 #define MAX_DEVICES_TO_FIND         10
@@ -1037,10 +1038,9 @@ Bool readChargerState (ChargeState *pState, Bool *pFlashDetectPossible)
 }
 
 /*
- * Switch the Orangutan power relay from it's current 
+ * Switch the Orangutan power switch relay from it's current 
  * state to the reverse and back again.
- * This function also speculatively opens the Orangutan
- * in case this is a power on.
+ * This function also closes and re-opens the Orangutan port.
  *
  * @return  true if successful, otherwise false.
  */
@@ -1048,8 +1048,11 @@ Bool toggleOPwr (void)
 {
     Bool success;
     
+    closeOrangutan();
+
     success = togglePinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_O_PWR_TOGGLE);
     
+    usleep (WAIT_BEFORE_ORANGUTAN_OPEN_AFTER_TOGGLE_US);    
     openOrangutan();
 
     return success;
@@ -1086,8 +1089,8 @@ Bool readOPwr (Bool *pIsOn)
 
 /*
  * Switch the Orangutan reset relay from it's current 
- * state to the reverse and back again.
- * This function also er-opens the Orangutan port.
+ * state to the reverse and back again. This function
+ * also closes and re-opens the Orangutan port.
  *
  * @return  true if successful, otherwise false.
  */
@@ -1095,10 +1098,13 @@ Bool toggleORst (void)
 {
     Bool success;
     
-    success = togglePinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_O_RESET_TOGGLE);
+    closeOrangutan();
 
-    openOrangutan();
+    success = togglePinsWithShadow (OW_NAME_DARLINGTON_PIO, DARLINGTON_O_RESET_TOGGLE);
     
+    usleep (WAIT_BEFORE_ORANGUTAN_OPEN_AFTER_TOGGLE_US);    
+    openOrangutan();
+
     return success;
 }
 
