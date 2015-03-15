@@ -19,6 +19,7 @@ typedef unsigned long UInt32;
 #define ASSERT_STRING(cONDITION,sTRING) ((cONDITION) ? true : (assertFunc (__FUNCTION__, __LINE__, sTRING, 0)))
 #define ASSERT_PARAM(cONDITION,pARAM1) ((cONDITION) ? true : (assertFunc (__FUNCTION__, __LINE__, PNULL, (pARAM1))))
 #define BINARY_STRING_BUFFER_SIZE 9
+#define UNUSED(x) (void)(x)
 
 bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 param1);
 void setProgressPrintsOn (void);
