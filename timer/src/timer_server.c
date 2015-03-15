@@ -302,8 +302,8 @@ static void tickHandler (int sig, siginfo_t *si, void *uc)
 
 /*
  * Sort the list of user timers so that the ones
- * going to expires soonest are at the start.
- * Simple bubble sort.
+ * going to expires soonest are at the start using
+ * a simple bubble sort.
  */
 static void sortUsedList (void)
 {
