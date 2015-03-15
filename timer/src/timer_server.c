@@ -23,7 +23,7 @@
 /* The number of timers that can be simultaneously active */
 #define MAX_NUM_TIMERS 100
 /* Timer tick frequency (100 ms) */
-#define TIMER_INTERVAL_NANOSECONDS 10000000L
+#define TIMER_INTERVAL_NANOSECONDS 100000000L
 
 /*
  * TYPES
