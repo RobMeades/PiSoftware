@@ -32,8 +32,8 @@
 /* A type to hold a timer */
 typedef struct TimerTag
 {
-    TimerId id;
     UInt32 expiryTimeDeciSeconds;
+    TimerId id;
     SInt32 sourcePort;
     void *pContext;
 } Timer;
@@ -68,18 +68,17 @@ static struct sigevent gSev;
 static timer_t gTimerId;
 /* Time counter in tenths of a second */
 static UInt32 gTimerTickDeciSeconds = 0;
-/* Counting flag to indicate that we're playing with the linked lists (if non-zero) */
-static UInt32 lockLinkedLists = 0;
+/* Mutex to protect linked list manipulation */
+pthread_mutex_t lockLinkedLists;
 
 /*
  * STATIC FUNCTIONS
  */
 
-
 /*
  * Get the process time in nanosecond resolution.
  * 
- * @return  the system time in nanoseconds.
+ * @return  the process time in nanoseconds.
  */
 UInt32 getProcessTimeNanoSeconds (void)
 {
@@ -100,8 +99,7 @@ UInt32 getProcessTimeNanoSeconds (void)
  * port                  the port number to send to.
  * msgType               the message type to send.
  * pSendMsgBody          pointer to the body of the
- *                       REquest message to send.
- *                       May be PNULL.
+ *                       message to send. May be PNULL.
  * sendMsgBodyLength     the length of the data that
  *                       pSendMsg points to.
  * 
@@ -128,7 +126,7 @@ static Bool timerServerSend (SInt32 port, TimerMsgType msgType, void *pSendMsgBo
         pSendMsg->msgType = msgType;
         pSendMsg->msgLength += sizeof (pSendMsg->msgType);
                     
-        /* Put any stuff to send */
+        /* Add the body to send */
         if (pSendMsgBody != PNULL)
         {
             memcpy (&pSendMsg->msgBody[0], pSendMsgBody, sendMsgBodyLength);
@@ -170,13 +168,18 @@ static Bool sendTimerExpiryIndMsg (Timer *pTimer)
     return timerServerSend (pTimer->sourcePort, TIMER_EXPIRY_IND, &msg, sizeof (msg));
 }
 
-
 /*
  * Free a timer.
+ *
+ * IMPORTANT: the lockLinkedLists mutex MUST be held
+ * by the calling function!!!  It is not grabbed
+ * here as this function is only called from places
+ * where it is already held and recursive mutexes appear
+ * to be only unreliably present in Linux.
  * 
  * pTimer  a pointer to the timer.
  */
-static void freeTimer (Timer *pTimer)
+static void freeTimerUnprotected (Timer *pTimer)
 {
     UInt32 x = 0;
     TimerEntry * pEntry;
@@ -184,8 +187,6 @@ static void freeTimer (Timer *pTimer)
     ASSERT_PARAM (pTimer != PNULL, (unsigned long) pTimer);
 
     printDebug ("freeTimer: freeing the timer at 0x%lx...\n", pTimer);
-
-    lockLinkedLists++;
 
     /* Find the entry in the list */
     pEntry = &gUsedTimerListHead;
@@ -245,8 +246,6 @@ static void freeTimer (Timer *pTimer)
     {
         ASSERT_ALWAYS_PARAM ((UInt32) pTimer);
     }
-
-    lockLinkedLists--;
 }
 
 /*
@@ -260,12 +259,12 @@ static void tickHandler (int sig, siginfo_t *si, void *uc)
     TimerEntry * pEntry;
     UInt32 tickProcessingStartNanoSeconds;
 
+    tickProcessingStartNanoSeconds = getProcessTimeNanoSeconds();
+
     gTimerTickDeciSeconds++;
 
-    if (lockLinkedLists == 0)
+    if (pthread_mutex_trylock (&lockLinkedLists) == 0)
     {
-        tickProcessingStartNanoSeconds = getProcessTimeNanoSeconds();
-    
         pEntry = &gUsedTimerListHead;
         for (x = 0; (pEntry != PNULL) && (pEntry->inUse) && (x < (MAX_NUM_TIMERS)); x++)
         {
@@ -280,7 +279,7 @@ static void tickHandler (int sig, siginfo_t *si, void *uc)
                 
                 /* Move to the next entry and then free this timer entry */
                 pEntry = pEntry->pNextEntry;
-                freeTimer (pTimer);
+                freeTimerUnprotected (pTimer);
             }
             else
             {
@@ -288,6 +287,7 @@ static void tickHandler (int sig, siginfo_t *si, void *uc)
             }
         }
         
+        pthread_mutex_unlock (&lockLinkedLists);
         printDebug ("tickHandler: processing a tick took %d nanoseconds.\n", getProcessTimeNanoSeconds() - tickProcessingStartNanoSeconds);
     }
     else
@@ -302,16 +302,20 @@ static void tickHandler (int sig, siginfo_t *si, void *uc)
  * Sort the list of user timers so that the ones
  * going to expires soonest are at the start using
  * a simple bubble sort.
+ *
+ * IMPORTANT: the lockLinkedLists mutex MUST be held
+ * by the calling function!!!  It is not grabbed
+ * here as this function is only called from places
+ * where it is already held and recursive mutexes appear
+ * to be only unreliably present in Linux.
  */
-static void sortUsedList (void)
+static void sortUsedListUnprotected (void)
 {
     UInt32 x = 0;
     TimerEntry * pEntry;
     UInt32 sortingStartNanoSeconds;
 
     sortingStartNanoSeconds = getProcessTimeNanoSeconds();
-
-    lockLinkedLists++;
 
     pEntry = &gUsedTimerListHead;
     for (x = 0; (pEntry != PNULL) && (pEntry->inUse) && (x < (MAX_NUM_TIMERS * MAX_NUM_TIMERS)); x++)
@@ -345,8 +349,6 @@ static void sortUsedList (void)
     {
         printDebug ("sortUsedList: sorting the timer list took %d iterations, %d nanoseconds.\n", x, getProcessTimeNanoSeconds() - sortingStartNanoSeconds);        
     }
- 
-    lockLinkedLists--;
 }
 
 /*
@@ -361,7 +363,7 @@ static Timer * allocTimer (void)
     UInt32 x = 0;
     TimerEntry * pEntry;
 
-    lockLinkedLists++;
+    pthread_mutex_lock (&lockLinkedLists);
 
     /* If there is already an unused entry in the list, just return it */
     pEntry = &gUsedTimerListHead;
@@ -415,7 +417,7 @@ static Timer * allocTimer (void)
                 pAlloc = &(pWantedEntry->timer);
                 
                 /* Now sort the list */
-                sortUsedList();
+                sortUsedListUnprotected();
             }
             else
             {
@@ -428,20 +430,24 @@ static Timer * allocTimer (void)
         }
     }
     
-    lockLinkedLists--;
+    pthread_mutex_unlock (&lockLinkedLists);
 
     return pAlloc;
 }
 
 /*
  * Free unused timers
+ *
+ * IMPORTANT: the lockLinkedLists mutex MUST be held
+ * by the calling function!!!  It is not grabbed
+ * here as this function is only called from places
+ * where it is already held and recursive mutexes appear
+ * to be only unreliably present in Linux.
  */
-static void freeUnusedTimers (void)
+static void freeUnusedTimersUnprotected (void)
 {
     UInt32 x = 0;
     TimerEntry * pEntry = PNULL;
-
-    lockLinkedLists++;
 
     printDebug ("freeUnusedTimers: freeing unused timers.\n");
     
@@ -463,7 +469,7 @@ static void freeUnusedTimers (void)
              * if it is, free it */
             if ((!(pEntry->inUse)) && (pEntry != &gUsedTimerListHead))
             {
-                freeTimer (&(pEntry->timer));
+                freeTimerUnprotected (&(pEntry->timer));
                 printDebug ("freeUnusedTimers: freeing an entry.\n");
             }
             pEntry = pNextOne;
@@ -473,8 +479,6 @@ static void freeUnusedTimers (void)
     {
         ASSERT_ALWAYS_PARAM (x);   
     }
-    
-    lockLinkedLists--;
 }
 
 /*
@@ -485,7 +489,7 @@ static void freeAllTimers (void)
     UInt32 x;
     TimerEntry * pEntry = PNULL;
 
-    lockLinkedLists++;
+    pthread_mutex_lock (&lockLinkedLists);
 
     printDebug ("freeAllTimers: freeing all timers.\n");
     
@@ -496,9 +500,9 @@ static void freeAllTimers (void)
         pEntry = pEntry->pNextEntry;
     }
 
-    freeUnusedTimers();
+    freeUnusedTimersUnprotected();
 
-    lockLinkedLists--;
+    pthread_mutex_unlock (&lockLinkedLists);
 }
 
 /*
@@ -510,6 +514,12 @@ static void actionTimerServerStart (void)
     TimerEntry * pPrevEntry = &gFreeTimerListHeadUnused;
     TimerEntry ** ppEntry = &(gFreeTimerListHeadUnused.pNextEntry);
 
+    /* Create the mutex */
+    if (pthread_mutex_init (&lockLinkedLists, NULL) != 0)
+    {
+        ASSERT_ALWAYS_STRING ("actionTimerServerStart: failed pthread_mutex_init().");
+    }
+    
     memset (&gFreeTimerListHeadUnused, 0, sizeof (gFreeTimerListHeadUnused));
     memset (&gUsedTimerListHead, 0, sizeof (gUsedTimerListHead));
 
@@ -547,7 +557,7 @@ static void actionTimerServerStart (void)
     gSa.sa_flags = SA_SIGINFO;
     gSa.sa_sigaction = tickHandler;
     sigemptyset (&gSa.sa_mask);
-    if (sigaction (SIGRTMIN, &gSa, PNULL) == -1)
+    if (sigaction (SIGRTMIN, &gSa, PNULL) != 0)
     {
         ASSERT_ALWAYS_STRING ("actionTimerServerStart: failed sigaction().");
     }
@@ -556,7 +566,7 @@ static void actionTimerServerStart (void)
     gSev.sigev_notify = SIGEV_SIGNAL;
     gSev.sigev_signo = SIGRTMIN;
     gSev.sigev_value.sival_ptr = &gTimerId;
-    if (timer_create (CLOCK_MONOTONIC, &gSev, &gTimerId) == -1)
+    if (timer_create (CLOCK_MONOTONIC, &gSev, &gTimerId) != 0)
     {
         ASSERT_ALWAYS_STRING ("actionTimerServerStart: failed timer_create().");        
     }
@@ -567,7 +577,7 @@ static void actionTimerServerStart (void)
      gIts.it_interval.tv_sec = gIts.it_value.tv_sec;
      gIts.it_interval.tv_nsec = gIts.it_value.tv_nsec;
 
-     if (timer_settime (gTimerId, 0, &gIts, PNULL) == -1)
+     if (timer_settime (gTimerId, 0, &gIts, PNULL) !== 0)
      {
          ASSERT_ALWAYS_STRING ("actionTimerServerStart: failed timer_settime().");                 
      }
@@ -596,6 +606,9 @@ static void actionTimerServerStop (void)
         free (pEntry);
         pEntry = pNextOne;
     }
+    
+    /* Destroy the mutex */
+    pthread_mutex_destroy (&lockLinkedLists);
 }
 
 /*
@@ -650,7 +663,10 @@ static void actionTimerStop (TimerStopReq *pTimerStopReq)
         if ((pEntry->timer.id == pTimerStopReq->id) && (pEntry->timer.sourcePort == pTimerStopReq->sourcePort))
         {
             found = true;
-            freeTimer (&(pEntry->timer));            
+            
+            pthread_mutex_lock (&lockLinkedLists);
+            freeTimerUnprotected (&(pEntry->timer));
+            pthread_mutex_unlock (&lockLinkedLists);
         }
         pEntry = pEntry->pNextEntry;
     }
