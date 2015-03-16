@@ -161,15 +161,13 @@ static Bool timerServerSend (SInt32 port, TimerMsgType msgType, void *pSendMsgBo
  */
 static Bool sendTimerExpiryIndMsg (Timer *pTimer)
 {
-    Bool success;
     TimerExpiryInd msg;
     
-    printDebug ("Sending TimerExpiryInd message to port %d (id %d, pContext 0x%lx).\n", pTimer->sourcePort, pTimer->id, pTimer->pContext);
+    printDebug ("Sending TimerExpiryInd message to port %d (timer id %d, pContext 0x%lx).\n", pTimer->sourcePort, pTimer->id, pTimer->pContext);
     msg.id = pTimer->id;
     msg.pContext = pTimer->pContext;
-    success = timerServerSend (pTimer->sourcePort, TIMER_EXPIRY_IND, &msg, sizeof (msg));
     
-    return success;
+    return timerServerSend (pTimer->sourcePort, TIMER_EXPIRY_IND, &msg, sizeof (msg));
 }
 
 
@@ -185,7 +183,7 @@ static void freeTimer (Timer *pTimer)
 
     ASSERT_PARAM (pTimer != PNULL, (unsigned long) pTimer);
 
-    printDebug ("Freeing a timer (at 0x%lx)...\n", pTimer);
+    printDebug ("freeTimer: freeing the timer at 0x%lx...\n", pTimer);
 
     lockLinkedLists++;
 
@@ -200,7 +198,7 @@ static void freeTimer (Timer *pTimer)
     {
         TimerEntry * pWantedEntry = pEntry;
 
-        printDebug ("Found the timer.\n");
+        printDebug ("freeTimer: found the timer.\n");
         /* Found it, mark it as not in use and, if it is a malloc()ed
          * entry, unlink it from the current list and move it to the
          * free list */
@@ -275,7 +273,7 @@ static void tickHandler (int sig, siginfo_t *si, void *uc)
             {
                 Timer * pTimer = &(pEntry->timer);
     
-                printDebug ("tickHandler: at tick %d, timer from port %d has expired (%d).\n", gTimerTickDeciSeconds, pEntry->timer.sourcePort, pEntry->timer.expiryTimeDeciSeconds);
+                printDebug ("tickHandler: timer from port %d (id %d) has expired at tick %d (value was %d).\n", pEntry->timer.sourcePort, pEntry->timer.id, gTimerTickDeciSeconds, pEntry->timer.expiryTimeDeciSeconds);
                 
                 /* Timer has expired, send a message back */
                 sendTimerExpiryIndMsg (pTimer);
@@ -341,11 +339,11 @@ static void sortUsedList (void)
     
     if (x == MAX_NUM_TIMERS * MAX_NUM_TIMERS)
     {
-        printDebug ("WARNING: sorting the timer list hit the buffers (%d iterations, %d nanoseconds).\n", x, getProcessTimeNanoSeconds() - sortingStartNanoSeconds);
+        printDebug ("sortUsedList: WARNING, sorting the timer list hit the buffers (%d iterations, %d nanoseconds).\n", x, getProcessTimeNanoSeconds() - sortingStartNanoSeconds);
     }
     else
     {
-        printDebug ("Sorting the timer list took %d iterations, %d nanoseconds.\n", x, getProcessTimeNanoSeconds() - sortingStartNanoSeconds);        
+        printDebug ("sortUsedList: sorting the timer list took %d iterations, %d nanoseconds.\n", x, getProcessTimeNanoSeconds() - sortingStartNanoSeconds);        
     }
  
     lockLinkedLists--;
@@ -445,6 +443,8 @@ static void freeUnusedTimers (void)
 
     lockLinkedLists++;
 
+    printDebug ("freeUnusedTimers: freeing unused timers.\n");
+    
     /* Go to the end of the list */
     pEntry = &gUsedTimerListHead;
     for (x = 0; (pEntry->pNextEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
@@ -487,6 +487,8 @@ static void freeAllTimers (void)
 
     lockLinkedLists++;
 
+    printDebug ("freeAllTimers: freeing all timers.\n");
+    
     pEntry = &gUsedTimerListHead;
     for (x = 0; (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
     {
@@ -534,7 +536,7 @@ static void actionTimerServerStart (void)
         }
         else
         {
-            ASSERT_ALWAYS_STRING ("Failed malloc().");
+            ASSERT_ALWAYS_STRING ("actionTimerServerStart: failed malloc().");
         }
     }
     
@@ -547,7 +549,7 @@ static void actionTimerServerStart (void)
     sigemptyset (&gSa.sa_mask);
     if (sigaction (SIGRTMIN, &gSa, PNULL) == -1)
     {
-        ASSERT_ALWAYS_STRING ("Failed sigaction().");
+        ASSERT_ALWAYS_STRING ("actionTimerServerStart: failed sigaction().");
     }
     
     /* Create the tick event */
@@ -556,7 +558,7 @@ static void actionTimerServerStart (void)
     gSev.sigev_value.sival_ptr = &gTimerId;
     if (timer_create (CLOCK_MONOTONIC, &gSev, &gTimerId) == -1)
     {
-        ASSERT_ALWAYS_STRING ("Failed timer_create().");        
+        ASSERT_ALWAYS_STRING ("actionTimerServerStart: failed timer_create().");        
     }
     
     /* Start the timer */
@@ -567,7 +569,7 @@ static void actionTimerServerStart (void)
 
      if (timer_settime (gTimerId, 0, &gIts, PNULL) == -1)
      {
-         ASSERT_ALWAYS_STRING ("Failed timer_settime().");                 
+         ASSERT_ALWAYS_STRING ("actionTimerServerStart: failed timer_settime().");                 
      }
 }
 
@@ -605,7 +607,7 @@ static void actionTimerStart (TimerStartReq *pTimerStartReq)
 {
     Timer * pTimer;
     
-    printDebug ("Starting a timer of duration %d 10ths of a second (from port %d, id %d, pContext 0x%lx).\n",
+    printDebug ("actionTimerStart: starting a timer of duration %d 10ths of a second (from port %d, id %d, pContext 0x%lx).\n",
                 pTimerStartReq->expiryDeciSeconds,
                 pTimerStartReq->sourcePort,
                 pTimerStartReq->id,
@@ -623,7 +625,7 @@ static void actionTimerStart (TimerStartReq *pTimerStartReq)
     }
     else
     {
-        ASSERT_ALWAYS_STRING ("Unable to allocate a timer.");        
+        ASSERT_ALWAYS_STRING ("actionTimerStart: unable to allocate a timer.");        
     }    
 }
 
@@ -638,7 +640,7 @@ static void actionTimerStop (TimerStopReq *pTimerStopReq)
     Bool found = false;
     TimerEntry * pEntry;
 
-    printDebug ("Stopping timer id %d from port %d.\n",
+    printDebug ("actionTimerStop: stopping timer id %d from port %d.\n",
                 pTimerStopReq->id,
                 pTimerStopReq->sourcePort);
 
