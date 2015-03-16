@@ -594,6 +594,8 @@ static void actionTimerServerStop (void)
     /* Return used timers to the free list */
     freeAllTimers ();
 
+    pthread_mutex_lock (&lockLinkedLists);
+    
     /* Free the free list from the end */
     pEntry = &gFreeTimerListHeadUnused;
     for (x = 0; (pEntry->pNextEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
@@ -606,6 +608,14 @@ static void actionTimerServerStop (void)
         free (pEntry);
         pEntry = pNextOne;
     }
+    
+    if (timer_delete (&gTimerId) !== 0)
+    {
+        ASSERT_ALWAYS_STRING ("actionTimerServerStop: failed timer_delete().");                 
+    }
+
+    pthread_mutex_unlock (&lockLinkedLists);
+    
     
     /* Destroy the mutex */
     pthread_mutex_destroy (&lockLinkedLists);
