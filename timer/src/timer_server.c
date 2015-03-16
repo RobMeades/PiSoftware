@@ -33,7 +33,7 @@
 typedef struct TimerTag
 {
     TimerId id;
-    UInt32 expiryTime;
+    UInt32 expiryTimeDeciSeconds;
     SInt32 sourcePort;
     void *pContext;
 } Timer;
@@ -271,11 +271,11 @@ static void tickHandler (int sig, siginfo_t *si, void *uc)
         pEntry = &gUsedTimerListHead;
         for (x = 0; (pEntry != PNULL) && (pEntry->inUse) && (x < (MAX_NUM_TIMERS)); x++)
         {
-            if (pEntry->timer.expiryTime <= gTimerTickDeciSeconds)
+            if (pEntry->timer.expiryTimeDeciSeconds <= gTimerTickDeciSeconds)
             {
                 Timer * pTimer = &(pEntry->timer);
     
-                printDebug ("tickHandler: at tick %d, timer from port %d has expired (%d).\n", gTimerTickDeciSeconds, pEntry->timer.sourcePort, pEntry->timer.expiryTime);
+                printDebug ("tickHandler: at tick %d, timer from port %d has expired (%d).\n", gTimerTickDeciSeconds, pEntry->timer.sourcePort, pEntry->timer.expiryTimeDeciSeconds);
                 
                 /* Timer has expired, send a message back */
                 sendTimerExpiryIndMsg (pTimer);
@@ -318,12 +318,12 @@ static void sortUsedList (void)
     pEntry = &gUsedTimerListHead;
     for (x = 0; (pEntry != PNULL) && (pEntry->inUse) && (x < (MAX_NUM_TIMERS * MAX_NUM_TIMERS)); x++)
     {
-        if ((pEntry->pNextEntry != PNULL) && (pEntry->timer.expiryTime > pEntry->pNextEntry->timer.expiryTime))
+        if ((pEntry->pNextEntry != PNULL) && (pEntry->timer.expiryTimeDeciSeconds > pEntry->pNextEntry->timer.expiryTimeDeciSeconds))
         {
             TimerEntry * pThisEntry = pEntry;
             TimerEntry * pNextEntry = pEntry->pNextEntry;
 
-            printDebug ("sortUsedList: swapping entries %d with %d.\n", pEntry->timer.expiryTime, pEntry->pNextEntry->timer.expiryTime);
+            printDebug ("sortUsedList: swapping entries %d with %d.\n", pEntry->timer.expiryTimeDeciSeconds, pEntry->pNextEntry->timer.expiryTimeDeciSeconds);
             /* If this entry has a later expiry time than the next one, swap them */
             pThisEntry->pNextEntry = pNextEntry->pNextEntry;
             pNextEntry->pPrevEntry = pThisEntry->pPrevEntry;
@@ -616,7 +616,7 @@ static void actionTimerStart (TimerStartReq *pTimerStartReq)
     if (pTimer != PNULL)
     {
         /* Fill in the contents */
-        pTimer->expiryTime = gTimerTickDeciSeconds + pTimerStartReq->expiryDeciSeconds;
+        pTimer->expiryTimeDeciSeconds = gTimerTickDeciSeconds + pTimerStartReq->expiryDeciSeconds;
         pTimer->id = pTimerStartReq->id;
         pTimer->sourcePort = pTimerStartReq->sourcePort;
         pTimer->pContext = pTimerStartReq->pContext;
