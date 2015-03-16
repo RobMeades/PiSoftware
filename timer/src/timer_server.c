@@ -262,6 +262,8 @@ static void tickHandler (int sig, siginfo_t *si, void *uc)
     tickProcessingStartNanoSeconds = getProcessTimeNanoSeconds();
 
     gTimerTickDeciSeconds++;
+    
+    /* Wrap is several years so don't need to deal with it */
 
     if (pthread_mutex_trylock (&lockLinkedLists) == 0)
     {
