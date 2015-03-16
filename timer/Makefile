@@ -5,6 +5,7 @@ endif
 
 PROGRAM = timer_server
 LIB = timer_client.a
+TST = timer_test
 SRC_DIR = src
 OBJ_DIR = obj
 API_DIR = api
@@ -17,16 +18,20 @@ C_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(C_FILES))
 LIB_OBJ:= $(OBJ_DIR)/timer_client.o $(OBJ_DIR)/timer_msg_names.o
 EXE_OBJ:= $(OBJ_DIR)/main.o $(OBJ_DIR)/timer_server.o $(OBJ_DIR)/timer_msg_names.o
+TST_OBJ:= $(OBJ_DIR)/test.o
 CC = $(GCC_PREFIX)gcc.exe
 AR =  $(GCC_PREFIX)ar.exe
 DFLAGS = -O0 -fbuiltin -g
 CFLAGS = -O2 -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR)
-LDFLAGS = -lrt $(OBJ_DIR)/$(LIB) $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a
+LDFLAGS = -lrt -lpthread $(OBJ_DIR)/$(LIB) $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a
 
-all: $(PROGRAM)
+all: $(PROGRAM) $(TST)
 
 $(PROGRAM): $(LIB)
 	$(CC) $(EXE_OBJ) $(LDFLAGS) -o $(OBJ_DIR)/$(PROGRAM)
+
+$(TST): $(LIB)
+	$(CC) $(TST_OBJ) $(LDFLAGS) -o $(OBJ_DIR)/$(TST)
 
 $(LIB): .depend $(OBJS)
 	$(AR) r $(OBJ_DIR)/$(LIB) $(LIB_OBJ)

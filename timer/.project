@@ -5,8 +5,6 @@
 	<projects>
 		<project>MessagingClient</project>
 		<project>MessagingServer</project>
-		<project>RoboOneHardware</project>
-		<project>RoboOneStateMachine</project>
 		<project>shared</project>
 	</projects>
 	<buildSpec>
@@ -85,14 +83,14 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>obj</name>
-			<type>2</type>
-			<location>C:/Users/Rob Meades/workspace/timer/obj</location>
-		</link>
-		<link>
 			<name>src</name>
 			<type>2</type>
 			<location>C:/Users/Rob Meades/workspace/timer/src</location>
+		</link>
+		<link>
+			<name>obj</name>
+			<type>2</type>
+			<location>C:/Users/Rob Meades/workspace/timer/obj</location>
 		</link>
 	</linkedResources>
 </projectDescription>

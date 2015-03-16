@@ -16,4 +16,4 @@
 /*
  * FUNCTION PROTOTYPES
  */
-Bool timerServerSendReceive (TimerMsgType msgType, void *pSendMsgBody, UInt16 sendMsgBodyLength, void *pReceivedMsgSpecifics);
+Bool timerServerSend (TimerMsgType msgType, void *pSendMsgBody, UInt16 sendMsgBodyLength);

@@ -43,7 +43,7 @@ extern Char *pgTimerMessageNames[];
  *                   message indicates success,
  *                   otherwise false.
  */
-Bool timerServerSendReceive (TimerMsgType msgType, void *pSendMsgBody, UInt16 sendMsgBodyLength)
+Bool timerServerSend (TimerMsgType msgType, void *pSendMsgBody, UInt16 sendMsgBodyLength)
 {
     ClientReturnCode returnCode;
     Bool success = false;

@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <time.h>
+#include <pthread.h>
 #include <rob_system.h>
 #include <messaging_server.h>
 #include <messaging_client.h>
@@ -94,7 +95,7 @@ UInt32 getProcessTimeNanoSeconds (void)
 }
 
 /*
- * Send a message to a port.
+ * Reply to a message port.
  * 
  * port                  the port number to send to.
  * msgType               the message type to send.
@@ -108,7 +109,7 @@ UInt32 getProcessTimeNanoSeconds (void)
  *                   message indicates success,
  *                   otherwise false.
  */
-static Bool timerServerSend (SInt32 port, TimerMsgType msgType, void *pSendMsgBody, UInt16 sendMsgBodyLength)
+static Bool timerServerReply (SInt32 port, TimerMsgType msgType, void *pSendMsgBody, UInt16 sendMsgBodyLength)
 {
     ClientReturnCode returnCode;
     Bool success = false;
@@ -165,7 +166,7 @@ static Bool sendTimerExpiryIndMsg (Timer *pTimer)
     msg.id = pTimer->id;
     msg.pContext = pTimer->pContext;
     
-    return timerServerSend (pTimer->sourcePort, TIMER_EXPIRY_IND, &msg, sizeof (msg));
+    return timerServerReply (pTimer->sourcePort, TIMER_EXPIRY_IND, &msg, sizeof (msg));
 }
 
 /*
@@ -579,7 +580,7 @@ static void actionTimerServerStart (void)
      gIts.it_interval.tv_sec = gIts.it_value.tv_sec;
      gIts.it_interval.tv_nsec = gIts.it_value.tv_nsec;
 
-     if (timer_settime (gTimerId, 0, &gIts, PNULL) !== 0)
+     if (timer_settime (gTimerId, 0, &gIts, PNULL) != 0)
      {
          ASSERT_ALWAYS_STRING ("actionTimerServerStart: failed timer_settime().");                 
      }
@@ -611,7 +612,7 @@ static void actionTimerServerStop (void)
         pEntry = pNextOne;
     }
     
-    if (timer_delete (&gTimerId) !== 0)
+    if (timer_delete (&gTimerId) != 0)
     {
         ASSERT_ALWAYS_STRING ("actionTimerServerStop: failed timer_delete().");                 
     }
