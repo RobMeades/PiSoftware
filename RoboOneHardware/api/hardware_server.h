@@ -7,7 +7,7 @@
  */
 
 #define HARDWARE_SERVER_EXE "./roboone_hardware_server"
-#define HARDWARE_SERVER_PORT_STRING "5235"
+#define HARDWARE_SERVER_PORT_STRING "5234"
 
 /* Maximum length of a string sent to or received back from the Orangutan, AKA Hindbrain */
 #define MAX_O_STRING_LENGTH         80

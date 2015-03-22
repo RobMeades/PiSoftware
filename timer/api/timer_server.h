@@ -7,7 +7,7 @@
  */
 
 #define TIMER_SERVER_EXE "./timer_server"
-#define TIMER_SERVER_PORT_STRING "5231"
+#define TIMER_SERVER_PORT_STRING "5235"
 
 #pragma pack(push, 1) /* Force GCC to pack everything from here on as tightly as possible */
 

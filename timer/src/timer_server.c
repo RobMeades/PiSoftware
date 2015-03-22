@@ -61,8 +61,6 @@ extern Char *pgTimerMessageNames[];
 static TimerEntry gFreeTimerListHeadUnused;
 /* Head of used timer linked list */
 static TimerEntry gUsedTimerListHead;
-/* Signal action structure for timer tick */
-static struct sigaction gSa;
 /* Signal event, timer Id and frequency of expiry */
 static struct itimerspec gIts;
 static struct sigevent gSev;
@@ -254,11 +252,13 @@ static void freeTimerUnprotected (Timer *pTimer)
  * Increment the deci-second counter and see if
  * any timers have expired.
  */
-static void tickHandler (int sig, siginfo_t *si, void *uc)
+static void tickHandler (sigval_t sv)
 {
     UInt32 x = 0;
     TimerEntry * pEntry;
     UInt32 tickProcessingStartNanoSeconds;
+    
+    UNUSED (sv);
 
     tickProcessingStartNanoSeconds = getProcessTimeNanoSeconds();
 
@@ -291,14 +291,12 @@ static void tickHandler (int sig, siginfo_t *si, void *uc)
         }
         
         pthread_mutex_unlock (&lockLinkedLists);
-        printDebug ("tickHandler: processing a tick took %d nanoseconds.\n", getProcessTimeNanoSeconds() - tickProcessingStartNanoSeconds);
+        printDebug ("tickHandler: processing a tick took %d microseconds.\n", (getProcessTimeNanoSeconds() - tickProcessingStartNanoSeconds) / 1000);
     }
     else
     {
         printDebug ("tickHandler: linked lists locked, skipping tick processing at tick %d.\n", gTimerTickDeciSeconds);
     }
-
-    signal (sig, SIG_IGN);
 }
 
 /*
@@ -554,21 +552,15 @@ static void actionTimerServerStart (void)
     }
     
     /* The following code is taken from the example at
-     * http://man7.org/linux/man-pages/man2/timer_create.2.html */
-    
-    /* Establish the handler for a tick from the OS */
-    gSa.sa_flags = SA_SIGINFO;
-    gSa.sa_sigaction = tickHandler;
-    sigemptyset (&gSa.sa_mask);
-    if (sigaction (SIGRTMIN, &gSa, PNULL) != 0)
-    {
-        ASSERT_ALWAYS_STRING ("actionTimerServerStart: failed sigaction().");
-    }
+     * http://man7.org/linux/man-pages/man2/timer_create.2.html
+     * but modified to call a handler rather than send a signal
+     * 'cos we already use the signalling for our messaging */
     
     /* Create the tick event */
-    gSev.sigev_notify = SIGEV_SIGNAL;
-    gSev.sigev_signo = SIGRTMIN;
+    gSev.sigev_notify = SIGEV_THREAD;
     gSev.sigev_value.sival_ptr = &gTimerId;
+    gSev.sigev_notify_function = tickHandler;
+    gSev.sigev_notify_attributes = PNULL;
     if (timer_create (CLOCK_MONOTONIC, &gSev, &gTimerId) != 0)
     {
         ASSERT_ALWAYS_STRING ("actionTimerServerStart: failed timer_create().");        
@@ -605,14 +597,14 @@ static void actionTimerServerStop (void)
     {
         pEntry = pEntry->pNextEntry;
     }
-    for (x = 0; (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
+    for (x = 0; (pEntry != PNULL) && (pEntry != &gFreeTimerListHeadUnused) && (x < MAX_NUM_TIMERS); x++)
     {
         TimerEntry * pNextOne = pEntry->pPrevEntry;
         free (pEntry);
         pEntry = pNextOne;
     }
     
-    if (timer_delete (&gTimerId) != 0)
+    if (timer_delete (gTimerId) != 0)
     {
         ASSERT_ALWAYS_STRING ("actionTimerServerStop: failed timer_delete().");                 
     }

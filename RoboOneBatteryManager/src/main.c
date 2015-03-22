@@ -52,7 +52,7 @@ int main (int argc, char **argv)
     }    
     else
     {
-        printProgress ("Usage: %s portnumber\ne.g. %s 5231\n", argv[0], argv[0]);
+        printProgress ("Usage: %s portnumber\ne.g. %s 5232\n", argv[0], argv[0]);
     }
     
     setDebugPrintsOff();
