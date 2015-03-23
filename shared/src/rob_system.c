@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <time.h>
+#include <pthread.h>
 #include <rob_system.h>
 
 /*
@@ -20,6 +21,8 @@ static Bool gDebugPrintsAreOn = false;
 static FILE *pgDebugPrintsStream = PNULL;
 static Bool gProgressPrintsAreOn = true;
 static Bool gSuspendDebug = false;
+/* Mutex to ensure no loss of printf()s if called from multiple threads */
+pthread_mutex_t lockPrintf;
 
 /*
  * Assert function for debugging (should be called via the macros in rob_system.c).
@@ -42,6 +45,7 @@ Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 pa
     /* If debug is printing to file, put the assert there also */
     if (gDebugPrintsAreOn && (pgDebugPrintsStream != PNULL))
     {
+        pthread_mutex_lock (&lockPrintf);
         /* But remove any initial line feeds for neatness */
         if (*pFormat == '\n')
         {
@@ -59,6 +63,10 @@ Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 pa
         }
         fflush (pgDebugPrintsStream);
         fclose (pgDebugPrintsStream);
+        
+        pthread_mutex_unlock (&lockPrintf);
+        pthread_mutex_destroy (&lockPrintf);
+
     }
 
     fflush (stdout);
@@ -103,6 +111,7 @@ void setDebugPrintsOff (void)
         printDebug ("Stopped debug prints on %s", asctime (localtime (&timeNow))); 
         fclose (pgDebugPrintsStream);
         pgDebugPrintsStream = PNULL;
+        pthread_mutex_destroy (&lockPrintf);
     }
 }
 
@@ -140,6 +149,12 @@ void setDebugPrintsOnToFile (Char * pFilename)
     {
         time_t timeNow = time (NULL);
         
+        /* Create the mutex */
+        if (pthread_mutex_init (&lockPrintf, NULL) != 0)
+        {
+            ASSERT_ALWAYS_STRING ("setDebugPrintsOnToFile: failed pthread_mutex_init().");
+        }
+        
         gDebugPrintsAreOn = true;
         printDebug ("Started debug prints on %s", asctime (localtime (&timeNow))); 
     }
@@ -154,6 +169,8 @@ void printProgress (const Char * pFormat, ...)
     {
         va_list args;
         
+        pthread_mutex_lock (&lockPrintf);
+
         va_start (args, pFormat);
         vprintf (pFormat, args);
         
@@ -170,6 +187,8 @@ void printProgress (const Char * pFormat, ...)
         }
         va_end (args);
         fflush (stdout);
+        
+        pthread_mutex_unlock (&lockPrintf);
     }
 }
 
@@ -183,6 +202,9 @@ void printDebug (const Char * pFormat, ...)
     if (gDebugPrintsAreOn && !gSuspendDebug)
     {
         va_list args;
+
+        pthread_mutex_lock (&lockPrintf);
+        
         if (pgDebugPrintsStream != PNULL)
         {
             pStream = pgDebugPrintsStream;
@@ -192,6 +214,8 @@ void printDebug (const Char * pFormat, ...)
         vfprintf (pStream, pFormat, args);
         va_end (args);
         fflush (pStream);
+        
+        pthread_mutex_unlock (&lockPrintf);
     }
 }
 
@@ -207,6 +231,8 @@ void printHexDump (const void * pMemory, UInt16 size)
     
     if (gDebugPrintsAreOn && !gSuspendDebug)
     {
+        pthread_mutex_lock (&lockPrintf);
+
         time = getSystemTicks();
         if (pgDebugPrintsStream != PNULL)
         {
@@ -221,6 +247,8 @@ void printHexDump (const void * pMemory, UInt16 size)
             pPrint +=8;
         }
         fflush (pStream);
+
+        pthread_mutex_unlock (&lockPrintf);
     }
 }
 

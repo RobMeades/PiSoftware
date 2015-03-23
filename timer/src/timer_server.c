@@ -42,7 +42,6 @@ typedef struct TimerTag
 /* A linked list entry holding a timer */
 typedef struct TimerEntryTag
 {
-    bool inUse;
     Timer timer;
     struct TimerEntryTag * pPrevEntry;
     struct TimerEntryTag * pNextEntry;
@@ -58,9 +57,9 @@ extern Char *pgTimerMessageNames[];
  */
 
 /* Head of free timer linked list */
-static TimerEntry gFreeTimerListHeadUnused;
-/* Head of used timer linked list */
-static TimerEntry gUsedTimerListHead;
+static TimerEntry * pgFreeTimerListHead = PNULL;
+/* Pointer to head of used timer linked list */
+static TimerEntry * pgUsedTimerListHead = PNULL;
 /* Signal event, timer Id and frequency of expiry */
 static struct itimerspec gIts;
 static struct sigevent gSev;
@@ -168,7 +167,7 @@ static Bool sendTimerExpiryIndMsg (Timer *pTimer)
 }
 
 /*
- * Free a timer.
+ * Free a timer.  The timer must exist.
  *
  * IMPORTANT: the lockLinkedLists mutex MUST be held
  * by the calling function!!!  It is not grabbed
@@ -181,14 +180,14 @@ static Bool sendTimerExpiryIndMsg (Timer *pTimer)
 static void freeTimerUnprotected (Timer *pTimer)
 {
     UInt32 x = 0;
-    TimerEntry * pEntry;
+    TimerEntry * pEntry = pgUsedTimerListHead;
+    TimerEntry * pPrevEntry = PNULL;
 
     ASSERT_PARAM (pTimer != PNULL, (unsigned long) pTimer);
 
     printDebug ("freeTimer: freeing the timer at 0x%lx...\n", pTimer);
 
     /* Find the entry in the list */
-    pEntry = &gUsedTimerListHead;
     for (x = 0; (pEntry != PNULL) && (&(pEntry->timer) != pTimer) && (x < MAX_NUM_TIMERS); x++)
     {
         pEntry = pEntry->pNextEntry;
@@ -197,48 +196,42 @@ static void freeTimerUnprotected (Timer *pTimer)
     if ((pEntry != PNULL) && (&(pEntry->timer) == pTimer))
     {
         TimerEntry * pWantedEntry = pEntry;
+        TimerEntry ** ppEntry = PNULL;
 
         printDebug ("freeTimer: found the timer.\n");
-        /* Found it, mark it as not in use and, if it is a malloc()ed
-         * entry, unlink it from the current list and move it to the
-         * free list */
-        pWantedEntry->inUse = false;
+        /* Unlink it from the used list */
         memset (&(pWantedEntry->timer), 0, sizeof (pWantedEntry->timer));
-        if (pWantedEntry != &gUsedTimerListHead)
+        printDebug ("freeTimer: moving entry to free list.\n");
+        if (pWantedEntry->pPrevEntry != PNULL)
         {
-            printDebug ("freeTimer: moving malloc()ed entry to free list.\n");
-            if (pWantedEntry->pPrevEntry != PNULL)
-            {
-                pWantedEntry->pPrevEntry->pNextEntry = pWantedEntry->pNextEntry;
-                pWantedEntry->pPrevEntry = PNULL;
-            }
-            if (pWantedEntry->pNextEntry != PNULL)
-            {
-                pWantedEntry->pNextEntry->pPrevEntry = pWantedEntry->pPrevEntry;
-                pWantedEntry->pNextEntry = PNULL;
-            }
+            pWantedEntry->pPrevEntry->pNextEntry = pWantedEntry->pNextEntry;
+            pWantedEntry->pPrevEntry = PNULL;
+        }
+        if (pWantedEntry->pNextEntry != PNULL)
+        {
+            pWantedEntry->pNextEntry->pPrevEntry = pWantedEntry->pPrevEntry;
+            pWantedEntry->pNextEntry = PNULL;
+        }
+        if (pWantedEntry == pgUsedTimerListHead) /* Deal with empty used list case */
+        {
+            pgUsedTimerListHead = PNULL;
+        }
 
-            /* Find the end of the free list */
-            pEntry = &gFreeTimerListHeadUnused;
-            for (x = 0; (pEntry->pNextEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
-            {
-                pEntry = pEntry->pNextEntry;
-            }
-
-            /* Link it there */
-            if (pEntry->pNextEntry == PNULL)
-            {
-                pEntry->pNextEntry = pWantedEntry;
-                pWantedEntry->pPrevEntry = pEntry;
-            }
-            else
-            {
-                ASSERT_ALWAYS_PARAM (x);   
-            }
+        /* Put it on the end of the free list. TODO putting it on the front would be quicker */
+        ppEntry = &pgFreeTimerListHead;
+        for (x = 0; (*ppEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
+        {
+            pPrevEntry = *ppEntry;
+            ppEntry = &(pEntry->pNextEntry);
+        }
+        if (*ppEntry == PNULL)
+        {
+            *ppEntry = pWantedEntry;
+            pWantedEntry->pPrevEntry = pPrevEntry;
         }
         else
         {
-            printDebug ("freeTimer: just marking head entry as unused.\n");
+            ASSERT_ALWAYS_PARAM (x);   
         }
     }
     else
@@ -252,7 +245,7 @@ static void freeTimerUnprotected (Timer *pTimer)
  * Increment the deci-second counter and see if
  * any timers have expired.
  */
-static void tickHandler (sigval_t sv)
+static void tickHandlerCallback (sigval_t sv)
 {
     UInt32 x = 0;
     TimerEntry * pEntry;
@@ -266,10 +259,12 @@ static void tickHandler (sigval_t sv)
     
     /* Wrap is several years so don't need to deal with it */
 
+    printDebug ("Tick %d.\n", gTimerTickDeciSeconds);
+    
     if (pthread_mutex_trylock (&lockLinkedLists) == 0)
     {
-        pEntry = &gUsedTimerListHead;
-        for (x = 0; (pEntry != PNULL) && (pEntry->inUse) && (x < (MAX_NUM_TIMERS)); x++)
+        pEntry = pgUsedTimerListHead;
+        for (x = 0; (pEntry != PNULL) && (x < (MAX_NUM_TIMERS)); x++)
         {
             if (pEntry->timer.expiryTimeDeciSeconds <= gTimerTickDeciSeconds)
             {
@@ -313,42 +308,50 @@ static void tickHandler (sigval_t sv)
 static void sortUsedListUnprotected (void)
 {
     UInt32 x = 0;
-    TimerEntry * pEntry;
+    UInt32 i = 0;
+    TimerEntry * pEntry = pgUsedTimerListHead;
     UInt32 sortingStartNanoSeconds;
 
     sortingStartNanoSeconds = getProcessTimeNanoSeconds();
 
-    pEntry = &gUsedTimerListHead;
-    for (x = 0; (pEntry != PNULL) && (pEntry->inUse) && (x < (MAX_NUM_TIMERS * MAX_NUM_TIMERS)); x++)
+    for (x = 0; (pEntry != PNULL) && (x < (MAX_NUM_TIMERS * MAX_NUM_TIMERS)); x++)
     {
         if ((pEntry->pNextEntry != PNULL) && (pEntry->timer.expiryTimeDeciSeconds > pEntry->pNextEntry->timer.expiryTimeDeciSeconds))
         {
             TimerEntry * pThisEntry = pEntry;
             TimerEntry * pNextEntry = pEntry->pNextEntry;
 
-            printDebug ("sortUsedList: swapping entries %d with %d.\n", pEntry->timer.expiryTimeDeciSeconds, pEntry->pNextEntry->timer.expiryTimeDeciSeconds);
+            printDebug ("sortUsedList: swapping entry %d (%d) with entry %d (%d).\n", i, pEntry->timer.expiryTimeDeciSeconds, i + 1, pNextEntry->timer.expiryTimeDeciSeconds);
             /* If this entry has a later expiry time than the next one, swap them */
             pThisEntry->pNextEntry = pNextEntry->pNextEntry;
             pNextEntry->pPrevEntry = pThisEntry->pPrevEntry;
             pThisEntry->pPrevEntry = pNextEntry;
             pNextEntry->pNextEntry = pThisEntry;
             
+            /* If we have just changed the head, swap it around too */
+            if (pThisEntry == pgUsedTimerListHead)
+            {
+                pgUsedTimerListHead = pNextEntry;
+            }
+            
             /* Restart the sort from the beginning */
-            pEntry = &gUsedTimerListHead;
+            pEntry = pgUsedTimerListHead;
+            i = 0;
         }
         else
         {
             pEntry = pEntry->pNextEntry;
+            i++;
         }
     }
     
     if (x == MAX_NUM_TIMERS * MAX_NUM_TIMERS)
     {
-        printDebug ("sortUsedList: WARNING, sorting the timer list hit the buffers (%d iterations, %d nanoseconds).\n", x, getProcessTimeNanoSeconds() - sortingStartNanoSeconds);
+        printDebug ("sortUsedList: WARNING, sorting the timer list hit the buffers (%d iterations, %d microseconds).\n", x, (getProcessTimeNanoSeconds() - sortingStartNanoSeconds) / 1000);
     }
     else
     {
-        printDebug ("sortUsedList: sorting the timer list took %d iterations, %d nanoseconds.\n", x, getProcessTimeNanoSeconds() - sortingStartNanoSeconds);        
+        printDebug ("sortUsedList: sorting the timer list took %d iterations, %d microseconds.\n", x, (getProcessTimeNanoSeconds() - sortingStartNanoSeconds) / 1000);        
     }
 }
 
@@ -362,68 +365,50 @@ static Timer * allocTimer (void)
 {
     Timer * pAlloc = PNULL;
     UInt32 x = 0;
-    TimerEntry * pEntry;
+    TimerEntry * pEntry = pgFreeTimerListHead;
+    TimerEntry * pPrevEntry = PNULL;
 
     pthread_mutex_lock (&lockLinkedLists);
 
-    /* If there is already an unused entry in the list, just return it */
-    pEntry = &gUsedTimerListHead;
-    for (x = 0; (pEntry != PNULL) && (pEntry->inUse) && (x < MAX_NUM_TIMERS); x++)
+    printDebug ("allocTimer: finding entry in the free list...\n");
+    /* Find the entry at the end of the free list. TODO quicker to take it from the front */
+    for (x = 0; (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
     {
+        pPrevEntry = pEntry;
         pEntry = pEntry->pNextEntry;
     }
 
-    if ((pEntry != PNULL) && (!pEntry->inUse))
+    /* If there is one, move it to the used list */
+    if (pPrevEntry != PNULL)
     {
-        printDebug ("allocTimer: found existing unused entry in list.\n");
-        /* Good, use this one */
-        memset (&(pEntry->timer), 0, sizeof (pEntry->timer));
-        pEntry->inUse = true;
-        pAlloc = &(pEntry->timer);
-    }
-    else
-    {
-        printDebug ("allocTimer: finding malloc()ed entry in the free list...\n");
-        /* Find the malloc()ed entry at the end of the free list */
-        pEntry = &gFreeTimerListHeadUnused;
-        for (x = 0; (pEntry->pNextEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
+        TimerEntry * pWantedEntry = pPrevEntry;
+        TimerEntry ** ppEntry = PNULL;
+
+        /* Unlink it from the end of the free list */
+        if (pWantedEntry->pPrevEntry != PNULL)
         {
-            pEntry = pEntry->pNextEntry;
+            pWantedEntry->pPrevEntry->pNextEntry = pWantedEntry->pNextEntry;
+            pWantedEntry->pPrevEntry = PNULL;
+        }
+        if (pWantedEntry == pgFreeTimerListHead) /* Deal with empty free list case */
+        {
+            pgFreeTimerListHead = PNULL;
+        }        
+
+        /* Attach it to the end of the used list */
+        ppEntry = &pgUsedTimerListHead;
+        pPrevEntry = PNULL;
+        for (x = 0; (*ppEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
+        {
+            pPrevEntry = *ppEntry; 
+            ppEntry = &(pEntry->pNextEntry);
         }
 
-        /* If there is one, move it to the used list */
-        if ((pEntry != PNULL) && (pEntry->pNextEntry == PNULL) && pEntry != &gFreeTimerListHeadUnused)
+        if (*ppEntry == PNULL)
         {
-            TimerEntry * pWantedEntry = pEntry;
-
-            /* Unlink it from the end of the free list */
-            if (pWantedEntry->pPrevEntry != PNULL)
-            {
-                pWantedEntry->pPrevEntry->pNextEntry = pWantedEntry->pNextEntry;
-                pWantedEntry->pPrevEntry = PNULL;
-            }
-
-            /* Attach it to the end of the used list */
-            pEntry = &gUsedTimerListHead;
-            for (x = 0; (pEntry->pNextEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
-            {
-                pEntry = pEntry->pNextEntry;
-            }
-
-            if (pEntry->pNextEntry == PNULL)
-            {
-                pEntry->pNextEntry = pWantedEntry;
-                pWantedEntry->pPrevEntry = pEntry;
-                pWantedEntry->inUse = true;
-                pAlloc = &(pWantedEntry->timer);
-                
-                /* Now sort the list */
-                sortUsedListUnprotected();
-            }
-            else
-            {
-                ASSERT_ALWAYS_PARAM (x);   
-            }
+            *ppEntry = pWantedEntry;
+            pWantedEntry->pPrevEntry = pPrevEntry;
+            pAlloc = &(pWantedEntry->timer);
         }
         else
         {
@@ -437,71 +422,25 @@ static Timer * allocTimer (void)
 }
 
 /*
- * Free unused timers
- *
- * IMPORTANT: the lockLinkedLists mutex MUST be held
- * by the calling function!!!  It is not grabbed
- * here as this function is only called from places
- * where it is already held and recursive mutexes appear
- * to be only unreliably present in Linux.
- */
-static void freeUnusedTimersUnprotected (void)
-{
-    UInt32 x = 0;
-    TimerEntry * pEntry = PNULL;
-
-    printDebug ("freeUnusedTimers: freeing unused timers.\n");
-    
-    /* Go to the end of the list */
-    pEntry = &gUsedTimerListHead;
-    for (x = 0; (pEntry->pNextEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
-    {
-        pEntry = pEntry->pNextEntry;
-    }
-
-    if ((pEntry != PNULL) && (pEntry->pNextEntry == PNULL))
-    {
-        /* Now work backwards up the list freeing unused things until we get
-         * to the head */
-        for (x = 0; (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
-        {
-            TimerEntry * pNextOne = pEntry->pPrevEntry;
-            /* Check that this entry is unused and not the first static entry then,
-             * if it is, free it */
-            if ((!(pEntry->inUse)) && (pEntry != &gUsedTimerListHead))
-            {
-                freeTimerUnprotected (&(pEntry->timer));
-                printDebug ("freeUnusedTimers: freeing an entry.\n");
-            }
-            pEntry = pNextOne;
-        }
-    }
-    else
-    {
-        ASSERT_ALWAYS_PARAM (x);   
-    }
-}
-
-/*
  * Empty the used timer list
  */
 static void freeAllTimers (void)
 {
     UInt32 x;
-    TimerEntry * pEntry = PNULL;
+    TimerEntry * pEntry = pgUsedTimerListHead;
+    TimerEntry * pNextEntry = PNULL;
 
     pthread_mutex_lock (&lockLinkedLists);
 
     printDebug ("freeAllTimers: freeing all timers.\n");
     
-    pEntry = &gUsedTimerListHead;
     for (x = 0; (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
     {
-        pEntry->inUse = false;
-        pEntry = pEntry->pNextEntry;
+        pNextEntry = pEntry->pNextEntry;
+        freeTimerUnprotected (&(pEntry->timer));
+        pEntry = pNextEntry;
     }
-
-    freeUnusedTimersUnprotected();
+    pgUsedTimerListHead = PNULL;
 
     pthread_mutex_unlock (&lockLinkedLists);
 }
@@ -512,8 +451,8 @@ static void freeAllTimers (void)
 static void actionTimerServerStart (void)
 {
     UInt32 x;
-    TimerEntry * pPrevEntry = &gFreeTimerListHeadUnused;
-    TimerEntry ** ppEntry = &(gFreeTimerListHeadUnused.pNextEntry);
+    TimerEntry ** ppEntry = &pgFreeTimerListHead;
+    TimerEntry * pPrevEntry = PNULL;
 
     /* Create the mutex */
     if (pthread_mutex_init (&lockLinkedLists, NULL) != 0)
@@ -521,12 +460,8 @@ static void actionTimerServerStart (void)
         ASSERT_ALWAYS_STRING ("actionTimerServerStart: failed pthread_mutex_init().");
     }
     
-    memset (&gFreeTimerListHeadUnused, 0, sizeof (gFreeTimerListHeadUnused));
-    memset (&gUsedTimerListHead, 0, sizeof (gUsedTimerListHead));
-
-    /* Create a malloc()ed free list attached to the (unused) static
-     * head of the free list */
-    for (x = 1; x < MAX_NUM_TIMERS; x++)  /* from 1 as it's from head.pNextEntry onwards */
+    /* Create a malloc()ed free list */
+    for (x = 0; x < MAX_NUM_TIMERS; x++)
     {
         *ppEntry = (TimerEntry *) malloc (sizeof (TimerEntry));
         if (*ppEntry != PNULL)
@@ -535,7 +470,6 @@ static void actionTimerServerStart (void)
             /* Link it in */
             (*ppEntry)->pPrevEntry = pPrevEntry;
             (*ppEntry)->pNextEntry = PNULL;
-            (*ppEntry)->inUse = false;
             if (pPrevEntry != PNULL)
             {
                 pPrevEntry->pNextEntry = *ppEntry;
@@ -559,7 +493,7 @@ static void actionTimerServerStart (void)
     /* Create the tick event */
     gSev.sigev_notify = SIGEV_THREAD;
     gSev.sigev_value.sival_ptr = &gTimerId;
-    gSev.sigev_notify_function = tickHandler;
+    gSev.sigev_notify_function = tickHandlerCallback;
     gSev.sigev_notify_attributes = PNULL;
     if (timer_create (CLOCK_MONOTONIC, &gSev, &gTimerId) != 0)
     {
@@ -584,25 +518,21 @@ static void actionTimerServerStart (void)
 static void actionTimerServerStop (void)
 {
     UInt32 x = 0;
-    TimerEntry * pEntry = PNULL;
+    TimerEntry * pEntry = pgFreeTimerListHead;
 
     /* Return used timers to the free list */
     freeAllTimers ();
 
     pthread_mutex_lock (&lockLinkedLists);
     
-    /* Free the free list from the end */
-    pEntry = &gFreeTimerListHeadUnused;
-    for (x = 0; (pEntry->pNextEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
+    /* Free the free list */
+    for (x = 0; (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
     {
-        pEntry = pEntry->pNextEntry;
-    }
-    for (x = 0; (pEntry != PNULL) && (pEntry != &gFreeTimerListHeadUnused) && (x < MAX_NUM_TIMERS); x++)
-    {
-        TimerEntry * pNextOne = pEntry->pPrevEntry;
+        TimerEntry * pNextEntry = pEntry->pNextEntry;
         free (pEntry);
-        pEntry = pNextOne;
+        pEntry = pNextEntry;
     }
+    pgFreeTimerListHead = PNULL;
     
     if (timer_delete (gTimerId) != 0)
     {
@@ -610,7 +540,6 @@ static void actionTimerServerStop (void)
     }
 
     pthread_mutex_unlock (&lockLinkedLists);
-    
     
     /* Destroy the mutex */
     pthread_mutex_destroy (&lockLinkedLists);
@@ -640,6 +569,11 @@ static void actionTimerStart (TimerStartReq *pTimerStartReq)
         pTimer->id = pTimerStartReq->id;
         pTimer->sourcePort = pTimerStartReq->sourcePort;
         pTimer->pContext = pTimerStartReq->pContext;
+
+        /* Now sort the list */
+        pthread_mutex_lock (&lockLinkedLists);
+        sortUsedListUnprotected();
+        pthread_mutex_unlock (&lockLinkedLists);
     }
     else
     {
@@ -662,8 +596,8 @@ static void actionTimerStop (TimerStopReq *pTimerStopReq)
                 pTimerStopReq->id,
                 pTimerStopReq->sourcePort);
 
-    pEntry = &gUsedTimerListHead;
-    for (x = 0; !found && (pEntry != PNULL) && (pEntry->inUse) && (x < MAX_NUM_TIMERS); x++)
+    pEntry = pgUsedTimerListHead;
+    for (x = 0; !found && (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
     {
         if ((pEntry->timer.id == pTimerStopReq->id) && (pEntry->timer.sourcePort == pTimerStopReq->sourcePort))
         {
