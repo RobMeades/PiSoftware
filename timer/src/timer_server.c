@@ -222,12 +222,13 @@ static void freeTimerUnprotected (Timer *pTimer)
         for (x = 0; (*ppEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
         {
             pPrevEntry = *ppEntry;
-            ppEntry = &(pEntry->pNextEntry);
+            ppEntry = &((*ppEntry)->pNextEntry);
         }
         if (*ppEntry == PNULL)
         {
             *ppEntry = pWantedEntry;
             pWantedEntry->pPrevEntry = pPrevEntry;
+            pWantedEntry->pNextEntry = PNULL;
         }
         else
         {
@@ -270,7 +271,7 @@ static void tickHandlerCallback (sigval_t sv)
             {
                 Timer * pTimer = &(pEntry->timer);
     
-                printDebug ("tickHandler: timer from port %d (id %d) has expired at tick %d (value was %d).\n", pEntry->timer.sourcePort, pEntry->timer.id, gTimerTickDeciSeconds, pEntry->timer.expiryTimeDeciSeconds);
+                printDebug ("tickHandler: %d decisecond timer expired.\n", pEntry->timer.expiryTimeDeciSeconds);
                 
                 /* Timer has expired, send a message back */
                 sendTimerExpiryIndMsg (pTimer);
@@ -286,11 +287,11 @@ static void tickHandlerCallback (sigval_t sv)
         }
         
         pthread_mutex_unlock (&lockLinkedLists);
-        printDebug ("tickHandler: processing a tick took %d microseconds.\n", (getProcessTimeNanoSeconds() - tickProcessingStartNanoSeconds) / 1000);
+        printDebug ("tickHandler: processing took %d microseconds.\n", (getProcessTimeNanoSeconds() - tickProcessingStartNanoSeconds) / 1000);
     }
     else
     {
-        printDebug ("tickHandler: linked lists locked, skipping tick processing at tick %d.\n", gTimerTickDeciSeconds);
+        printDebug ("tickHandler: lists locked, skipping at tick %d.\n", gTimerTickDeciSeconds);
     }
 }
 
@@ -314,6 +315,7 @@ static void sortUsedListUnprotected (void)
 
     sortingStartNanoSeconds = getProcessTimeNanoSeconds();
 
+    printDebug ("sortUsedList: starting...\n");
     for (x = 0; (pEntry != PNULL) && (x < (MAX_NUM_TIMERS * MAX_NUM_TIMERS)); x++)
     {
         if ((pEntry->pNextEntry != PNULL) && (pEntry->timer.expiryTimeDeciSeconds > pEntry->pNextEntry->timer.expiryTimeDeciSeconds))
@@ -388,7 +390,6 @@ static Timer * allocTimer (void)
         if (pWantedEntry->pPrevEntry != PNULL)
         {
             pWantedEntry->pPrevEntry->pNextEntry = pWantedEntry->pNextEntry;
-            pWantedEntry->pPrevEntry = PNULL;
         }
         if (pWantedEntry == pgFreeTimerListHead) /* Deal with empty free list case */
         {
@@ -401,13 +402,14 @@ static Timer * allocTimer (void)
         for (x = 0; (*ppEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
         {
             pPrevEntry = *ppEntry; 
-            ppEntry = &(pEntry->pNextEntry);
+            ppEntry = &((*ppEntry)->pNextEntry);
         }
 
         if (*ppEntry == PNULL)
         {
             *ppEntry = pWantedEntry;
             pWantedEntry->pPrevEntry = pPrevEntry;
+            pWantedEntry->pNextEntry = PNULL;
             pAlloc = &(pWantedEntry->timer);
         }
         else

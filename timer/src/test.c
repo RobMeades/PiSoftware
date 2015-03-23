@@ -227,15 +227,21 @@ int main (int argc, char **argv)
                     UInt32 x;
                     UInt32 rememberId;
                     
-                    printProgress ("TEST 1: a one second timer which should expire.\n");
+                    printProgress ("TEST 1: a 1 second timer which should expire.\n");
                     sendStartTimer (10, id, LOCAL_SERVER_PORT, PNULL);
-                    sleep (5);
+                    sleep (2);
                     printProgress ("TEST 2: a 1.5 second timer which is stopped after 1 second.\n");
                     id++;
                     sendStartTimer (15, id, LOCAL_SERVER_PORT, PNULL);
                     sleep (1);
                     sendStopTimer (id, LOCAL_SERVER_PORT);
-                    printProgress ("TEST 3: start 10 2(ish) second timers, stop the first five and then wait for the last five to expire.\n");
+                    printProgress ("TEST 3: a 1 second timer followed by a 0.5 second timer which should both expire.\n");
+                    id++;
+                    sendStartTimer (10, id, LOCAL_SERVER_PORT, PNULL);
+                    id++;
+                    sendStartTimer (5, id, LOCAL_SERVER_PORT, PNULL);
+                    sleep (2);
+                    printProgress ("TEST 4: start 10 2(ish) second timers, stop the first five and then wait for the last five to expire.\n");
                     id++;
                     rememberId = id;
                     for (x = 0; x < 10; x++)
@@ -248,7 +254,7 @@ int main (int argc, char **argv)
                         sendStopTimer (rememberId, LOCAL_SERVER_PORT);
                         rememberId++;
                     }
-                    sleep (5);
+                    sleep (10);
                 }
                 
                 /* Tidy up the local server now that we're done */
