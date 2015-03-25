@@ -29,21 +29,39 @@ static Bool gSuspendDebug = false;
 /*
  * Assert function for debugging (should be called via the macros in rob_system.c).
  */
-Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 param1)
+Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, Bool paramPresent, UInt32 param1)
 {
     Char * pFormat = PNULL;
     
     if (pText)
     {
-        pFormat = "\n!!! ASSERT: %s#%u:%s %lu!!!\n";
-	    printf (pFormat, pPlace, (int) line, pText, param1);
-	    syslog (LOG_ALERT, pFormat, pPlace, (int) line, pText, param1);
+    	if (paramPresent)
+    	{
+            pFormat = "\n!!! ASSERT: %s#%u:%s %lu!!!\n";
+            printf (pFormat, pPlace, (int) line, pText, param1);
+	        syslog (LOG_ALERT, pFormat, pPlace, (int) line, pText, param1);
+    	}
+    	else
+    	{
+            pFormat = "\n!!! ASSERT: %s#%u:%s!!!\n";
+            printf (pFormat, pPlace, (int) line, pText);
+	        syslog (LOG_ALERT, pFormat, pPlace, (int) line, pText);
+    	}
     }
     else
     {
-        pFormat = "\n!!! ASSERT: %s#%u: %lu!!!\n";
-	    printf (pFormat, pPlace, (int) line, param1);
-        syslog (LOG_ALERT, pFormat, pPlace, (int) line, param1);
+    	if (paramPresent)
+    	{
+            pFormat = "\n!!! ASSERT: %s#%u: %lu!!!\n";
+	        printf (pFormat, pPlace, (int) line, param1);
+            syslog (LOG_ALERT, pFormat, pPlace, (int) line, param1);
+    	}
+    	else
+    	{
+            pFormat = "\n!!! ASSERT: %s#%u!!!\n";
+            printf (pFormat, pPlace, (int) line);
+            syslog (LOG_ALERT, pFormat, pPlace, (int) line);
+    	}
     }
     
     /* If debug is printing to file, put the assert there also */
@@ -58,11 +76,25 @@ Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, UInt32 pa
         
         if (pText)
         {
-            fprintf (pgDebugPrintsStream, pFormat, pPlace, (int) line, pText, param1);
+            if (paramPresent)
+            {
+                fprintf (pgDebugPrintsStream, pFormat, pPlace, (int) line, pText, param1);
+            }
+            else
+            {
+                fprintf (pgDebugPrintsStream, pFormat, pPlace, (int) line, pText);
+            }
         }
         else
         {
-            fprintf (pgDebugPrintsStream, pFormat, pPlace, (int) line, param1);
+            if (paramPresent)
+            {
+                fprintf (pgDebugPrintsStream, pFormat, pPlace, (int) line, param1);
+            }
+            else
+            {
+                fprintf (pgDebugPrintsStream, pFormat, pPlace, (int) line);
+            }
         }
         fflush (pgDebugPrintsStream);
         fclose (pgDebugPrintsStream);        
