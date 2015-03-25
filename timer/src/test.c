@@ -22,6 +22,7 @@
  * MANIFEST CONSTANTS
  */
 #define LOCAL_SERVER_PORT 5229
+#define MAX_NUM_TIMER_EXPIRY_INDS_REMEMBERED 10
 
 /*
  * EXTERNS
@@ -32,6 +33,10 @@ extern int errno;
  * GLOBALS (prefixed with g)
  */
 extern Char *pgTimerMessageNames[];
+/* An array to store the timer expiries in */
+TimerExpiryInd gTimerExpiryInds[MAX_NUM_TIMER_EXPIRY_INDS_REMEMBERED];
+/* The number of entries in the array */
+UInt8_t gNumTimerExpiryInds = 0;
 
 /*
  * STATIC FUNCTIONS
@@ -134,9 +139,27 @@ static Bool sendStopTimer (TimerId id, SInt32 sourcePort)
 }
 
 static void handleTimerExpiryInd (TimerExpiryInd *pTimerExpiryInd)
-{   
+{
+    UInt32_t x;
+    
     printDebug ("Received timer expiry, timer id %d, pContext 0x%x.\n",
-                pTimerExpiryInd->id, pTimerExpiryInd->pContext);        
+                pTimerExpiryInd->id, pTimerExpiryInd->pContext);
+                
+    /* Remember the data so that we can check it later */
+    if (gNumTimerExpiryInds => MAX_NUM_TIMER_EXPIRY_INDS_REMEMBERED)
+    {
+        for (x = 0; x < MAX_NUM_TIMER_EXPIRY_INDS_REMEMBERED - 1; x++)
+        {
+            memcpy (&(gTimerExpiryInds[x]), &(gTimerExpiryInds[x + 1]), sizeof (gTimerExpiryInds[x]));
+        }
+    }
+    
+    memcpy (&(gTimerExpiryInds[gNumTimerExpiryInds]), pTimerExpiryInd, sizeof (gTimerExpiryInds[gNumTimerExpiryInds]));
+    
+    if (gNumTimerExpiryInds < MAX_NUM_TIMER_EXPIRY_INDS_REMEMBERED)
+    {
+        gNumTimerExpiryInds++;
+    }
 }
 
 /*
@@ -190,6 +213,9 @@ int main (int argc, char **argv)
     pid_t  tiServerPID;
     pthread_t localServerThread;
     UInt8  id = 0;
+    char buf1 = "hello world";
+    char buf2 = "goodbye cruel world";
+    char buf3 = "hi world";
 
     setDebugPrintsOnToFile ("timer_test.log");
     setProgressPrintsOn();
@@ -229,21 +255,36 @@ int main (int argc, char **argv)
                     UInt32 x;
                     UInt32 rememberId;
                     
-                    printProgress ("TEST 1: a 1 second timer which should expire.\n");
+                    printProgress ("------------------------------------------------------------------\n");
+                    printProgress ("STARTING TIMER TESTS.\n");
+                    printProgress ("- TEST 0: start a 25 second timer, with a context, that should over-arch\n          these tests.\n");
+                    sendStartTimer (250, id, LOCAL_SERVER_PORT, buf2);
+                    
+                    printProgress ("- TEST 1: a 1 second timer which should expire.\n");
+                    id++;
                     sendStartTimer (10, id, LOCAL_SERVER_PORT, PNULL);
                     sleep (2);
-                    printProgress ("TEST 2: a 1.5 second timer which is stopped after 1 second.\n");
+                    ASSERT_PARAM (gNumTimerExpiryInds == 1, gNumTimerExpiryInds);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 1].id == id, gTimerExpiryInds[gNumTimerExpiryInds - 1].id);
+
+                    printProgress ("- TEST 2: a 1.5 second timer which is stopped after 1 second.\n");
                     id++;
                     sendStartTimer (15, id, LOCAL_SERVER_PORT, PNULL);
                     sleep (1);
                     sendStopTimer (id, LOCAL_SERVER_PORT);
-                    printProgress ("TEST 3: a 1 second timer followed by a 0.5 second timer which should both expire.\n");
+                    ASSERT_PARAM (gNumTimerExpiryInds == 1, gNumTimerExpiryInds);
+                    
+                    printProgress ("- TEST 3: a 1 second timer followed by a 0.5 second timer which should both\n          expire.\n");
                     id++;
                     sendStartTimer (10, id, LOCAL_SERVER_PORT, PNULL);
                     id++;
                     sendStartTimer (5, id, LOCAL_SERVER_PORT, PNULL);
                     sleep (2);
-                    printProgress ("TEST 4: start 10 5(ish) second timers, stop the first five and then wait for the last five to expire.\n");
+                    ASSERT_PARAM (gNumTimerExpiryInds == 3, gNumTimerExpiryInds);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 2].id == id, gTimerExpiryInds[gNumTimerExpiryInds - 2].id);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 1].id == id - 1, gTimerExpiryInds[gNumTimerExpiryInds - 1].id);
+
+                    printProgress ("- TEST 4: start 10 5(ish) second timers, stop the first five and then wait\n          for the last five to expire.\n");
                     id++;
                     rememberId = id;
                     for (x = 0; x < 10; x++)
@@ -256,7 +297,64 @@ int main (int argc, char **argv)
                         sendStopTimer (rememberId, LOCAL_SERVER_PORT);
                         rememberId++;
                     }
-                    sleep (15);
+                    sleep (8);
+                    ASSERT_PARAM (gNumTimerExpiryInds == 8, gNumTimerExpiryInds);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 5].id == id - 4, gTimerExpiryInds[gNumTimerExpiryInds - 5].id);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 4].id == id - 3, gTimerExpiryInds[gNumTimerExpiryInds - 4].id);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 3].id == id - 2, gTimerExpiryInds[gNumTimerExpiryInds - 3].id);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 2].id == id - 1, gTimerExpiryInds[gNumTimerExpiryInds - 2].id);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 1].id == id, gTimerExpiryInds[gNumTimerExpiryInds - 1].id);
+
+                    printProgress ("- TEST 5: start 5 timers of differing, overlapping, expiries and check that\n          they expire in the correct order.\n");
+                    gNumTimerExpiryInds = 0;
+                    id++;
+                    sendStartTimer (21, id, LOCAL_SERVER_PORT, PNULL);
+                    id++;
+                    sendStartTimer (10, id, LOCAL_SERVER_PORT, PNULL);
+                    id++;
+                    sendStartTimer (25, id, LOCAL_SERVER_PORT, PNULL);
+                    id++;
+                    sendStartTimer (11, id, LOCAL_SERVER_PORT, PNULL);
+                    id++;
+                    sendStartTimer (5, id, LOCAL_SERVER_PORT, PNULL);
+                    sleep (5);
+                    ASSERT_PARAM (gNumTimerExpiryInds == 5, gNumTimerExpiryInds);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 5].id == id, gTimerExpiryInds[gNumTimerExpiryInds - 5].id);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 4].id == id - 3, gTimerExpiryInds[gNumTimerExpiryInds - 4].id);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 3].id == id - 1, gTimerExpiryInds[gNumTimerExpiryInds - 3].id);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 2].id == id - 4, gTimerExpiryInds[gNumTimerExpiryInds - 2].id);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 1].id == id - 2, gTimerExpiryInds[gNumTimerExpiryInds - 1].id);
+
+                    printProgress ("- TEST 6: start a 0 second timer, it should expire straight away\n          (100 ms permitted).\n");
+                    id++;
+                    sendStartTimer (0, id, LOCAL_SERVER_PORT, PNULL);
+                    usleep (100000);
+                    ASSERT_PARAM (gNumTimerExpiryInds == 6, gNumTimerExpiryInds);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 1].id == id, gTimerExpiryInds[gNumTimerExpiryInds - 1].id);
+
+                    printProgress ("- TEST 7: start 3 timers, with contexts, then stop the middle one and check\n          that the other two expire in the right order.\n");
+                    id++;
+                    sendStartTimer (30, id, LOCAL_SERVER_PORT, buf1);
+                    id++;
+                    sendStartTimer (20, id, LOCAL_SERVER_PORT, buf2);
+                    id++;
+                    sendStartTimer (10, id, LOCAL_SERVER_PORT, buf3);
+                    sendStopTimer (id - 1, LOCAL_SERVER_PORT);
+                    sleep (4);
+                    ASSERT_PARAM (gNumTimerExpiryInds == 9, gNumTimerExpiryInds);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds].id == id, gTimerExpiryInds[gNumTimerExpiryInds].id);
+                    ASSERT_PARAM (strcmp (gTimerExpiryInds[gNumTimerExpiryInds].pContext, buf3) == 0, strlen (gTimerExpiryInds[gNumTimerExpiryInds].pContext));
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds - 1].id == id - 2, gTimerExpiryInds[gNumTimerExpiryInds - 1].id);
+                    ASSERT_PARAM (strcmp (gTimerExpiryInds[gNumTimerExpiryInds - 1].pContext, buf1) == 0, strlen (gTimerExpiryInds[gNumTimerExpiryInds].pContext));
+
+                    printProgress ("- TEST 8: wait for the over-arching timer to expire.\n");
+                    sleep (5);
+                    ASSERT_PARAM (gNumTimerExpiryInds == 10, gNumTimerExpiryInds);
+                    ASSERT_PARAM (gTimerExpiryInds[gNumTimerExpiryInds].id == 0, gTimerExpiryInds[gNumTimerExpiryInds].id);
+                    ASSERT_PARAM (strcmp (gTimerExpiryInds[gNumTimerExpiryInds].pContext, buf2) == 0, strlen (gTimerExpiryInds[gNumTimerExpiryInds].pContext));
+
+                    printProgress ("TESTING COMPLETED: if there are no asserts above then it's a pass.\n");
+                    printProgress ("------------------------------------------------------------------\n");
                 }
                 
                 /* Tidy up the local server now that we're done */
