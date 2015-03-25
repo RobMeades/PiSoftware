@@ -31,6 +31,8 @@ int main (int argc, char **argv)
 
     setDebugPrintsOnToFile ("timer.log");
     setProgressPrintsOn();
+    copyDebugPrintsToSyslogOn();
+    copyProgressPrintsToSyslogOn();
 
     if (argc == 2)
     {

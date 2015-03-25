@@ -193,7 +193,9 @@ int main (int argc, char **argv)
 
     setDebugPrintsOnToFile ("timer_test.log");
     setProgressPrintsOn();
-
+    copyDebugPrintsToSyslogOn();
+    copyProgressPrintsToSyslogOn();
+    
     /* Spawn a child that will become the Timer server. */
     tiServerPID = fork();
     if (tiServerPID == 0)
@@ -241,12 +243,12 @@ int main (int argc, char **argv)
                     id++;
                     sendStartTimer (5, id, LOCAL_SERVER_PORT, PNULL);
                     sleep (2);
-                    printProgress ("TEST 4: start 10 2(ish) second timers, stop the first five and then wait for the last five to expire.\n");
+                    printProgress ("TEST 4: start 10 5(ish) second timers, stop the first five and then wait for the last five to expire.\n");
                     id++;
                     rememberId = id;
                     for (x = 0; x < 10; x++)
                     {
-                        sendStartTimer (20 + x, id, LOCAL_SERVER_PORT, PNULL);
+                        sendStartTimer (50 + x, id, LOCAL_SERVER_PORT, PNULL);
                         id++;
                     }
                     for (x = 0; x < 5; x++)
@@ -254,7 +256,7 @@ int main (int argc, char **argv)
                         sendStopTimer (rememberId, LOCAL_SERVER_PORT);
                         rememberId++;
                     }
-                    sleep (10);
+                    sleep (15);
                 }
                 
                 /* Tidy up the local server now that we're done */

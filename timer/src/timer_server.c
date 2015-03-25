@@ -74,6 +74,43 @@ pthread_mutex_t lockLinkedLists;
  */
 
 /*
+ * Print the used timer list for debug purposes.
+ * 
+ * IMPORTANT: the lockLinkedLists mutex MUST be held
+ * by the calling function!!!  It is not grabbed
+ * here as this function is only called from places
+ * where it is already held and recursive mutexes appear
+ * to be only unreliably present in Linux.
+ * 
+ */
+void printDebugUsedTimerListUnprotected (void)
+{
+    UInt32 x;
+    TimerEntry * pEntry = pgUsedTimerListHead;
+
+    if (pgUsedTimerListHead == PNULL)
+    {
+        printDebug ("No timers running.\n");        
+    }
+    else
+    {
+        printDebug ("Timers running:\n");
+        for (x = 0; (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
+        {
+            printDebug (" %d (0x%08x): expires %d, id %d/%d, pContext 0x%08x, next 0x%08x.\n",
+                        x,
+                        &(pEntry->timer),
+                        pEntry->timer.expiryTimeDeciSeconds,
+                        pEntry->timer.sourcePort,
+                        pEntry->timer.id,
+                        pEntry->timer.pContext,
+                        pEntry->pNextEntry);
+            pEntry = pEntry->pNextEntry;
+        }
+    }
+}
+
+/*
  * Get the process time in nanosecond resolution.
  * 
  * @return  the process time in nanoseconds.
@@ -159,7 +196,7 @@ static Bool sendTimerExpiryIndMsg (Timer *pTimer)
 {
     TimerExpiryInd msg;
     
-    printDebug ("Sending TimerExpiryInd message to port %d (timer id %d, pContext 0x%lx).\n", pTimer->sourcePort, pTimer->id, pTimer->pContext);
+    printDebug ("Sending TimerExpiryInd message to port %d (timer id %d, pContext 0x%08x).\n", pTimer->sourcePort, pTimer->id, pTimer->pContext);
     msg.id = pTimer->id;
     msg.pContext = pTimer->pContext;
     
@@ -185,7 +222,7 @@ static void freeTimerUnprotected (Timer *pTimer)
 
     ASSERT_PARAM (pTimer != PNULL, (unsigned long) pTimer);
 
-    printDebug ("freeTimer: freeing the timer at 0x%lx...\n", pTimer);
+    printDebug ("freeTimer: freeing the timer at 0x%08x...\n", pTimer);
 
     /* Find the entry in the list */
     for (x = 0; (pEntry != PNULL) && (&(pEntry->timer) != pTimer) && (x < MAX_NUM_TIMERS); x++)
@@ -202,19 +239,22 @@ static void freeTimerUnprotected (Timer *pTimer)
         /* Unlink it from the used list */
         memset (&(pWantedEntry->timer), 0, sizeof (pWantedEntry->timer));
         printDebug ("freeTimer: moving entry to free list.\n");
+        /* Link the previous entry's next entry pointer to the one ahead of this */
         if (pWantedEntry->pPrevEntry != PNULL)
         {
             pWantedEntry->pPrevEntry->pNextEntry = pWantedEntry->pNextEntry;
             pWantedEntry->pPrevEntry = PNULL;
         }
+        /* If it is the first entry in the list that is expiring, move the head */
+        if (pWantedEntry == pgUsedTimerListHead)
+        {
+            pgUsedTimerListHead = pWantedEntry->pNextEntry;
+        }
+        /* Now link the next entry's previous entry pointer to the one before this */
         if (pWantedEntry->pNextEntry != PNULL)
         {
             pWantedEntry->pNextEntry->pPrevEntry = pWantedEntry->pPrevEntry;
             pWantedEntry->pNextEntry = PNULL;
-        }
-        if (pWantedEntry == pgUsedTimerListHead) /* Deal with empty used list case */
-        {
-            pgUsedTimerListHead = PNULL;
         }
 
         /* Put it on the end of the free list. TODO putting it on the front would be quicker */
@@ -264,14 +304,14 @@ static void tickHandlerCallback (sigval_t sv)
     
     if (pthread_mutex_trylock (&lockLinkedLists) == 0)
     {
-        pEntry = pgUsedTimerListHead;
+        pEntry = pgUsedTimerListHead; /* Need to assign this here as it may have been changed by whoever held the lock */
         for (x = 0; (pEntry != PNULL) && (x < (MAX_NUM_TIMERS)); x++)
         {
             if (pEntry->timer.expiryTimeDeciSeconds <= gTimerTickDeciSeconds)
             {
                 Timer * pTimer = &(pEntry->timer);
     
-                printDebug ("tickHandler: %d decisecond timer expired.\n", pEntry->timer.expiryTimeDeciSeconds);
+                printDebug ("tickHandler: %d decisecond timer at 0x%08x expired.\n", pEntry->timer.expiryTimeDeciSeconds, &(pEntry->timer));
                 
                 /* Timer has expired, send a message back */
                 sendTimerExpiryIndMsg (pTimer);
@@ -279,6 +319,7 @@ static void tickHandlerCallback (sigval_t sv)
                 /* Move to the next entry and then free this timer entry */
                 pEntry = pEntry->pNextEntry;
                 freeTimerUnprotected (pTimer);
+                printDebugUsedTimerListUnprotected();
             }
             else
             {
@@ -323,7 +364,7 @@ static void sortUsedListUnprotected (void)
             TimerEntry * pThisEntry = pEntry;
             TimerEntry * pNextEntry = pEntry->pNextEntry;
 
-            printDebug ("sortUsedList: swapping entry %d (%d) with entry %d (%d).\n", i, pEntry->timer.expiryTimeDeciSeconds, i + 1, pNextEntry->timer.expiryTimeDeciSeconds);
+            printDebug ("sortUsedList: swapping entry %d (%d, 0x%08x) with entry %d (%d, 0x%08x).\n", i, pEntry->timer.expiryTimeDeciSeconds, &(pEntry->timer), i + 1, pNextEntry->timer.expiryTimeDeciSeconds, &(pNextEntry->timer));
             /* If this entry has a later expiry time than the next one, swap them */
             pThisEntry->pNextEntry = pNextEntry->pNextEntry;
             pNextEntry->pPrevEntry = pThisEntry->pPrevEntry;
@@ -355,22 +396,29 @@ static void sortUsedListUnprotected (void)
     {
         printDebug ("sortUsedList: sorting the timer list took %d iterations, %d microseconds.\n", x, (getProcessTimeNanoSeconds() - sortingStartNanoSeconds) / 1000);        
     }
+    printDebugUsedTimerListUnprotected();
 }
 
 /*
  * Allocate a timer and re-sort the timer list.
  * 
+ * periodDeciSeconds  the timer period in deciSeconds
+ * sourcePort         the port to send the expiry message to
+ * id                 the id for the timer
+ * pContext           a context pointer to store with the timer
+ * 
  * @return  a pointer to the timer or PNULL if
  *          unable to allocate one.
  */
-static Timer * allocTimer (void)
+static Timer * allocTimer (UInt32 periodDeciSeconds, SInt32 sourcePort, TimerId id, void * pContext)
 {
     Timer * pAlloc = PNULL;
     UInt32 x = 0;
-    TimerEntry * pEntry = pgFreeTimerListHead;
+    TimerEntry * pEntry;
     TimerEntry * pPrevEntry = PNULL;
 
     pthread_mutex_lock (&lockLinkedLists);
+    pEntry = pgFreeTimerListHead; /* Assign this here in case it has been changed by whoever held the lock */
 
     printDebug ("allocTimer: finding entry in the free list...\n");
     /* Find the entry at the end of the free list. TODO quicker to take it from the front */
@@ -411,6 +459,17 @@ static Timer * allocTimer (void)
             pWantedEntry->pPrevEntry = pPrevEntry;
             pWantedEntry->pNextEntry = PNULL;
             pAlloc = &(pWantedEntry->timer);
+            
+            /* Copy the data in */
+            pAlloc->expiryTimeDeciSeconds = gTimerTickDeciSeconds + periodDeciSeconds;
+            pAlloc->id = id;
+            pAlloc->sourcePort = sourcePort;
+            pAlloc->pContext = pContext;
+
+            printDebug ("allocTimer: timer should expire at tick %d.\n", pAlloc->expiryTimeDeciSeconds);
+
+            /* Now sort the list */
+            sortUsedListUnprotected();
         }
         else
         {
@@ -429,10 +488,11 @@ static Timer * allocTimer (void)
 static void freeAllTimers (void)
 {
     UInt32 x;
-    TimerEntry * pEntry = pgUsedTimerListHead;
+    TimerEntry * pEntry;
     TimerEntry * pNextEntry = PNULL;
 
     pthread_mutex_lock (&lockLinkedLists);
+    pEntry = pgUsedTimerListHead; /* Assign this here in case it has been changed by whoever held the lock */
 
     printDebug ("freeAllTimers: freeing all timers.\n");
     
@@ -520,12 +580,13 @@ static void actionTimerServerStart (void)
 static void actionTimerServerStop (void)
 {
     UInt32 x = 0;
-    TimerEntry * pEntry = pgFreeTimerListHead;
+    TimerEntry * pEntry;
 
     /* Return used timers to the free list */
     freeAllTimers ();
 
     pthread_mutex_lock (&lockLinkedLists);
+    pEntry = pgFreeTimerListHead; /* Assign this here in case it has been changed by whoever held the lock */
     
     /* Free the free list */
     for (x = 0; (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
@@ -556,26 +617,17 @@ static void actionTimerStart (TimerStartReq *pTimerStartReq)
 {
     Timer * pTimer;
     
-    printDebug ("actionTimerStart: starting a timer of duration %d 10ths of a second (from port %d, id %d, pContext 0x%lx).\n",
+    printDebug ("actionTimerStart: starting a timer of duration %d 10ths of a second (from port %d, id %d, pContext 0x%08x).\n",
                 pTimerStartReq->expiryDeciSeconds,
                 pTimerStartReq->sourcePort,
                 pTimerStartReq->id,
                 pTimerStartReq->pContext);
 
-    /* Allocate a timer */
-    pTimer = allocTimer();
+    /* Allocate a timer and fill the data in */
+    pTimer = allocTimer (pTimerStartReq->expiryDeciSeconds, pTimerStartReq->sourcePort, pTimerStartReq->id, pTimerStartReq->pContext);
     if (pTimer != PNULL)
     {
-        /* Fill in the contents */
-        pTimer->expiryTimeDeciSeconds = gTimerTickDeciSeconds + pTimerStartReq->expiryDeciSeconds;
-        pTimer->id = pTimerStartReq->id;
-        pTimer->sourcePort = pTimerStartReq->sourcePort;
-        pTimer->pContext = pTimerStartReq->pContext;
-
-        /* Now sort the list */
-        pthread_mutex_lock (&lockLinkedLists);
-        sortUsedListUnprotected();
-        pthread_mutex_unlock (&lockLinkedLists);
+        printDebug ("actionTimerStart: allocated a timer at 0x%08x.\n", pTimer);
     }
     else
     {
@@ -598,6 +650,8 @@ static void actionTimerStop (TimerStopReq *pTimerStopReq)
                 pTimerStopReq->id,
                 pTimerStopReq->sourcePort);
 
+    pthread_mutex_lock (&lockLinkedLists);
+
     pEntry = pgUsedTimerListHead;
     for (x = 0; !found && (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
     {
@@ -605,12 +659,12 @@ static void actionTimerStop (TimerStopReq *pTimerStopReq)
         {
             found = true;
             
-            pthread_mutex_lock (&lockLinkedLists);
             freeTimerUnprotected (&(pEntry->timer));
-            pthread_mutex_unlock (&lockLinkedLists);
         }
         pEntry = pEntry->pNextEntry;
     }
+    
+    pthread_mutex_unlock (&lockLinkedLists);
 }
 
 /*
