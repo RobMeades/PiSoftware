@@ -19,17 +19,17 @@
  */
 
 static Bool gDebugPrintsAreOn = false;
-static Bool gCopyDebugPrintsToSyslog = false;
-static Bool gCopyHexDumpsToSyslog = false;
+static Bool gDebugPrintsToSyslogAreOn = false;
+static Bool gHexDumpsToSyslogAreOn = false;
+static FILE *pgDefaultStream = PNULL;
 static FILE *pgDebugPrintsStream = PNULL;
 static Bool gProgressPrintsAreOn = true;
-static Bool gCopyProgressPrintsToSyslog = false;
 static Bool gSuspendDebug = false;
 
 /*
  * Assert function for debugging (should be called via the macros in rob_system.c).
  */
-Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, Bool paramPresent, UInt32 param1)
+Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, Bool paramPresent, UInt32 param1, UInt32 param2, UInt32 param3)
 {
     Char * pFormat = PNULL;
     
@@ -37,9 +37,9 @@ Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, Bool para
     {
     	if (paramPresent)
     	{
-            pFormat = "\n!!! ASSERT: %s#%u:%s %lu!!!\n";
-            printf (pFormat, pPlace, (int) line, pText, param1);
-	        syslog (LOG_ALERT, pFormat, pPlace, (int) line, pText, param1);
+            pFormat = "\n!!! ASSERT: %s#%u:%s 0x%08x 0x%08x 0x%08x!!!\n";
+            printf (pFormat, pPlace, (int) line, pText, param1, param2, param3);
+	        syslog (LOG_ALERT, pFormat, pPlace, (int) line, pText, param1, param2, param3);
     	}
     	else
     	{
@@ -52,9 +52,9 @@ Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, Bool para
     {
     	if (paramPresent)
     	{
-            pFormat = "\n!!! ASSERT: %s#%u: %lu!!!\n";
-	        printf (pFormat, pPlace, (int) line, param1);
-            syslog (LOG_ALERT, pFormat, pPlace, (int) line, param1);
+            pFormat = "\n!!! ASSERT: %s#%u: 0x%08x 0x%08x 0x%08x!!!\n";
+	        printf (pFormat, pPlace, (int) line, param1, param2, param3);
+            syslog (LOG_ALERT, pFormat, pPlace, (int) line, param1, param2, param3);
     	}
     	else
     	{
@@ -78,7 +78,7 @@ Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, Bool para
         {
             if (paramPresent)
             {
-                fprintf (pgDebugPrintsStream, pFormat, pPlace, (int) line, pText, param1);
+                fprintf (pgDebugPrintsStream, pFormat, pPlace, (int) line, pText, param1, param2, param3);
             }
             else
             {
@@ -89,7 +89,7 @@ Bool assertFunc (const Char * pPlace, UInt32 line, const Char * pText, Bool para
         {
             if (paramPresent)
             {
-                fprintf (pgDebugPrintsStream, pFormat, pPlace, (int) line, param1);
+                fprintf (pgDebugPrintsStream, pFormat, pPlace, (int) line, param1, param2, param3);
             }
             else
             {
@@ -143,56 +143,37 @@ void setDebugPrintsOff (void)
         fclose (pgDebugPrintsStream);
         pgDebugPrintsStream = PNULL;
     }
+    gDebugPrintsToSyslogAreOn = false;
 }
 
 /*
- * Copy debug prints to syslog() from now on
+ * Debug prints to syslog() from now on
  */
-void copyDebugPrintsToSyslogOn (void)
+void setDebugPrintsOnToSyslog (void)
 {
-    gCopyDebugPrintsToSyslog = true;
+    time_t timeNow = time (NULL);
+    
+    gDebugPrintsAreOn = true;
+    gDebugPrintsToSyslogAreOn = true;
+    printDebug ("Started debug prints to syslog on %s", asctime (localtime (&timeNow))); 
 }
 
 /*
- * Stop copying debug prints to syslog()
- */
-void copyDebugPrintsToSyslogOff (void)
-{
-    gCopyDebugPrintsToSyslog = false;
-}
-
-/*
- * Copy progress prints to syslog() from now on
- */
-void copyProgressPrintsToSyslogOn (void)
-{
-    gCopyProgressPrintsToSyslog = true;
-}
-
-/*
- * Stop copying debug prints to syslog()
- */
-void copyProgressPrintsToSyslogOff (void)
-{
-    gCopyProgressPrintsToSyslog = false;
-}
-
-/*
- * Copy hex dumps to syslog() from now on
- * Kept separate from the copy debug to syslog()
+ * Hex dumps to syslog() from now on
+ * Kept separate from the debug to syslog()
  * flag as this could be quite a heavy load. 
  */
-void copyHexDumpsToSyslogOn (void)
+void hexDumpsToSyslogOn (void)
 {
-    gCopyHexDumpsToSyslog = true;
+    gHexDumpsToSyslogAreOn = true;
 }
 
 /*
- * Stop copying dex dumps to syslog()
+ * Stop hex dumps to syslog()
  */
-void copyHexDumpsToSyslogOff (void)
+void hexDumpsToSyslogOff (void)
 {
-    gCopyHexDumpsToSyslog = false;
+    gHexDumpsToSyslogAreOn = false;
 }
 
 /*
@@ -246,22 +227,25 @@ void printProgress (const Char * pFormat, ...)
         va_start (args, pFormat);
         vprintf (pFormat, args);
         
-        /* If debug is printing to file, put the progress prints there also */
-        if (gDebugPrintsAreOn && !gSuspendDebug && (pgDebugPrintsStream != PNULL))
+        /* If debug is printing to file/syslog, put the progress prints there also */
+        if (gDebugPrintsAreOn && !gSuspendDebug)
         {
             /* But remove any initial line feeds for neatness */
             if (*pFormat == '\n')
             {
                 pFormat++;
             }
-            fprintf (pgDebugPrintsStream, "%.10lu: ", getSystemTicks());
-            vfprintf (pgDebugPrintsStream, pFormat, args);
-            
-            if (gCopyProgressPrintsToSyslog)
+            if (pgDebugPrintsStream != PNULL)
+            {
+                fprintf (pgDebugPrintsStream, "%.10lu: ", getSystemTicks());
+                vfprintf (pgDebugPrintsStream, pFormat, args);                
+            }
+            if (gDebugPrintsToSyslogAreOn)
             {
                 vsyslog (LOG_INFO, pFormat, args);
             }
         }
+        
         va_end (args);
         fflush (stdout);
     }
@@ -272,7 +256,7 @@ void printProgress (const Char * pFormat, ...)
  */
 void printDebug (const Char * pFormat, ...)
 {
-    FILE *pStream = stdout;
+    FILE *pStream = pgDefaultStream;
     
     if (gDebugPrintsAreOn && !gSuspendDebug)
     {
@@ -283,16 +267,22 @@ void printDebug (const Char * pFormat, ...)
             pStream = pgDebugPrintsStream;
         }
         
-        va_start (args, pFormat);        
-        fprintf (pStream, "%.10lu: ", getSystemTicks());
-        vfprintf (pStream, pFormat, args);
-        
-        if (gCopyDebugPrintsToSyslog)
+        va_start (args, pFormat);
+        if (pStream != PNULL)
+        {
+            fprintf (pStream, "%.10lu: ", getSystemTicks());
+            vfprintf (pStream, pFormat, args);
+        }        
+        if (gDebugPrintsToSyslogAreOn)
         {
             vsyslog (LOG_INFO, pFormat, args);
         }
         va_end (args);
-        fflush (pStream);
+        
+        if (pStream != PNULL)
+        {
+            fflush (pStream);
+        }
     }
 }
 
@@ -303,7 +293,7 @@ void printHexDump (const void * pMemory, UInt16 size)
 {
     UInt8 i;
     UInt32 time;
-    FILE *pStream = stdout;
+    FILE *pStream = pgDefaultStream;
     const UInt8 *pPrint = pMemory;
     
     if (gDebugPrintsAreOn && !gSuspendDebug)
@@ -314,18 +304,29 @@ void printHexDump (const void * pMemory, UInt16 size)
             pStream = pgDebugPrintsStream;
         }
 
-        fprintf (pStream, "%.10lu: ", time);
-        fprintf (pStream, "Printing at least %d bytes:\n", size);
+        if (pStream != PNULL)
+        {
+            fprintf (pStream, "%.10lu: ", time);
+            fprintf (pStream, "Printing at least %d bytes:\n", size);
+        }
+        
         for (i = 0; i < size; i +=8)
         {
-            fprintf (pStream, "%.10lu: 0x%.8lx: 0x%.2x 0x%.2x 0x%.2x 0x%.2x : 0x%.2x 0x%.2x 0x%.2x 0x%.2x\n", time, (unsigned long) pPrint, *pPrint, *(pPrint + 1), *(pPrint + 2), *(pPrint + 3), *(pPrint + 4), *(pPrint + 5), *(pPrint + 6), *(pPrint + 7));
-            if (gCopyHexDumpsToSyslog)
+            if (pStream != PNULL)
+            {
+                fprintf (pStream, "%.10lu: 0x%.8lx: 0x%.2x 0x%.2x 0x%.2x 0x%.2x : 0x%.2x 0x%.2x 0x%.2x 0x%.2x\n", time, (unsigned long) pPrint, *pPrint, *(pPrint + 1), *(pPrint + 2), *(pPrint + 3), *(pPrint + 4), *(pPrint + 5), *(pPrint + 6), *(pPrint + 7));
+            }
+            if (gHexDumpsToSyslogAreOn)
             {
                 syslog (LOG_INFO, "%.10lu: 0x%.8lx: 0x%.2x 0x%.2x 0x%.2x 0x%.2x : 0x%.2x 0x%.2x 0x%.2x 0x%.2x\n", time, (unsigned long) pPrint, *pPrint, *(pPrint + 1), *(pPrint + 2), *(pPrint + 3), *(pPrint + 4), *(pPrint + 5), *(pPrint + 6), *(pPrint + 7));
             }
             pPrint +=8;
         }
-        fflush (pStream);
+        
+        if (pStream != PNULL)
+        {
+            fflush (pStream);
+        }
     }
 }
 
