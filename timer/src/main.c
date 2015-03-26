@@ -29,10 +29,9 @@ int main (int argc, char **argv)
     ServerReturnCode returnCode = SERVER_ERR_GENERAL_FAILURE;
     UInt16 timerServerPort;
 
-    setDebugPrintsOnToFile ("timer.log");
+    /*setDebugPrintsOnToFile ("timer.log");*/
     setProgressPrintsOn();
-    copyDebugPrintsToSyslogOn();
-    copyProgressPrintsToSyslogOn();
+    setDebugPrintsOnToSyslog();
 
     if (argc == 2)
     {

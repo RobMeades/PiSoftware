@@ -90,11 +90,11 @@ void printDebugUsedTimerListUnprotected (void)
 
     if (pgUsedTimerListHead == PNULL)
     {
-        printDebug ("No timers running.\n");        
+        printDebug ("No timers running (pgUsedTimerListHead 0x%08x):\n", pgUsedTimerListHead);
     }
     else
     {
-        printDebug ("Timers running:\n");
+        printDebug ("Timers running (pgUsedTimerListHead 0x%08x):\n", pgUsedTimerListHead);
         for (x = 0; (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
         {
             printDebug (" %d (0x%08x): expires %d, id %d/%d, pContext 0x%08x, next 0x%08x.\n",
@@ -243,7 +243,6 @@ static void freeTimerUnprotected (Timer *pTimer)
         if (pWantedEntry->pPrevEntry != PNULL)
         {
             pWantedEntry->pPrevEntry->pNextEntry = pWantedEntry->pNextEntry;
-            pWantedEntry->pPrevEntry = PNULL;
         }
         /* If it is the first entry in the list that is expiring, move the head */
         if (pWantedEntry == pgUsedTimerListHead)
@@ -254,7 +253,6 @@ static void freeTimerUnprotected (Timer *pTimer)
         if (pWantedEntry->pNextEntry != PNULL)
         {
             pWantedEntry->pNextEntry->pPrevEntry = pWantedEntry->pPrevEntry;
-            pWantedEntry->pNextEntry = PNULL;
         }
 
         /* Put it on the end of the free list. TODO putting it on the front would be quicker */
@@ -328,7 +326,7 @@ static void tickHandlerCallback (sigval_t sv)
         }
         
         pthread_mutex_unlock (&lockLinkedLists);
-        printDebug ("tickHandler: processing took %d microseconds.\n", (getProcessTimeNanoSeconds() - tickProcessingStartNanoSeconds) / 1000);
+        printDebug ("tickHandler: processing took %d microsecond(s).\n", (getProcessTimeNanoSeconds() - tickProcessingStartNanoSeconds) / 1000);
     }
     else
     {
@@ -351,6 +349,7 @@ static void sortUsedListUnprotected (void)
 {
     UInt32 x = 0;
     UInt32 i = 0;
+    UInt32 z = 0;
     TimerEntry * pEntry = pgUsedTimerListHead;
     UInt32 sortingStartNanoSeconds;
 
@@ -364,12 +363,21 @@ static void sortUsedListUnprotected (void)
             TimerEntry * pThisEntry = pEntry;
             TimerEntry * pNextEntry = pEntry->pNextEntry;
 
+            z++;
             printDebug ("sortUsedList: swapping entry %d (%d, 0x%08x) with entry %d (%d, 0x%08x).\n", i, pEntry->timer.expiryTimeDeciSeconds, &(pEntry->timer), i + 1, pNextEntry->timer.expiryTimeDeciSeconds, &(pNextEntry->timer));
             /* If this entry has a later expiry time than the next one, swap them */
+            if (pThisEntry->pPrevEntry != PNULL)
+            {
+                pThisEntry->pPrevEntry->pNextEntry = pNextEntry;
+            }
+            if (pNextEntry->pNextEntry != PNULL)
+            {
+                pNextEntry->pNextEntry->pPrevEntry = pThisEntry;
+            }
             pThisEntry->pNextEntry = pNextEntry->pNextEntry;
             pNextEntry->pPrevEntry = pThisEntry->pPrevEntry;
             pThisEntry->pPrevEntry = pNextEntry;
-            pNextEntry->pNextEntry = pThisEntry;
+            pNextEntry->pNextEntry = pThisEntry;            
             
             /* If we have just changed the head, swap it around too */
             if (pThisEntry == pgUsedTimerListHead)
@@ -390,11 +398,11 @@ static void sortUsedListUnprotected (void)
     
     if (x == MAX_NUM_TIMERS * MAX_NUM_TIMERS)
     {
-        printDebug ("sortUsedList: WARNING, sorting the timer list hit the buffers (%d iterations, %d microseconds).\n", x, (getProcessTimeNanoSeconds() - sortingStartNanoSeconds) / 1000);
+        printDebug ("sortUsedList: WARNING, sorting the timer list hit the buffers (%d iteration(s) (%d swap(s)), %d microsecond(s)).\n", x, z, (getProcessTimeNanoSeconds() - sortingStartNanoSeconds) / 1000);
     }
     else
     {
-        printDebug ("sortUsedList: sorting the timer list took %d iterations, %d microseconds.\n", x, (getProcessTimeNanoSeconds() - sortingStartNanoSeconds) / 1000);        
+        printDebug ("sortUsedList: sorting the timer list took %d iteration(s) (%d swap(s)), %d microsecond(s).\n", x, z, (getProcessTimeNanoSeconds() - sortingStartNanoSeconds) / 1000);        
     }
     printDebugUsedTimerListUnprotected();
 }
@@ -651,8 +659,8 @@ static void actionTimerStop (TimerStopReq *pTimerStopReq)
                 pTimerStopReq->sourcePort);
 
     pthread_mutex_lock (&lockLinkedLists);
-
-    pEntry = pgUsedTimerListHead;
+    pEntry = pgUsedTimerListHead; /* Assign this here in case it has been changed by whoever held the lock */
+    
     for (x = 0; !found && (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
     {
         if ((pEntry->timer.id == pTimerStopReq->id) && (pEntry->timer.sourcePort == pTimerStopReq->sourcePort))
