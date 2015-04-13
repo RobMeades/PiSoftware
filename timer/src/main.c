@@ -31,7 +31,7 @@ int main (int argc, char **argv)
 
     /*setDebugPrintsOnToFile ("timer.log");*/
     setProgressPrintsOn();
-    setDebugPrintsOnToSyslog();
+    /* setDebugPrintsOnToSyslog();*/ /* Don't switch any debug on in here, the load has a significant effect */
 
     if (argc == 2)
     {
