@@ -8,6 +8,7 @@
 		<project>RoboOneHardware</project>
 		<project>RoboOneStateMachine</project>
 		<project>shared</project>
+		<project>timer</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

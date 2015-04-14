@@ -426,7 +426,6 @@ int main (int argc, char **argv)
     
     success = parseParameters (argc, argv);
     
-#if 0
     if (success)
     {
         /* Spawn a child that will become the Timer server. */
@@ -451,7 +450,7 @@ int main (int argc, char **argv)
                 usleep (TIMER_SERVER_START_DELAY_PI_US);
                 /* Now setup the Timer server */
                 success = startTimerServer();
-#endif    
+
                 if (success)
                 {    
                     /* Spawn a child that will become the Hardware server. */
@@ -598,14 +597,13 @@ int main (int argc, char **argv)
                         }
                     }
                 }
-#if 0                
+
                 /* When done, shut down the Timer server gracefully */
                 stopTimerServer();
                 waitpid (tiServerPID, 0, 0); /* wait for server to exit */
             }
         }
     }
-#endif
     
     setDebugPrintsOff();
 

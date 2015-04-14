@@ -16,6 +16,9 @@
 #include <hardware_server.h>
 #include <hardware_msg_auto.h>
 #include <hardware_client.h>
+#include <timer_server.h>
+#include <timer_msg_auto.h>
+#include <timer_client.h>
 #include <battery_manager_server.h>
 #include <battery_manager_msg_auto.h>
 #include <battery_manager_client.h>
@@ -32,6 +35,12 @@
 #define MAXIMUM_TEMPERATURE_C 60
 #define TEMPERATURE_BROKEN_C -20
 #define TEMPERATURE_HYSTERESIS_C 10
+
+/* The length of the hardware message queue */
+#define MAX_LEN_HARDWARE_MSG_Q 20
+
+/* The time between messages that need to be offset */
+#define SEND_MSG_OFFSET_DURATION_DECISECONDS 20
 
 /*
  * TYPES
@@ -61,6 +70,11 @@ BatteryContainerData gBatteryDataContainerRio;
 BatteryContainerData gBatteryDataContainerO1;
 BatteryContainerData gBatteryDataContainerO2;
 BatteryContainerData gBatteryDataContainerO3;
+HardwareMsgType gHardwareMsgQ [MAX_LEN_HARDWARE_MSG_Q];
+UInt8 gHardwareMsgQLen = 0;
+UInt16 gThisServerPort = 0;
+ShortMsg gTimerExpiryMsg;
+Bool gTimerRunning = false;
 
 /*
  * STATIC FUNCTIONS
@@ -234,108 +248,161 @@ static Bool setChargerStatus (BatteryContainerData *pBatteryContainerData)
     return pBatteryContainerData->batteryStatus.chargerOn;
 }
 
+
+/*
+ * Add a message to the queue of messages that need to be
+ * set offset in time.  This is used when switching relays
+ * that draw quite a lot of current and so need to be offset
+ * in time.
+ * 
+ * hardwareMsgType   the message to send (with zero length body)
+ */
+static void sendMsgOffset (HardwareMsgType hardwareMsgType)
+{
+    if (!gTimerRunning)
+    {
+        printDebug ("Sending message 0x%x to HW, (queue empty).\n", hardwareMsgType);
+        /* If there's no timer running, don't bother to queue this
+         * one as there's nothing to offset it from, just send it */
+        hardwareServerSendReceive (hardwareMsgType, PNULL, 0, PNULL);
+        
+        /* Start the offset timer, with the msg as the ID just for debug purposes */
+        printDebug ("Message offset timer started.\n");
+        sendStartTimer (SEND_MSG_OFFSET_DURATION_DECISECONDS, hardwareMsgType, gThisServerPort, &gTimerExpiryMsg);
+        gTimerRunning = true;
+    }
+    else
+    {
+        /* Queue the message */
+        ASSERT_PARAM2 (gHardwareMsgQLen < MAX_LEN_HARDWARE_MSG_Q, gHardwareMsgQLen, MAX_LEN_HARDWARE_MSG_Q);
+        gHardwareMsgQ[gHardwareMsgQLen] = hardwareMsgType;
+        gHardwareMsgQLen++;
+        printDebug ("Queuing message 0x%x to HW (%d in the queue).\n", hardwareMsgType, gHardwareMsgQLen);
+    }
+}
+
 /*
  * Switch the RIO battery charger on or off based
  * on what we know.
  * 
- * @return  true if successful, otherwise false.
+ * forceSendMsg  send the message to the HW even
+ *               if the charger status hasn't changed.
  */
-static Bool setRioChargerStatus (void)
+static void setRioChargerStatus (Bool forceSendMsg)
 {
-    Bool success = true;
-
+    Bool previouslyOn = gBatteryDataContainerRio.batteryStatus.chargerOn;
+    
     printDebug ("Pi/Rio battery data:\n");
     if (setChargerStatus (&gBatteryDataContainerRio))
     {
         if (gChargingPermitted)
         {
-            success = hardwareServerSendReceive (HARDWARE_SET_RIO_BATTERY_CHARGER_ON, PNULL, 0, PNULL);
+            if (!previouslyOn || forceSendMsg)
+            {
+                sendMsgOffset (HARDWARE_SET_RIO_BATTERY_CHARGER_ON);
+            }
         }
     }
     else
     {
-        success = hardwareServerSendReceive (HARDWARE_SET_RIO_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);               
+        if (previouslyOn || forceSendMsg)
+        {
+            sendMsgOffset (HARDWARE_SET_RIO_BATTERY_CHARGER_OFF);
+        }
     }
-    
-    return success;
 }
 
 /*
  * Switch the O1 battery charger on or off based
  * on what we know.
  * 
- * @return  true if successful, otherwise false.
+ * forceSendMsg  send the message to the HW even
+ *               if the charger status hasn't changed.
  */
-static Bool setO1ChargerStatus (void)
+static void setO1ChargerStatus (Bool forceSendMsg)
 {
-    Bool success = true;
-    
+    Bool previouslyOn = gBatteryDataContainerO1.batteryStatus.chargerOn;
+
     printDebug ("O1 battery data:\n");
     if (setChargerStatus (&gBatteryDataContainerO1))
     {
         if (gChargingPermitted)
         {
-            success = hardwareServerSendReceive (HARDWARE_SET_O1_BATTERY_CHARGER_ON, PNULL, 0, PNULL);
+            if (!previouslyOn || forceSendMsg)
+            {
+                sendMsgOffset (HARDWARE_SET_O1_BATTERY_CHARGER_ON);
+            }
         }
     }
     else
     {
-        success = hardwareServerSendReceive (HARDWARE_SET_O1_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);               
+        if (previouslyOn || forceSendMsg)
+        {
+            sendMsgOffset (HARDWARE_SET_O1_BATTERY_CHARGER_OFF);
+        }
     }
-    
-    return success;
 }
 
 /*
  * Switch the O2 battery charger on or off based
  * on what we know.
  * 
- * @return  true if successful, otherwise false.
+ * forceSendMsg  send the message to the HW even
+ *               if the charger status hasn't changed.
  */
-static Bool setO2ChargerStatus (void)
+static void setO2ChargerStatus (Bool forceSendMsg)
 {
-    Bool success = true;
-    
+    Bool previouslyOn = gBatteryDataContainerO2.batteryStatus.chargerOn;
+
     printDebug ("O2 battery data:\n");
     if (setChargerStatus (&gBatteryDataContainerO2))
     {
         if (gChargingPermitted)
         {
-            success = hardwareServerSendReceive (HARDWARE_SET_O2_BATTERY_CHARGER_ON, PNULL, 0, PNULL);
+            if (!previouslyOn || forceSendMsg)
+            {
+                sendMsgOffset (HARDWARE_SET_O2_BATTERY_CHARGER_ON);
+            }
         }
     }
     else
     {
-        success = hardwareServerSendReceive (HARDWARE_SET_O2_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);               
+        if (previouslyOn || forceSendMsg)
+        {
+            sendMsgOffset (HARDWARE_SET_O2_BATTERY_CHARGER_OFF);
+        }
     }
-    
-    return success;
 }
 
 /*
  * Switch the O3 battery charger on or off based
  * on what we know.
  * 
- * @return  true if successful, otherwise false.
+ * forceSendMsg  send the message to the HW even
+ *               if the charger status hasn't changed.
  */
-static Bool setO3ChargerStatus (void)
+static void setO3ChargerStatus (Bool forceSendMsg)
 {
-    Bool success = true;
-    
+    Bool previouslyOn = gBatteryDataContainerO3.batteryStatus.chargerOn;
+
     printDebug ("O3 battery data:\n");
     if (setChargerStatus (&gBatteryDataContainerO3))
     {
         if (gChargingPermitted)
         {
-            success = hardwareServerSendReceive (HARDWARE_SET_O3_BATTERY_CHARGER_ON, PNULL, 0, PNULL);
+            if (!previouslyOn || forceSendMsg)
+            {
+                sendMsgOffset (HARDWARE_SET_O3_BATTERY_CHARGER_ON);
+            }
         }
     }
     else
     {
-        success = hardwareServerSendReceive (HARDWARE_SET_O3_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);               
+        if (previouslyOn || forceSendMsg)
+        {
+            sendMsgOffset (HARDWARE_SET_O3_BATTERY_CHARGER_OFF);
+        }
     }
-    
-    return success;
 }
 
 /*
@@ -358,11 +425,16 @@ static UInt16 actionBatteryManagerServerStart (BatteryManagerServerStartCnf *pSe
     gChargingPermitted = false;
     gAllFullyCharged = false;
     gAllInsufficientCharge = false;
+    gHardwareMsgQLen = 0;
+    gThisServerPort = atoi (BATTERY_MANAGER_SERVER_PORT_STRING);
+    gTimerRunning = false;
     
     memset (&gBatteryDataContainerRio, false, sizeof (gBatteryDataContainerRio));
     memset (&gBatteryDataContainerO1, false, sizeof (gBatteryDataContainerO1));
     memset (&gBatteryDataContainerO2, false, sizeof (gBatteryDataContainerO2));
     memset (&gBatteryDataContainerO3, false, sizeof (gBatteryDataContainerO3));
+    
+    createTimerExpiryMsg (&gTimerExpiryMsg, BATTERY_MANAGER_TIMER_EXPIRY, PNULL, 0);
     
     pSendMsgBody->success = true;
     sendMsgBodyLength += sizeof (pSendMsgBody->success);
@@ -415,7 +487,7 @@ static UInt16 actionBatteryManagerData (BatteryManagerMsgType msgType, BatteryDa
         {
             gBatteryDataContainerRio.updated = true;
             memcpy (&(gBatteryDataContainerRio.batteryData), pData, sizeof (gBatteryDataContainerRio.batteryData));
-            setRioChargerStatus();
+            setRioChargerStatus (false);
             memcpy (pStatus, &(gBatteryDataContainerRio.batteryStatus), sizeof (*pStatus));
             sendMsgBodyLength += sizeof (*pStatus);
         }
@@ -424,7 +496,7 @@ static UInt16 actionBatteryManagerData (BatteryManagerMsgType msgType, BatteryDa
         {
             gBatteryDataContainerO1.updated = true;
             memcpy (&(gBatteryDataContainerO1.batteryData), pData, sizeof (gBatteryDataContainerO1.batteryData));
-            setO1ChargerStatus();
+            setO1ChargerStatus (false);
             memcpy (pStatus, &(gBatteryDataContainerO1.batteryStatus), sizeof (*pStatus));
             sendMsgBodyLength += sizeof (*pStatus);
         }
@@ -433,7 +505,7 @@ static UInt16 actionBatteryManagerData (BatteryManagerMsgType msgType, BatteryDa
         {
             gBatteryDataContainerO2.updated = true;
             memcpy (&(gBatteryDataContainerO2.batteryData), pData, sizeof (gBatteryDataContainerO2.batteryData));
-            setO2ChargerStatus();
+            setO2ChargerStatus (false);
             memcpy (pStatus, &(gBatteryDataContainerO2.batteryStatus), sizeof (*pStatus));
             sendMsgBodyLength += sizeof (*pStatus);
         }
@@ -442,7 +514,7 @@ static UInt16 actionBatteryManagerData (BatteryManagerMsgType msgType, BatteryDa
         {
             gBatteryDataContainerO3.updated = true;
             memcpy (&(gBatteryDataContainerO3.batteryData), pData, sizeof (gBatteryDataContainerO3.batteryData));
-            setO3ChargerStatus();
+            setO3ChargerStatus (false);
             memcpy (pStatus, &(gBatteryDataContainerO3.batteryStatus), sizeof (*pStatus));
             sendMsgBodyLength += sizeof (*pStatus);
         }
@@ -472,6 +544,8 @@ static UInt16 actionBatteryManagerData (BatteryManagerMsgType msgType, BatteryDa
  */
 static UInt16 actionBatteryManagerChargingPermitted (Bool isPermitted)
 {
+    Bool justSwitchedToPermitted = false;
+    
     if (isPermitted)
     {
         printDebug ("Battery charging is permitted.\n");
@@ -485,10 +559,15 @@ static UInt16 actionBatteryManagerChargingPermitted (Bool isPermitted)
     
     if (gChargingPermitted && !isPermitted)
     {
-        hardwareServerSendReceive (HARDWARE_SET_RIO_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);
-        hardwareServerSendReceive (HARDWARE_SET_O1_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);
-        hardwareServerSendReceive (HARDWARE_SET_O2_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);
-        hardwareServerSendReceive (HARDWARE_SET_O3_BATTERY_CHARGER_OFF, PNULL, 0, PNULL);       
+        sendMsgOffset (HARDWARE_SET_RIO_BATTERY_CHARGER_OFF);
+        sendMsgOffset (HARDWARE_SET_O1_BATTERY_CHARGER_OFF);
+        sendMsgOffset (HARDWARE_SET_O2_BATTERY_CHARGER_OFF);
+        sendMsgOffset (HARDWARE_SET_O3_BATTERY_CHARGER_OFF);       
+    }
+    
+    if (!gChargingPermitted && isPermitted)
+    {
+        justSwitchedToPermitted = true;
     }
     
     /* No need to check if charging is permitted now, the function calls
@@ -496,12 +575,41 @@ static UInt16 actionBatteryManagerChargingPermitted (Bool isPermitted)
     
     gChargingPermitted = isPermitted;
     
-    setRioChargerStatus();
-    setO1ChargerStatus();
-    setO2ChargerStatus();
-    setO3ChargerStatus();
+    setRioChargerStatus (justSwitchedToPermitted);
+    setO1ChargerStatus (justSwitchedToPermitted);
+    setO2ChargerStatus (justSwitchedToPermitted);
+    setO3ChargerStatus (justSwitchedToPermitted);
     
     signalChargeStateAll();
+    
+    return 0;
+}
+
+/*
+ * Handle a timer expiry message.  This indicates
+ * that we can send the next request to the Hardware
+ * server.
+ * 
+ * @return  the length of the message body to send back.
+ */
+static UInt16 actionBatteryManagerTimerExpiry (void)
+{
+    printDebug ("Message offset timer expired.\n");
+    gTimerRunning = false;
+    if (gHardwareMsgQLen > 0)
+    {
+        /* Send the next thing in the queue */
+        hardwareServerSendReceive (gHardwareMsgQ[gHardwareMsgQLen - 1], PNULL, 0, PNULL);
+        gHardwareMsgQLen--;
+        printDebug ("Sending message 0x%x to HW, (%d in the queue).\n", gHardwareMsgQ[gHardwareMsgQLen], gHardwareMsgQLen);
+        if (gHardwareMsgQLen > 0)
+        {
+            printDebug ("Message offset timer restarted.\n");
+            /* If there's still something in the queue, set the timer off again */
+            sendStartTimer (SEND_MSG_OFFSET_DURATION_DECISECONDS, gHardwareMsgQ[gHardwareMsgQLen - 1], gThisServerPort, &gTimerExpiryMsg);
+            gTimerRunning = true;
+        }
+    }
     
     return 0;
 }
@@ -579,6 +687,11 @@ static ServerReturnCode doAction (BatteryManagerMsgType receivedMsgType, UInt8 *
         {
             Bool isPermitted = ((BatteryManagerChargingPermittedInd *) pReceivedMsgBody)->isPermitted;
             pSendMsg->msgLength += actionBatteryManagerChargingPermitted (isPermitted);            
+        }
+        break;
+        case BATTERY_MANAGER_TIMER_EXPIRY:
+        {
+            pSendMsg->msgLength += actionBatteryManagerTimerExpiry();            
         }
         break;
         default:

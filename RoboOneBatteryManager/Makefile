@@ -10,6 +10,7 @@ OBJ_DIR = obj
 API_DIR = api
 
 SHARED_PRE = ../shared
+TIMER_PRE = ../timer
 ROBOONEHARDWARE_PRE = ../RoboOneHardware
 ROBOONESTATEMACHINE_PRE = ../RoboOneStateMachine
 ROBOONETASKHANDLER_PRE = ../RoboOneTaskHandler
@@ -23,8 +24,8 @@ EXE_OBJ:= $(OBJ_DIR)/main.o $(OBJ_DIR)/battery_manager_server.o $(OBJ_DIR)/batte
 CC = $(GCC_PREFIX)gcc.exe
 AR =  $(GCC_PREFIX)ar.exe
 DFLAGS = -O0 -fbuiltin -g
-CFLAGS = -O2 -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(ROBOONEHARDWARE_PRE)/$(API_DIR) -I$(ROBOONESTATEMACHINE_PRE)/$(API_DIR) -I$(ROBOONETASKHANDLER_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR)
-LDFLAGS = $(OBJ_DIR)/$(LIB) $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(ROBOONEHARDWARE_PRE)/$(OBJ_DIR)/roboone_hardware_client.a $(ROBOONESTATEMACHINE_PRE)/$(OBJ_DIR)/roboone_state_machine_client.a $(ROBOONETASKHANDLER_PRE)/$(OBJ_DIR)/roboone_task_handler_client.a $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a
+CFLAGS = -O2 -Wall -pedantic -pedantic-errors -I. -I$(SRC_DIR) -I$(API_DIR) -I$(SHARED_PRE)/$(API_DIR) -I$(TIMER_PRE)/$(API_DIR) -I$(ROBOONEHARDWARE_PRE)/$(API_DIR) -I$(ROBOONESTATEMACHINE_PRE)/$(API_DIR) -I$(ROBOONETASKHANDLER_PRE)/$(API_DIR) -I$(SERVER_PRE)/$(API_DIR) -I$(CLIENT_PRE)/$(API_DIR)
+LDFLAGS = $(OBJ_DIR)/$(LIB) $(SHARED_PRE)/$(OBJ_DIR)/shared.a $(TIMER_PRE)/$(OBJ_DIR)/timer_client.a $(ROBOONEHARDWARE_PRE)/$(OBJ_DIR)/roboone_hardware_client.a $(ROBOONESTATEMACHINE_PRE)/$(OBJ_DIR)/roboone_state_machine_client.a $(ROBOONETASKHANDLER_PRE)/$(OBJ_DIR)/roboone_task_handler_client.a $(SERVER_PRE)/$(OBJ_DIR)/messaging_server.a $(CLIENT_PRE)/$(OBJ_DIR)/messaging_client.a
 
 all: $(PROGRAM)
 
