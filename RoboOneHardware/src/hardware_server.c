@@ -170,7 +170,7 @@ static UInt16 actionReadChargerState (HardwareReadChargerStateCnf *pSendMsgBody)
 
 /*
  * Handle a message that calls a function with
- * no return value.
+ * no return value (aside from success/fail).
  * 
  * msgType       the msgType, extracted from the
  *               received mesage.
