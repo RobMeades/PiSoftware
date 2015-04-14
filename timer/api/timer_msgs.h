@@ -2,7 +2,7 @@
  * Messages that go from/to the timer server.
  * 
  * These messages never have a confirm, only Req and Ind
- * forms, thereofre the structures here are slightly different
+ * forms, therefore the structures here are slightly different
  * to those in the other servers.
  */
 
@@ -22,6 +22,6 @@
  */
 TIMER_MSG_DEF (TIMER_SERVER_START_REQ, TimerServerStartReq, timerServerStartReq, TIMER_EMPTY)
 TIMER_MSG_DEF (TIMER_SERVER_STOP_REQ, TimerServerStopReq, timerServerStopReq, TIMER_EMPTY)
-TIMER_MSG_DEF (TIMER_START_REQ, TimerStartReq, timerStartReq, UInt32 expiryDeciSeconds; TimerId id; SInt32 sourcePort; void *pContext)
+/* Note: the id field is only required to be filled-in if the timer might ever be stopped */
+TIMER_MSG_DEF (TIMER_START_REQ, TimerStartReq, timerStartReq, UInt32 expiryDeciSeconds; TimerId id; SInt32 sourcePort; ShortMsg expiryMsg)
 TIMER_MSG_DEF (TIMER_STOP_REQ, TimerStopReq, timerStopReq, TimerId id; SInt32 sourcePort)
-TIMER_MSG_DEF (TIMER_EXPIRY_IND, TimerExpiryInd, timerExpiryInd, TimerId id; void *pContext)

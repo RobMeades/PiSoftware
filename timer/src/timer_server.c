@@ -22,7 +22,7 @@
  */
 
 /* The number of timers that can be simultaneously active */
-#define MAX_NUM_TIMERS 100
+#define MAX_NUM_TIMERS 30
 /* Timer tick frequency (100 ms) */
 #define TIMER_INTERVAL_NANOSECONDS 100000000L
 
@@ -36,7 +36,7 @@ typedef struct TimerTag
     UInt32 expiryTimeDeciSeconds;
     TimerId id;
     SInt32 sourcePort;
-    void *pContext;
+    Msg expiryMsg;
 } Timer;
 
 /* A linked list entry holding a timer */
@@ -97,13 +97,13 @@ void printDebugUsedTimerListUnprotected (void)
         printDebug ("Timers running (pgUsedTimerListHead 0x%08x):\n", pgUsedTimerListHead);
         for (x = 0; (pEntry != PNULL) && (x < MAX_NUM_TIMERS); x++)
         {
-            printDebug (" %d (0x%08x): expires %d, id %d/%d, pContext 0x%08x, next 0x%08x.\n",
+            printDebug (" %d (0x%08x): expires %d, id %d/%d, expiryMsg.msgType 0x%08x, next 0x%08x.\n",
                         x,
                         &(pEntry->timer),
                         pEntry->timer.expiryTimeDeciSeconds,
                         pEntry->timer.sourcePort,
                         pEntry->timer.id,
-                        pEntry->timer.pContext,
+                        pEntry->timer.expiryMsg.msgType,
                         pEntry->pNextEntry);
             pEntry = pEntry->pNextEntry;
         }
@@ -129,61 +129,6 @@ UInt32 getProcessTimeNanoSeconds (void)
 }
 
 /*
- * Reply to a message port.
- * 
- * port                  the port number to send to.
- * msgType               the message type to send.
- * pSendMsgBody          pointer to the body of the
- *                       message to send. May be PNULL.
- * sendMsgBodyLength     the length of the data that
- *                       pSendMsg points to.
- * 
- * @return           true if the message send is
- *                   successful and the response
- *                   message indicates success,
- *                   otherwise false.
- */
-static Bool timerServerReply (SInt32 port, TimerMsgType msgType, void *pSendMsgBody, UInt16 sendMsgBodyLength)
-{
-    ClientReturnCode returnCode;
-    Bool success = false;
-    Msg *pSendMsg;
-
-    ASSERT_PARAM (msgType < MAX_NUM_TIMER_MSGS, msgType);
-    ASSERT_PARAM (sendMsgBodyLength <= MAX_MSG_BODY_LENGTH, sendMsgBodyLength);
-
-    pSendMsg = malloc (sizeof (*pSendMsg));
-    
-    if (pSendMsg != PNULL)
-    {
-        /* Put in the bit before the body */
-        pSendMsg->msgLength = 0;
-        pSendMsg->msgType = msgType;
-        pSendMsg->msgLength += sizeof (pSendMsg->msgType);
-                    
-        /* Add the body to send */
-        if (pSendMsgBody != PNULL)
-        {
-            memcpy (&pSendMsg->msgBody[0], pSendMsgBody, sendMsgBodyLength);
-        }
-        pSendMsg->msgLength += sendMsgBodyLength;
-            
-        printDebug ("Timer Server: sending to port %d, message %s, length %d, hex dump:\n", port, pgTimerMessageNames[pSendMsg->msgType], pSendMsg->msgLength);
-        printHexDump (pSendMsg, pSendMsg->msgLength + 1);
-        returnCode = runMessagingClient (port, PNULL, pSendMsg, PNULL);
-                    
-        printDebug ("Timer Server: message system returnCode: %d\n", returnCode);
-        if (returnCode == CLIENT_SUCCESS)
-        { 
-            success = true;
-        }
-        free (pSendMsg);
-    }
-
-    return success;
-}
-
-/*
  * Send a timer expiry message.
  * 
  * pTimer   the timer related to the
@@ -192,15 +137,24 @@ static Bool timerServerReply (SInt32 port, TimerMsgType msgType, void *pSendMsgB
  * @return  true if the message send is
  *          is successful, otherwise false.
  */
-static Bool sendTimerExpiryIndMsg (Timer *pTimer)
+static Bool sendTimerExpiryMsg (Timer *pTimer)
 {
-    TimerExpiryInd msg;
-    
-    printDebug ("Sending TimerExpiryInd message to port %d (timer id %d, pContext 0x%08x).\n", pTimer->sourcePort, pTimer->id, pTimer->pContext);
-    msg.id = pTimer->id;
-    msg.pContext = pTimer->pContext;
-    
-    return timerServerReply (pTimer->sourcePort, TIMER_EXPIRY_IND, &msg, sizeof (msg));
+    ClientReturnCode returnCode;
+    Bool success = false;
+
+    ASSERT_PARAM (pTimer != PNULL, (unsigned long) pTimer); 
+
+    printDebug ("Timer Server: sending expiry message to port %d, msgType 0x%08x, length %d, hex dump:\n", pTimer->sourcePort, pTimer->expiryMsg.msgType, pTimer->expiryMsg.msgLength);
+    printHexDump (&(pTimer->expiryMsg), pTimer->expiryMsg.msgLength + 1);
+    returnCode = runMessagingClient (pTimer->sourcePort, PNULL, &(pTimer->expiryMsg), PNULL);
+                
+    printDebug ("Timer Server: message system returnCode: %d\n", returnCode);
+    if (returnCode == CLIENT_SUCCESS)
+    { 
+        success = true;
+    }
+
+    return success;
 }
 
 /*
@@ -312,7 +266,7 @@ static void tickHandlerCallback (sigval_t sv)
                 printDebug ("tickHandler: %d decisecond timer at 0x%08x expired.\n", pEntry->timer.expiryTimeDeciSeconds, &(pEntry->timer));
                 
                 /* Timer has expired, send a message back */
-                sendTimerExpiryIndMsg (pTimer);
+                sendTimerExpiryMsg (pTimer);
                 
                 /* Move to the next entry and then free this timer entry */
                 pEntry = pEntry->pNextEntry;
@@ -413,18 +367,20 @@ static void sortUsedListUnprotected (void)
  * periodDeciSeconds  the timer period in deciSeconds
  * sourcePort         the port to send the expiry message to
  * id                 the id for the timer
- * pContext           a context pointer to store with the timer
+ * pExpiryMsg         a pointer to the expiry message to send
  * 
  * @return  a pointer to the timer or PNULL if
  *          unable to allocate one.
  */
-static Timer * allocTimer (UInt32 periodDeciSeconds, SInt32 sourcePort, TimerId id, void * pContext)
+static Timer * allocTimer (UInt32 periodDeciSeconds, SInt32 sourcePort, TimerId id, ShortMsg * pExpiryMsg)
 {
     Timer * pAlloc = PNULL;
     UInt32 x = 0;
     TimerEntry * pEntry;
     TimerEntry * pPrevEntry = PNULL;
 
+    ASSERT_PARAM (pExpiryMsg != PNULL, (unsigned long) pExpiryMsg);
+    
     pthread_mutex_lock (&lockLinkedLists);
     pEntry = pgFreeTimerListHead; /* Assign this here in case it has been changed by whoever held the lock */
 
@@ -472,7 +428,7 @@ static Timer * allocTimer (UInt32 periodDeciSeconds, SInt32 sourcePort, TimerId 
             pAlloc->expiryTimeDeciSeconds = gTimerTickDeciSeconds + periodDeciSeconds;
             pAlloc->id = id;
             pAlloc->sourcePort = sourcePort;
-            pAlloc->pContext = pContext;
+            memcpy (&(pAlloc->expiryMsg), pExpiryMsg, sizeof (pAlloc->expiryMsg));
 
             printDebug ("allocTimer: timer should expire at tick %d.\n", pAlloc->expiryTimeDeciSeconds);
 
@@ -625,14 +581,14 @@ static void actionTimerStart (TimerStartReq *pTimerStartReq)
 {
     Timer * pTimer;
     
-    printDebug ("actionTimerStart: starting a timer of duration %d 10ths of a second (from port %d, id %d, pContext 0x%08x).\n",
+    printDebug ("actionTimerStart: starting a timer of duration %d 10ths of a second (from port %d, id %d, expiryMsg.msgType 0x%08x).\n",
                 pTimerStartReq->expiryDeciSeconds,
                 pTimerStartReq->sourcePort,
                 pTimerStartReq->id,
-                pTimerStartReq->pContext);
+                pTimerStartReq->expiryMsg.msgType);
 
     /* Allocate a timer and fill the data in */
-    pTimer = allocTimer (pTimerStartReq->expiryDeciSeconds, pTimerStartReq->sourcePort, pTimerStartReq->id, pTimerStartReq->pContext);
+    pTimer = allocTimer (pTimerStartReq->expiryDeciSeconds, pTimerStartReq->sourcePort, pTimerStartReq->id, &(pTimerStartReq->expiryMsg));
     if (pTimer != PNULL)
     {
         printDebug ("actionTimerStart: allocated a timer at 0x%08x.\n", pTimer);
