@@ -323,33 +323,55 @@ static Bool updateRioWindow (WINDOW *pWin, UInt8 count)
     BatteryStatus batteryStatus;
     UInt8 row = 0;
     UInt8 col = 0;
+    Bool success;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
 
     memset (&batteryData, 0, sizeof (batteryData));
     memset (&batteryStatus, false, sizeof (batteryStatus));
 
-    hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_CURRENT, PNULL, 0, &(batteryData.current));
-    hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_VOLTAGE, PNULL, 0, &(batteryData.voltage));
+    success = hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_CURRENT, PNULL, 0, &(batteryData.current));
+    if (success)
+    {
+        success = hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_VOLTAGE, PNULL, 0, &(batteryData.voltage));
+    }
     wmove (pWin, row, col);
-    wclrtoeol (pWin);
-    wprintw (pWin, "%d mA, %u mV", batteryData.current, batteryData.voltage);
+    if (success)
+    {
+        wclrtoeol (pWin);
+        wprintw (pWin, "%d mA, %u mV", batteryData.current, batteryData.voltage);
+    }
     row++;
 
     if (count % SLOW_UPDATE_BACKOFF == 0)
     {
-        hardwareServerSendReceive (HARDWARE_READ_RIO_REMAINING_CAPACITY, PNULL, 0, &(batteryData.remainingCapacity));
-        hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData.chargeDischarge));
-        hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_TEMPERATURE, PNULL, 0, &(batteryData.temperature));
-        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_RIO, &batteryData, sizeof (batteryData), &batteryStatus);
+        success = hardwareServerSendReceive (HARDWARE_READ_RIO_REMAINING_CAPACITY, PNULL, 0, &(batteryData.remainingCapacity));
+        if (success)
+        {
+            success = hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData.chargeDischarge));
+        }
+        if (success)
+        {
+            success = hardwareServerSendReceive (HARDWARE_READ_RIO_BATT_TEMPERATURE, PNULL, 0, &(batteryData.temperature));
+        }
+        if (success)
+        {
+            success = batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_RIO, &batteryData, sizeof (batteryData), &batteryStatus);
+        }
         wmove (pWin, row, col);
-        wclrtoeol (pWin);
-        wprintw (pWin, "%u mAhr(s) remain [%c]", batteryData.remainingCapacity, displayBatteryStatusHelper (&batteryStatus));
+        if (success)
+        {
+            wclrtoeol (pWin);
+            wprintw (pWin, "%u mAhr(s) remain [%c]", batteryData.remainingCapacity, displayBatteryStatusHelper (&batteryStatus));
+        }
         row++;
         wmove (pWin, row, col);
-        wclrtoeol (pWin);
-        wprintw (pWin, "lifetime -%lu/%lu mAhr", batteryData.chargeDischarge.discharge, batteryData.chargeDischarge.charge);
-        row++;        
+        if (success)
+        {
+            wclrtoeol (pWin);
+            wprintw (pWin, "lifetime -%lu/%lu mAhr", batteryData.chargeDischarge.discharge, batteryData.chargeDischarge.charge);
+        }
+        row++;
     }
     else
     {
@@ -390,47 +412,105 @@ static Bool updateOWindow (WINDOW *pWin, UInt8 count)
     BatteryStatus batteryStatus[3];
     UInt8 row = 0;
     UInt8 col = 0;
+    Bool success;
 
     ASSERT_PARAM (pWin != PNULL, (unsigned long) pWin);
    
     memset (&(batteryData[0]), 0, sizeof (batteryData));
     memset (&(batteryStatus[0]), false, sizeof (batteryStatus));
 
-    hardwareServerSendReceive (HARDWARE_READ_O1_BATT_CURRENT, PNULL, 0, &(batteryData[0].current));
-    hardwareServerSendReceive (HARDWARE_READ_O2_BATT_CURRENT, PNULL, 0, &(batteryData[1].current));
-    hardwareServerSendReceive (HARDWARE_READ_O3_BATT_CURRENT, PNULL, 0, &(batteryData[2].current));
-    hardwareServerSendReceive (HARDWARE_READ_O1_BATT_VOLTAGE, PNULL, 0, &(batteryData[0].voltage));
-    hardwareServerSendReceive (HARDWARE_READ_O2_BATT_VOLTAGE, PNULL, 0, &(batteryData[1].voltage));
-    hardwareServerSendReceive (HARDWARE_READ_O3_BATT_VOLTAGE, PNULL, 0, &(batteryData[2].voltage));
+    success = hardwareServerSendReceive (HARDWARE_READ_O1_BATT_CURRENT, PNULL, 0, &(batteryData[0].current));
+    if (success)
+    {
+        success = hardwareServerSendReceive (HARDWARE_READ_O2_BATT_CURRENT, PNULL, 0, &(batteryData[1].current));
+    }
+    if (success)
+    {
+        success = hardwareServerSendReceive (HARDWARE_READ_O3_BATT_CURRENT, PNULL, 0, &(batteryData[2].current));
+    }
+    if (success)
+    {
+        success = hardwareServerSendReceive (HARDWARE_READ_O1_BATT_VOLTAGE, PNULL, 0, &(batteryData[0].voltage));
+    }
+    if (success)
+    {
+        success = hardwareServerSendReceive (HARDWARE_READ_O2_BATT_VOLTAGE, PNULL, 0, &(batteryData[1].voltage));
+    }
+    if (success)
+    {
+        success = hardwareServerSendReceive (HARDWARE_READ_O3_BATT_VOLTAGE, PNULL, 0, &(batteryData[2].voltage));
+    }
     wmove (pWin, row, col);
-    wclrtoeol (pWin);
-    wprintw (pWin, "%d/%d/%d mA, %u/%u/%u mV", batteryData[0].current, batteryData[1].current, batteryData[2].current,
-                                               batteryData[0].voltage, batteryData[1].voltage, batteryData[2].voltage);
+    if (success)
+    {
+        wclrtoeol (pWin);
+        wprintw (pWin, "%d/%d/%d mA, %u/%u/%u mV", batteryData[0].current, batteryData[1].current, batteryData[2].current,
+                                                   batteryData[0].voltage, batteryData[1].voltage, batteryData[2].voltage);
+    }
     row++;
     
     if (count % SLOWER_UPDATE_BACKOFF == 0)
     {
-        hardwareServerSendReceive (HARDWARE_READ_O1_REMAINING_CAPACITY, PNULL, 0, &(batteryData[0].remainingCapacity));
-        hardwareServerSendReceive (HARDWARE_READ_O2_REMAINING_CAPACITY, PNULL, 0, &(batteryData[1].remainingCapacity));
-        hardwareServerSendReceive (HARDWARE_READ_O3_REMAINING_CAPACITY, PNULL, 0, &(batteryData[2].remainingCapacity));
-        hardwareServerSendReceive (HARDWARE_READ_O1_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData[0].chargeDischarge));
-        hardwareServerSendReceive (HARDWARE_READ_O2_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData[1].chargeDischarge));
-        hardwareServerSendReceive (HARDWARE_READ_O3_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData[2].chargeDischarge));
-        hardwareServerSendReceive (HARDWARE_READ_O1_BATT_TEMPERATURE, PNULL, 0, &(batteryData[0].temperature));
-        hardwareServerSendReceive (HARDWARE_READ_O2_BATT_TEMPERATURE, PNULL, 0, &(batteryData[1].temperature));
-        hardwareServerSendReceive (HARDWARE_READ_O3_BATT_TEMPERATURE, PNULL, 0, &(batteryData[2].temperature));
-        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O1, &(batteryData[0]), sizeof (batteryData[0]), &(batteryStatus[0]));
-        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O2, &(batteryData[1]), sizeof (batteryData[1]), &(batteryStatus[1]));
-        batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O3, &(batteryData[2]), sizeof (batteryData[2]), &(batteryStatus[2]));
+        success = hardwareServerSendReceive (HARDWARE_READ_O1_REMAINING_CAPACITY, PNULL, 0, &(batteryData[0].remainingCapacity));
+        if (success)
+        {
+            success = hardwareServerSendReceive (HARDWARE_READ_O2_REMAINING_CAPACITY, PNULL, 0, &(batteryData[1].remainingCapacity));
+        }
+        if (success)
+        {
+            success = hardwareServerSendReceive (HARDWARE_READ_O3_REMAINING_CAPACITY, PNULL, 0, &(batteryData[2].remainingCapacity));
+        }
+        if (success)
+        {
+            success = hardwareServerSendReceive (HARDWARE_READ_O1_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData[0].chargeDischarge));
+        }
+        if (success)
+        {
+            success = hardwareServerSendReceive (HARDWARE_READ_O2_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData[1].chargeDischarge));
+        }
+        if (success)
+        {
+            success = hardwareServerSendReceive (HARDWARE_READ_O3_BATT_LIFETIME_CHARGE_DISCHARGE, PNULL, 0, &(batteryData[2].chargeDischarge));
+        }
+        if (success)
+        {
+            success = hardwareServerSendReceive (HARDWARE_READ_O1_BATT_TEMPERATURE, PNULL, 0, &(batteryData[0].temperature));
+        }
+        if (success)
+        {
+            success = hardwareServerSendReceive (HARDWARE_READ_O2_BATT_TEMPERATURE, PNULL, 0, &(batteryData[1].temperature));
+        }
+        if (success)
+        {
+            success = hardwareServerSendReceive (HARDWARE_READ_O3_BATT_TEMPERATURE, PNULL, 0, &(batteryData[2].temperature));
+        }
+        if (success)
+        {
+            success = batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O1, &(batteryData[0]), sizeof (batteryData[0]), &(batteryStatus[0]));
+            if (success)
+            {
+                success = batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O2, &(batteryData[1]), sizeof (batteryData[1]), &(batteryStatus[1]));
+            }
+            if (success)
+            {
+                success = batteryManagerServerSendReceive (BATTERY_MANAGER_DATA_O3, &(batteryData[2]), sizeof (batteryData[2]), &(batteryStatus[2]));
+            }
+        }
         wmove (pWin, row, col);
-        wclrtoeol (pWin);
-        wprintw (pWin, "%u mAhr(s) remain [%c%c%c]", batteryData[0].remainingCapacity + batteryData[1].remainingCapacity + batteryData[2].remainingCapacity,
-                                                     displayBatteryStatusHelper (&(batteryStatus[0])), displayBatteryStatusHelper (&(batteryStatus[1])), displayBatteryStatusHelper (&(batteryStatus[2])));        
+        if (success)
+        {
+            wclrtoeol (pWin);
+            wprintw (pWin, "%u mAhr(s) remain [%c%c%c]", batteryData[0].remainingCapacity + batteryData[1].remainingCapacity + batteryData[2].remainingCapacity,
+                                                         displayBatteryStatusHelper (&(batteryStatus[0])), displayBatteryStatusHelper (&(batteryStatus[1])), displayBatteryStatusHelper (&(batteryStatus[2])));        
+        }
         row++;
         wmove (pWin, row, col);
-        wclrtoeol (pWin);
-        wprintw (pWin, "lifetime -%lu/%lu mAhr", batteryData[0].chargeDischarge.discharge + batteryData[1].chargeDischarge.discharge + batteryData[2].chargeDischarge.discharge,
-                                                 batteryData[0].chargeDischarge.charge + batteryData[1].chargeDischarge.charge + batteryData[2].chargeDischarge.charge);
+        if (success)
+        {
+            wclrtoeol (pWin);
+            wprintw (pWin, "lifetime -%lu/%lu mAhr", batteryData[0].chargeDischarge.discharge + batteryData[1].chargeDischarge.discharge + batteryData[2].chargeDischarge.discharge,
+                                                     batteryData[0].chargeDischarge.charge + batteryData[1].chargeDischarge.charge + batteryData[2].chargeDischarge.charge);
+        }
         row++;
         
     }
