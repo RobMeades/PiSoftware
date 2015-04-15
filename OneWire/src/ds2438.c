@@ -52,17 +52,20 @@
 
 /* From the DS2438 data sheet remaining capacity (in mA hours) = ICA / (2048 * RSENS) */
 #define ICA_TO_MAHOURS(x)        (((x) * 1000) / (2048 * RSENS))
-#define MAHOURS_TO_ICA(x)        (((x) * 2048 * RSENS) / 1000)
+#define MAHOURS_TO_ICA(x)        ((2048 * RSENS * (x)) / 1000)
 /* The units for the accumulated registers are 15.625 mV hours as opposed
  * to 0.488s mV hours, so 32 times bigger */
 #define XCA_TO_MAHOURS(x)        (((x) * 1000 * 32) / (2048 * RSENS))
-#define MAHOURS_TO_XCA(x)        (((x) * 2048 * RSENS) / (1000 * 32))
+#define MAHOURS_TO_XCA(x)        ((2048 * RSENS * (x)) / (1000 * 32))
 /* From the DS2438 data sheet I (in Amps) = Current Register / (4096 * RSENS) */
 #define CURRENT_TO_MA(x)         (((x) * 1000) / (4096 * RSENS))
-#define MA_TO_CURRENT(x)         (((x) * 4096 * RSENS) / 1000)
+#define MA_TO_CURRENT(x)         ((4096 * RSENS * (x)) / 1000)
+
+/* The maximum remaining capacity of a battery in ICA units */
+#define MAX_REMAINING_CAPACITY_ICA   MAHOURS_TO_ICA (MAX_REMAINING_CAPACITY_MAHOURS)
 
 /* To protect against deadlocks when looping for HW responses */
-#define GUARD_COUNTER                   255
+#define GUARD_COUNTER            255
 
 /*
  * STATIC FUNCTIONS
@@ -830,6 +833,7 @@ Bool initTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber)
 {
     Bool success;
     UInt8 buffer[DS2438_NUM_BYTES_IN_PAGE];
+    UInt16 remainingCapacity;
     UInt32 shadowElapsedTime;
     UInt32 volatileElapsedTime;
     
@@ -843,6 +847,13 @@ Bool initTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber)
         
         if (success)
         {
+            remainingCapacity = ICA_TO_MAHOURS (buffer[DS2438_ICA_REG_OFFSET]);        
+            if (remainingCapacity > MAX_REMAINING_CAPACITY_MAHOURS)
+            {
+                remainingCapacity = MAX_REMAINING_CAPACITY_MAHOURS;
+                buffer[DS2438_ICA_REG_OFFSET] = MAX_REMAINING_CAPACITY_ICA;
+            }            
+
             if (shadowElapsedTime > volatileElapsedTime)
             {
                 success = writeNVPageDS2438 (portNumber, pSerialNumber, DS2438_ETM_ICA_OFFSET_PAGE, &buffer[0], DS2438_USER_DATA_ETM_ICA_SIZE);                
@@ -878,6 +889,7 @@ Bool initTimeCapacityDS2438 (SInt32 portNumber, UInt8 *pSerialNumber)
 Bool readTimeCapacityCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 *pElapsedTime, UInt16 *pRemainingCapacity, SInt16 *pOffsetCal, Bool writeShadow)
 {
     Bool success;
+    UInt16 remainingCapacity;
     UInt8 buffer[DS2438_NUM_BYTES_IN_PAGE];
     
     success = readNVPageDS2438 (portNumber, pSerialNumber, DS2438_ETM_ICA_OFFSET_PAGE, &buffer[0]);
@@ -888,9 +900,17 @@ Bool readTimeCapacityCalDS2438 (SInt32 portNumber, UInt8 *pSerialNumber, UInt32 
         {
             *pElapsedTime = buffer[DS2438_ETM_REG_OFFSET] | (buffer[DS2438_ETM_REG_OFFSET + 1] << 8) | (buffer[DS2438_ETM_REG_OFFSET + 2] << 16) | (buffer[DS2438_ETM_REG_OFFSET + 3] << 24);
         }
+        
+        remainingCapacity = ICA_TO_MAHOURS (buffer[DS2438_ICA_REG_OFFSET]);        
+        if (remainingCapacity > MAX_REMAINING_CAPACITY_MAHOURS)
+        {
+            remainingCapacity = MAX_REMAINING_CAPACITY_MAHOURS;
+            buffer[DS2438_ICA_REG_OFFSET] = MAX_REMAINING_CAPACITY_ICA;
+        }
+        
         if (pRemainingCapacity != PNULL)
         {
-            *pRemainingCapacity = ICA_TO_MAHOURS (buffer[DS2438_ICA_REG_OFFSET]);
+            *pRemainingCapacity = remainingCapacity;
         }
         if (pOffsetCal != PNULL)
         {

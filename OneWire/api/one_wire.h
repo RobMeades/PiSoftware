@@ -15,6 +15,9 @@ Bool oneWireAccessDevice (SInt32 portNumber, UInt8 *pAddress);
 /* To protect against deadlocks when looping for HW responses */
 #define GUARD_COUNTER           255
 
+/* The maximum remaining capacity of a battery (to cap any over-optimistic readings from the DS2438) */
+#define MAX_REMAINING_CAPACITY_MAHOURS 2200
+
 /*
  * Definitions specific to DS2408 PIO chip
  */

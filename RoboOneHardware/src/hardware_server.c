@@ -699,10 +699,6 @@ static UInt16 actionReadRemainingCapacity (HardwareMsgType msgType, UInt8 *pSend
         case HARDWARE_READ_RIO_REMAINING_CAPACITY:
         {
             success = readRioRemainingCapacity (&remainingCapacity);
-            if (remainingCapacity > MAX_REMAINING_CAPACITY_MAH)
-            {
-                remainingCapacity = MAX_REMAINING_CAPACITY_MAH;
-            }            
             ((HardwareReadRioRemainingCapacityCnf *) pSendMsgBody)->success = success;
             sendMsgBodyLength += sizeof (((HardwareReadRioRemainingCapacityCnf *) pSendMsgBody)->success);
             ((HardwareReadRioRemainingCapacityCnf *) pSendMsgBody)->remainingCapacity = remainingCapacity;
@@ -712,10 +708,6 @@ static UInt16 actionReadRemainingCapacity (HardwareMsgType msgType, UInt8 *pSend
         case HARDWARE_READ_O1_REMAINING_CAPACITY:
         {
             success = readO1RemainingCapacity (&remainingCapacity);
-            if (remainingCapacity > MAX_REMAINING_CAPACITY_MAH)
-            {
-                remainingCapacity = MAX_REMAINING_CAPACITY_MAH;
-            }            
             ((HardwareReadO1RemainingCapacityCnf *) pSendMsgBody)->success = success;
             sendMsgBodyLength += sizeof (((HardwareReadO1RemainingCapacityCnf *) pSendMsgBody)->success);
             ((HardwareReadO1RemainingCapacityCnf *) pSendMsgBody)->remainingCapacity = remainingCapacity;
@@ -725,10 +717,6 @@ static UInt16 actionReadRemainingCapacity (HardwareMsgType msgType, UInt8 *pSend
         case HARDWARE_READ_O2_REMAINING_CAPACITY:
         {
             success = readO2RemainingCapacity (&remainingCapacity);
-            if (remainingCapacity > MAX_REMAINING_CAPACITY_MAH)
-            {
-                remainingCapacity = MAX_REMAINING_CAPACITY_MAH;
-            }            
             ((HardwareReadO2RemainingCapacityCnf *) pSendMsgBody)->success = success;
             sendMsgBodyLength += sizeof (((HardwareReadO2RemainingCapacityCnf *) pSendMsgBody)->success);
             ((HardwareReadO2RemainingCapacityCnf *) pSendMsgBody)->remainingCapacity = remainingCapacity;
@@ -738,10 +726,6 @@ static UInt16 actionReadRemainingCapacity (HardwareMsgType msgType, UInt8 *pSend
         case HARDWARE_READ_O3_REMAINING_CAPACITY:
         {
             success = readO3RemainingCapacity (&remainingCapacity);
-            if (remainingCapacity > MAX_REMAINING_CAPACITY_MAH)
-            {
-                remainingCapacity = MAX_REMAINING_CAPACITY_MAH;
-            }            
             ((HardwareReadO3RemainingCapacityCnf *) pSendMsgBody)->success = success;
             sendMsgBodyLength += sizeof (((HardwareReadO3RemainingCapacityCnf *) pSendMsgBody)->success);
             ((HardwareReadO3RemainingCapacityCnf *) pSendMsgBody)->remainingCapacity = remainingCapacity;

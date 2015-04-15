@@ -19,8 +19,6 @@
 #define O_CHECK_OK_STRING(PoUTPUTsTRING) (((PoUTPUTsTRING)->stringLength) >= 2) && (((PoUTPUTsTRING)->string[0] == 'O') && ((PoUTPUTsTRING)->string[1] == 'K') ? true : false)  
 /* Suggested startup delay for the Orangutan, AKA Hindbrain, before it can be pinged */
 #define O_START_DELAY_US 100000L
-/* The maximum remaininc capacity of a battery (to cap any over-optimistic readings from the monitoring chips) */
-#define MAX_REMAINING_CAPACITY_MAH 2200
 
 #pragma pack(push, 1) /* Force GCC to pack everything from here on as tightly as possible */
 

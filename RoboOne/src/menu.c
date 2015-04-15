@@ -33,6 +33,7 @@
 #define SWAP_BATTERY_STATE_PROMPT "Is the new battery fully charged (Y) (N if it is discharged)?: "
 #define SWAP_BATTERY_CNF_MSG "Battery data updated.\n"
 #define MAX_LEN_INPUT_STRING 30 /* Includes null terminator */
+#define BATTERY_CAPACITY 2200 /* In mAh, required when doing a battery swap */
 
 /*
  * STATIC FUNCTION PROTOTYPES
@@ -1039,7 +1040,7 @@ static Bool swapRioBatteryCnf (WINDOW *pWin)
             /* Check that the new battery is fully charged */
             if (getYesInput (pWin, SWAP_BATTERY_STATE_PROMPT))
             {
-                batterySwapData.remainingCapacity = MAX_REMAINING_CAPACITY_MAH;
+                batterySwapData.remainingCapacity = BATTERY_CAPACITY;
             }
             printHelper (pWin, "\n");
             
@@ -1091,7 +1092,7 @@ static Bool swapO1BatteryCnf (WINDOW *pWin)
             /* Check that the new battery is fully charged */
             if (getYesInput (pWin, SWAP_BATTERY_STATE_PROMPT))
             {
-                batterySwapData.remainingCapacity = MAX_REMAINING_CAPACITY_MAH;
+                batterySwapData.remainingCapacity = BATTERY_CAPACITY;
             }
             printHelper (pWin, "\n");
             
@@ -1143,7 +1144,7 @@ static Bool swapO2BatteryCnf (WINDOW *pWin)
             /* Check that the new battery is fully charged */
             if (getYesInput (pWin, SWAP_BATTERY_STATE_PROMPT))
             {
-                batterySwapData.remainingCapacity = MAX_REMAINING_CAPACITY_MAH;
+                batterySwapData.remainingCapacity = BATTERY_CAPACITY;
             }
             printHelper (pWin, "\n");
             
@@ -1195,7 +1196,7 @@ static Bool swapO3BatteryCnf (WINDOW *pWin)
             /* Check that the new battery is fully charged */
             if (getYesInput (pWin, SWAP_BATTERY_STATE_PROMPT))
             {
-                batterySwapData.remainingCapacity = MAX_REMAINING_CAPACITY_MAH;
+                batterySwapData.remainingCapacity = BATTERY_CAPACITY;
             }
             printHelper (pWin, "\n");
             
