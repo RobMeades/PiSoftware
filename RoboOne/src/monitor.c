@@ -60,7 +60,7 @@
 #define WIN_CMD_START_ROW         12 /* Starts a row higher as there is no heading */
 #define WIN_CMD_START_COL         28
 #define WIN_CMD_HEIGHT            2
-#define WIN_CMD_WIDTH             25
+#define WIN_CMD_WIDTH             30
 #define WIN_OUTPUT_START_ROW      17
 #define WIN_OUTPUT_START_COL      2
 #define WIN_OUTPUT_HEIGHT         42
@@ -83,7 +83,7 @@
 
 /* The strings */
 #define STRING_MAIN_HEADING "RoboOne Dashboard"
-#define COMMAND_PROMPT "Command (? for help): "
+#define COMMAND_PROMPT "Command (? help, x exit): "
 #define STRING_POWER_HEADING "  Mains     Pi/RIO  Hindbrain"
  
 /* Misc stuff */
