@@ -229,7 +229,7 @@ int main (int argc, char **argv)
                              * line the charging point (which is mounted at
                              * North) up with an approaching IR.
                              */
-                            printProgress ("Starting main loop (CTRL-C to exit)...\n");
+                            printProgress ("Starting main loop (CTRL-C to exit)...\n\n");
                             do
                             {
                                 UInt32 clockwiseVote;
@@ -240,6 +240,8 @@ int main (int argc, char **argv)
                                 Bool hitBuffers;
                                 SInt16 current;
                                 Bool oneWireFailure;
+                                SInt16 currentFraction;
+                                SInt16 currentInteger;
                                 
                                 clockwiseVote = 0;
                                 antiClockwiseVote = 0;
@@ -347,7 +349,13 @@ int main (int argc, char **argv)
                                     oneWireFailure = true;
                                 }
                                 
-                                printProgress ("\r:  %.2d.%.3d Amps  ", current / 1000, current % 1000);
+                                currentFraction = current % 1000;
+                                if (currentFraction < 0)
+                                {
+                                    currentFraction = -currentFraction;
+                                }
+                                currentInteger = current / 1000;
+                                printProgress ("\r:  %.2d.%3.3d Amps  ", currentInteger, currentFraction);
                                 if (wantToMove)
                                 {
                                     if (!wantToGoClockwise)
