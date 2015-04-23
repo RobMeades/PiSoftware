@@ -8,6 +8,8 @@
  */
 
 /* Where the peripherals are connected */
+#define GPIO_RELAY_1_ENABLE   2  /* Set to 1 to switch relay 1 on */
+#define GPIO_RELAY_2_ENABLE   3  /* Set to 1 to switch relay 2 on */
 #define GPIO_MOTOR_MICRO_STEP 24 /* There are 1600 micro steps in one revolution */
 #define GPIO_MOTOR_DIRECTION  25 /* CLR for anti-clockwise SET for clockwise */
 #define GPIO_MOTOR_ENABLE_BAR 18 /* CLR to enable, SET to disable */

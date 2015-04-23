@@ -39,15 +39,14 @@
 /* Convert an angle to microsteps, rounding down */
 #define ANGLE_TO_MICROSTEPS(a) (a * 1600 / 360)
 
-/* The minimum angle to move (chose a multiple of 0.225) */
-#define MIN_ANGLE_DEGREES 9
+/* The minimum angle to move */
+#define MIN_ANGLE_DEGREES 3
 #define MIN_ANGLE_MICROSTEPS ANGLE_TO_MICROSTEPS (MIN_ANGLE_DEGREES)
 
 /* The minimum number of readings to decide on a move */
-#define MIN_READINGS 3
+#define MIN_READINGS 1
 
-/* The maximum angle to move to, clockwise or anti-clockwise
- * (chose a multiple of 0.225) */
+/* The maximum angle to move to, clockwise or anti-clockwise */
 #define LIMIT_ANGLE_DEGREES 90
 #define LIMIT_ANGLE_MICROSTEPS ANGLE_TO_MICROSTEPS (LIMIT_ANGLE_DEGREES)
 
@@ -73,13 +72,17 @@ SInt16 gOffsetCalibration;
  */
 static void setupPiGpios (void)
 {    
+    GPIO_CONFIG_OUTPUT (GPIO_RELAY_1_ENABLE);
+    GPIO_CONFIG_OUTPUT (GPIO_RELAY_2_ENABLE);
     GPIO_CONFIG_OUTPUT (GPIO_IR_ENABLE);
     GPIO_CONFIG_OUTPUT (GPIO_MOTOR_MICRO_STEP);
     GPIO_CONFIG_OUTPUT (GPIO_MOTOR_DIRECTION);
     GPIO_CONFIG_OUTPUT (GPIO_MOTOR_ENABLE_BAR);
-
+    
     GPIO_SET (GPIO_IR_ENABLE);
     GPIO_SET (GPIO_MOTOR_ENABLE_BAR);
+    GPIO_SET (GPIO_RELAY_1_ENABLE);
+    GPIO_SET (GPIO_RELAY_2_ENABLE);
 }
 
 /*
@@ -229,6 +232,7 @@ int main (int argc, char **argv)
                              * line the charging point (which is mounted at
                              * North) up with an approaching IR.
                              */
+                            GPIO_CLR (GPIO_MOTOR_ENABLE_BAR);
                             printProgress ("Starting main loop (CTRL-C to exit)...\n\n");
                             do
                             {
@@ -323,13 +327,11 @@ int main (int argc, char **argv)
                                         if ((angleMicrosteps + microstepChange < LIMIT_ANGLE_MICROSTEPS) &&
                                             (angleMicrosteps + microstepChange > -LIMIT_ANGLE_MICROSTEPS))
                                         {
-                                            GPIO_CLR (GPIO_MOTOR_ENABLE_BAR);
                                             GPIO_SET (GPIO_MOTOR_MICRO_STEP);
                                             usleep (10000);                        
                                             GPIO_CLR (GPIO_MOTOR_MICRO_STEP);
                                             usleep (10000);
                                             angleMicrosteps += microstepChange;
-                                            GPIO_SET (GPIO_MOTOR_ENABLE_BAR);
                                         }
                                         else
                                         {
@@ -401,6 +403,7 @@ int main (int argc, char **argv)
                                 printProgress ("\r");
                             }
                             while (!key_abort() && success);
+                            GPIO_SET (GPIO_MOTOR_ENABLE_BAR);
                             printProgress ("Exiting...\n");
                             GPIO_CLR (GPIO_IR_ENABLE);
                             closeIo();
