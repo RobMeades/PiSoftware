@@ -65,7 +65,7 @@ extern Char *pgBatteryManagerMessageNames[];
 Bool gChargingPermitted = false;
 Bool gAllFullyCharged = false;
 Bool gAllInsufficientCharge = false;
-Bool gInsufficientChargeThreshold = MINIMUM_CHARGE_CHARGING_NOT_PERMITTED;
+UInt16 gInsufficientChargeThreshold = MINIMUM_CHARGE_CHARGING_NOT_PERMITTED;
 BatteryContainerData gBatteryDataContainerRio;
 BatteryContainerData gBatteryDataContainerO1;
 BatteryContainerData gBatteryDataContainerO2;
@@ -79,6 +79,29 @@ Bool gTimerRunning = false;
 /*
  * STATIC FUNCTIONS
  */
+
+/*
+ * Print a battery charge status struct for
+ * debug purposes
+ */
+static void debugPrintBatteryChargeStatus (BatteryContainerData *pBatteryContainerData)
+{
+    printDebug ("Voltage %d V.\n", pBatteryContainerData->batteryData.voltage);
+    printDebug ("Current %d mA.\n", pBatteryContainerData->batteryData.current);
+    printDebug ("Remaining capacity %d mAh.\n", pBatteryContainerData->batteryData.remainingCapacity);
+    printDebug ("Temperature %f C.\n", pBatteryContainerData->batteryData.temperature);
+    printDebug ("Lifetime charge %d mAh.\n", pBatteryContainerData->batteryData.chargeDischarge.charge);
+    printDebug ("Lifetime discharge %d mAh.\n", pBatteryContainerData->batteryData.chargeDischarge.discharge);
+    printDebug ("FullyCharged: %d, insufficientCharge: %d, chargerOn: %d, overTemperature: %d, temperatureBroken: %d.\n",
+                 pBatteryContainerData->batteryStatus.fullyCharged,
+                 pBatteryContainerData->batteryStatus.insufficientCharge,
+                 pBatteryContainerData->batteryStatus.chargerOn,
+                 pBatteryContainerData->batteryStatus.overTemperature,
+                 pBatteryContainerData->batteryStatus.temperatureBroken);
+    printDebug ("gInsufficientChargeThreshold: %d.\n", gInsufficientChargeThreshold);
+    printDebug ("gChargingPermitted %d, gAllFullyCharged %d, gAllInsufficientCharge %d.\n",
+                gChargingPermitted, gAllFullyCharged, gAllInsufficientCharge);
+}
 
 /*
  * Determine the charge state of the robot as a whole
@@ -152,12 +175,7 @@ static Bool setChargerStatus (BatteryContainerData *pBatteryContainerData)
 {
     ASSERT_PARAM (pBatteryContainerData != PNULL, (unsigned long) pBatteryContainerData);
 
-    printDebug ("Voltage %d V.\n", pBatteryContainerData->batteryData.voltage);
-    printDebug ("Current %d mA.\n", pBatteryContainerData->batteryData.current);
-    printDebug ("Capacity %d mAh.\n", pBatteryContainerData->batteryData.remainingCapacity);
-    printDebug ("Temperature %f C.\n", pBatteryContainerData->batteryData.temperature);
-    printDebug ("Lifetime charge %d mAh.\n", pBatteryContainerData->batteryData.chargeDischarge.charge);
-    printDebug ("Lifetime discharge %d mAh.\n", pBatteryContainerData->batteryData.chargeDischarge.discharge);
+    debugPrintBatteryChargeStatus (pBatteryContainerData);
     
     if (!pBatteryContainerData->batteryStatus.overTemperature)
     {
