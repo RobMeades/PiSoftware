@@ -110,11 +110,7 @@ void closeOrangutan (void)
 Bool sendStringToOrangutan (Char *pSendString, Char *pReceiveString, UInt32 *pReceiveStringLength)
 {
     Bool success = false;
-    Bool done = false;
-    SInt32 bytesReceived;
-    Char buffer[ORANGUTAN_BUFFER_SIZE];
     SInt32 bytesToSend = strlen (pSendString);
-    UInt8 i;
     
     ASSERT_PARAM (pSendString != PNULL, (unsigned long) pSendString);
 
@@ -132,52 +128,91 @@ Bool sendStringToOrangutan (Char *pSendString, Char *pReceiveString, UInt32 *pRe
         if (write (gFd, pSendString, bytesToSend) == bytesToSend)
         {
             success = true;
-            /* If we need to, wait for the response string */
-            if ((pReceiveString != PNULL) && (pReceiveStringLength != PNULL) && (*pReceiveStringLength > 0))
+            /* Wait for a response if requested */
+            if ((pReceiveString != NULL) && (pReceiveStringLength != NULL))
             {
-                UInt32 maxBytesToReceive;
+                readStringFromOrangutan (pReceiveString, pReceiveStringLength);
+            }
+        }
+    }
     
-                /* Store the maximum length and replace it with zero */
-                maxBytesToReceive = *pReceiveStringLength;
-                *pReceiveStringLength = 0;
+    return success;
+}
+
+/*
+ * Read an asynchronous string from the Orangutan.
+ * 
+ * pReceiveString       pointer to a location where the
+ *                      response can be placed.  A null
+ *                      terminator will be included.
+ * pReceiveStringLength pointer to the length of the received
+ *                      string.  This should be set by the
+ *                      caller to the maximum received string
+ *                      that can be stored (including a null
+ *                      terminator).  It will be set by this
+ *                      function to the length of the received
+ *                      string (with guaranteed null terminator).
+ * 
+ * @return              true if successful, otherwise false.
+ */
+Bool readStringFromOrangutan (Char *pReceiveString, UInt32 *pReceiveStringLength)
+{
+    Bool success = false;
+    Bool done = false;
+    SInt32 bytesReceived;
+    Char buffer[ORANGUTAN_BUFFER_SIZE];
+    UInt8 i;
+    
+    ASSERT_PARAM (pReceiveString != PNULL, (unsigned long) pReceiveString);
+    ASSERT_PARAM (pReceiveStringLength != PNULL, (unsigned long) pReceiveStringLength);
+
+    if (gFd >= 0)
+    {
+        /* Read the Orangutan's string */
+        if (*pReceiveStringLength > 0)
+        {
+            UInt32 maxBytesToReceive;
+
+            /* Store the maximum length and replace it with zero */
+            maxBytesToReceive = *pReceiveStringLength;
+            *pReceiveStringLength = 0;
+            
+            while (!done)
+            {
+                bytesReceived = read (gFd, &buffer[0], sizeof (buffer));
                 
-                while (!done)
+                if (bytesReceived > 0)
                 {
-                    bytesReceived = read (gFd, &buffer[0], sizeof (buffer));
+                    for (i = 0; (i < bytesReceived) && !done; i++)
+                    {
+                        if (buffer[i] == ORANGUTAN_RESPONSE_TERMINATOR)
+                        {
+                            done = true;
+                            bytesReceived = i + 1; /* Chop off at the terminator */
+                        }
+                    }
                     
-                    if (bytesReceived > 0)
+                    /* Stop overruns */
+                    if (*pReceiveStringLength + bytesReceived > maxBytesToReceive - 1) /* -1 to leave room for adding a terminator */
                     {
-                        for (i = 0; (i < bytesReceived) && !done; i++)
-                        {
-                            if (buffer[i] == ORANGUTAN_RESPONSE_TERMINATOR)
-                            {
-                                done = true;
-                                bytesReceived = i + 1; /* Chop off at the terminator */
-                            }
-                        }
-                        
-                        /* Stop overruns */
-                        if (*pReceiveStringLength + bytesReceived > maxBytesToReceive - 1) /* -1 to leave room for adding a terminator */
-                        {
-                            bytesReceived = maxBytesToReceive - *pReceiveStringLength - 1;
-                        }
-                        
-                        /* Copy to the output and set the length */
-                        memcpy (pReceiveString + *pReceiveStringLength, &buffer[0], bytesReceived);                        
-                        *pReceiveStringLength += bytesReceived;                            
+                        bytesReceived = maxBytesToReceive - *pReceiveStringLength - 1;
                     }
-                    else
-                    {
-                        done = true;
-                    }
+                    
+                    /* Copy to the output and set the length */
+                    memcpy (pReceiveString + *pReceiveStringLength, &buffer[0], bytesReceived);                        
+                    *pReceiveStringLength += bytesReceived;                            
                 }
-                
-                /* Add a null terminator if we're done */
-                if (maxBytesToReceive > 0)
+                else
                 {
-                    *(pReceiveString + *pReceiveStringLength) = 0;
-                    (*pReceiveStringLength)++;
+                    done = true;
                 }
+            }
+            
+            /* Add a null terminator if we're done */
+            if (maxBytesToReceive > 0)
+            {
+                *(pReceiveString + *pReceiveStringLength) = 0;
+                (*pReceiveStringLength)++;
             }
         }
     }

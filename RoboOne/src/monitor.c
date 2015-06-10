@@ -788,7 +788,7 @@ static void initStateWindow (WINDOW *pWin)
  * Display the state window.
  * 
  * pWin     the window where state information
- *          can be diesplayed.
+ *          can be displayed.
  * count    the number of times this function
  *          has been called.  This is used to
  *          update some items more often than

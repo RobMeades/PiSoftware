@@ -27,13 +27,23 @@
  * MANIFEST CONSTANTS
  */
 
-/* Thresholds */
+/* Charging Thresholds */
+/* The level at which the robot could be disengaged to perform a task, though it is not yet fully charged.
+ * This threshold applies when the system says that charging can still occur.  */
 #define MINIMUM_CHARGE_CHARGING_PERMITTED 2000
+/* The level at which the robot could be disengaged to perform a task, though it is not yet fully charged.
+ * This threshold applies when the system says that charging CANNOT occur (lower 'cos there's no point in
+ * hanging around). */
 #define MINIMUM_CHARGE_CHARGING_NOT_PERMITTED 1800
-#define FULL_CHARGE 2150
+/* The level at which a battery is considered fully charged and so its charger is switched off */
+#define FULL_CHARGE 2150 
+/* Hysteresis */
 #define CHARGE_HYSTERESIS 100
+
+/* Temperature Thresholds */
 #define MAXIMUM_TEMPERATURE_C 60
 #define TEMPERATURE_BROKEN_C -20
+/* Hystersis */
 #define TEMPERATURE_HYSTERESIS_C 10
 
 /* The length of the hardware message queue */
@@ -279,7 +289,7 @@ static void sendMsgOffset (HardwareMsgType hardwareMsgType)
 {
     if (!gTimerRunning)
     {
-        printDebug ("Sending message 0x%x to HW, (queue empty).\n", hardwareMsgType);
+        printDebug ("Sending message 0x%x to HW immediately, (timer not running).\n", hardwareMsgType);
         /* If there's no timer running, don't bother to queue this
          * one as there's nothing to offset it from, just send it */
         hardwareServerSendReceive (hardwareMsgType, PNULL, 0, PNULL);
@@ -627,6 +637,10 @@ static UInt16 actionBatteryManagerTimerExpiry (void)
             sendStartTimer (SEND_MSG_OFFSET_DURATION_DECISECONDS, gHardwareMsgQ[gHardwareMsgQLen - 1], gThisServerPort, &gTimerExpiryMsg);
             gTimerRunning = true;
         }
+    }
+    else
+    {
+        printDebug ("No messages in the queue though.\n");
     }
     
     return 0;
